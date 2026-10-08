@@ -1,17 +1,13 @@
 import * as Crypto from 'expo-crypto';
 import * as SQLite from 'expo-sqlite';
 
-export type GameSession = {
-  id: string;
-  gameId: string;
-  startedAt: string;
-  endedAt: string;
-  score: number;
-  bestMetric: number;
-  durationSec: number;
-  settingsJson: string;
-  profileSnapshotJson: string;
-};
+import {
+  computeTrainingStats,
+  type GameSession,
+  type TrainingStats,
+} from './sessionTypes';
+
+export type { GameSession } from './sessionTypes';
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -108,54 +104,8 @@ export async function getRecentSessions(limit = 20): Promise<GameSession[]> {
   );
 }
 
-export async function getTrainingStats() {
+export async function getTrainingStats(): Promise<TrainingStats> {
   const db = await getDb();
-  const totals = await db.getFirstAsync<{
-    sessions: number;
-    minutes: number;
-    scoreSum: number;
-  }>(
-    `SELECT COUNT(*) as sessions,
-            COALESCE(SUM(durationSec), 0) / 60.0 as minutes,
-            COALESCE(SUM(score), 0) as scoreSum
-     FROM sessions`,
-  );
-
-  const days = await db.getAllAsync<{ day: string }>(
-    `SELECT DISTINCT substr(endedAt, 1, 10) as day
-     FROM sessions
-     ORDER BY day DESC
-     LIMIT 60`,
-  );
-
-  let streak = 0;
-  const daySet = new Set(days.map((d) => d.day));
-  const cursor = new Date();
-  for (let i = 0; i < 60; i += 1) {
-    const key = cursor.toISOString().slice(0, 10);
-    if (daySet.has(key)) {
-      streak += 1;
-      cursor.setDate(cursor.getDate() - 1);
-    } else if (i === 0) {
-      cursor.setDate(cursor.getDate() - 1);
-      continue;
-    } else {
-      break;
-    }
-  }
-
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const today = await db.getFirstAsync<{ seconds: number }>(
-    `SELECT COALESCE(SUM(durationSec), 0) as seconds
-     FROM sessions WHERE substr(endedAt, 1, 10) = ?`,
-    todayKey,
-  );
-
-  return {
-    sessionCount: totals?.sessions ?? 0,
-    totalMinutes: Math.round(totals?.minutes ?? 0),
-    scoreSum: totals?.scoreSum ?? 0,
-    streak,
-    todaySeconds: today?.seconds ?? 0,
-  };
+  const rows = await db.getAllAsync<GameSession>(`SELECT * FROM sessions`);
+  return computeTrainingStats(rows);
 }
