@@ -3,9 +3,19 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-import { colorForEye } from '@/src/anaglyph/palette';
 import type { EyeSide } from '@/src/anaglyph/color';
+import { colorForEye } from '@/src/anaglyph/palette';
 import type { GameSceneProps } from '../types';
+
+type OrbKind = 'wide' | 'shrinkAi' | 'slow';
+
+type Orb = {
+  id: string;
+  kind: OrbKind;
+  x: number;
+  y: number;
+  vy: number;
+};
 
 type State = {
   playerX: number;
@@ -14,10 +24,14 @@ type State = {
   ballY: number;
   vx: number;
   vy: number;
-  score: number;
+  playerScore: number;
+  aiScore: number;
   rally: number;
   bestRally: number;
+  serveToPlayer: boolean;
 };
+
+let orbSeq = 0;
 
 export function PongGame({
   width,
@@ -28,115 +42,228 @@ export function PongGame({
   onScore,
   onGameOver,
 }: GameSceneProps) {
-  const paddleW = Math.min(140, width * 0.28) * Number(settings.paddleSize ?? 1);
+  const basePaddleW = Math.min(140, width * 0.28) * Number(settings.paddleSize ?? 1);
   const paddleH = 14;
   const ballR = 9;
-  const speed = 220 * Number(settings.speed ?? 1);
+  const baseSpeed = 220 * Number(settings.speed ?? 1);
+  const pointsToWin = Number(settings.pointsToWin ?? 7);
+  const aiDifficulty = String(settings.aiDifficulty ?? 'medium');
+  const aiLead =
+    aiDifficulty === 'hard' ? 0.85 : aiDifficulty === 'easy' ? 0.25 : 0.55;
+  const aiError =
+    aiDifficulty === 'hard' ? 8 : aiDifficulty === 'easy' ? 48 : 22;
   const aiSpeed =
-    settings.aiDifficulty === 'hard' ? 280 : settings.aiDifficulty === 'easy' ? 120 : 190;
+    aiDifficulty === 'hard' ? 320 : aiDifficulty === 'easy' ? 140 : 210;
 
   const paddleEye = (settings.paddleEye as EyeSide) || 'left';
   const ballEye = (settings.ballEye as EyeSide) || 'right';
   const paddleColor = colorForEye(palette, paddleEye);
   const ballColor = colorForEye(palette, ballEye);
+  const boardBg = palette.background;
+  const neutral = palette.neutral;
 
   const [state, setState] = useState<State>(() => ({
-    playerX: width / 2 - paddleW / 2,
-    aiX: width / 2 - paddleW / 2,
+    playerX: width / 2 - basePaddleW / 2,
+    aiX: width / 2 - basePaddleW / 2,
     ballX: width / 2,
     ballY: height / 2,
-    vx: speed * (Math.random() > 0.5 ? 1 : -1) * 0.55,
-    vy: -speed,
-    score: 0,
+    vx: baseSpeed * (Math.random() > 0.5 ? 1 : -1) * 0.55,
+    vy: -baseSpeed,
+    playerScore: 0,
+    aiScore: 0,
     rally: 0,
     bestRally: 0,
+    serveToPlayer: true,
   }));
+  const [orbs, setOrbs] = useState<Orb[]>([]);
+  const [wideUntil, setWideUntil] = useState(0);
+  const [shrinkAiUntil, setShrinkAiUntil] = useState(0);
+  const [slowUntil, setSlowUntil] = useState(0);
 
   const startMs = useRef(Date.now());
   const ended = useRef(false);
   const pointerX = useRef(width / 2);
   const stateRef = useRef(state);
+  const orbsRef = useRef(orbs);
+  const wideRef = useRef(wideUntil);
+  const shrinkRef = useRef(shrinkAiUntil);
+  const slowRef = useRef(slowUntil);
+  const orbTimer = useRef(0);
   stateRef.current = state;
+  orbsRef.current = orbs;
+  wideRef.current = wideUntil;
+  shrinkRef.current = shrinkAiUntil;
+  slowRef.current = slowUntil;
 
   useEffect(() => {
-    onScore(state.score, state.bestRally);
-  }, [onScore, state.bestRally, state.score]);
+    onScore(state.playerScore, state.bestRally);
+  }, [onScore, state.bestRally, state.playerScore]);
 
   useEffect(() => {
     if (paused || ended.current) return;
     let frame = 0;
     let last = Date.now();
+
+    const resetBall = (toPlayer: boolean, s: State): State => {
+      const speed = baseSpeed;
+      return {
+        ...s,
+        ballX: width / 2,
+        ballY: height / 2,
+        vx: speed * (Math.random() > 0.5 ? 1 : -1) * 0.55,
+        vy: toPlayer ? speed : -speed,
+        rally: 0,
+        serveToPlayer: toPlayer,
+      };
+    };
+
     const tick = () => {
+      if (ended.current) return;
       const now = Date.now();
       const dt = Math.min(0.032, (now - last) / 1000);
       last = now;
 
-      let { playerX, aiX, ballX, ballY, vx, vy, score, rally, bestRally } = stateRef.current;
-      playerX = Math.max(0, Math.min(width - paddleW, pointerX.current - paddleW / 2));
+      const isWide = now < wideRef.current;
+      const isShrinkAi = now < shrinkRef.current;
+      const isSlow = now < slowRef.current;
+      const playerW = basePaddleW * (isWide ? 1.45 : 1);
+      const aiW = basePaddleW * (isShrinkAi ? 0.65 : 1);
+      const moveScale = isSlow ? 0.6 : 1;
 
-      const aiTarget = ballX - paddleW / 2;
-      if (aiX < aiTarget) aiX = Math.min(aiTarget, aiX + aiSpeed * dt);
-      if (aiX > aiTarget) aiX = Math.max(aiTarget, aiX - aiSpeed * dt);
-      aiX = Math.max(0, Math.min(width - paddleW, aiX));
+      let s = { ...stateRef.current };
+      s.playerX = Math.max(0, Math.min(width - playerW, pointerX.current - playerW / 2));
 
-      ballX += vx * dt;
-      ballY += vy * dt;
+      // Predictive AI with error
+      const predictX = s.ballX + s.vx * aiLead * (height / Math.max(80, Math.abs(s.vy)));
+      const aiTarget = predictX - aiW / 2 + (Math.random() - 0.5) * aiError;
+      if (s.aiX < aiTarget) s.aiX = Math.min(aiTarget, s.aiX + aiSpeed * dt);
+      if (s.aiX > aiTarget) s.aiX = Math.max(aiTarget, s.aiX - aiSpeed * dt);
+      s.aiX = Math.max(0, Math.min(width - aiW, s.aiX));
 
-      if (ballX <= ballR || ballX >= width - ballR) vx *= -1;
-      ballX = Math.max(ballR, Math.min(width - ballR, ballX));
+      const rallyBoost = 1 + Math.min(0.75, s.rally * 0.04);
+      s.ballX += s.vx * dt * moveScale * rallyBoost;
+      s.ballY += s.vy * dt * moveScale * rallyBoost;
+
+      if (s.ballX <= ballR || s.ballX >= width - ballR) s.vx *= -1;
+      s.ballX = Math.max(ballR, Math.min(width - ballR, s.ballX));
 
       // AI paddle (top)
-      if (ballY - ballR <= 28 + paddleH && ballY > 20 && ballX >= aiX && ballX <= aiX + paddleW && vy < 0) {
-        vy = Math.abs(vy);
-        vx += (ballX - (aiX + paddleW / 2)) * 3;
-        rally += 1;
-        bestRally = Math.max(bestRally, rally);
+      if (
+        s.ballY - ballR <= 28 + paddleH &&
+        s.ballY > 20 &&
+        s.ballX >= s.aiX &&
+        s.ballX <= s.aiX + aiW &&
+        s.vy < 0
+      ) {
+        s.vy = Math.abs(s.vy);
+        s.vx += (s.ballX - (s.aiX + aiW / 2)) * 3;
+        s.rally += 1;
+        s.bestRally = Math.max(s.bestRally, s.rally);
       }
 
       // Player paddle (bottom)
       if (
-        ballY + ballR >= height - 36 - paddleH &&
-        ballY < height - 20 &&
-        ballX >= playerX &&
-        ballX <= playerX + paddleW &&
-        vy > 0
+        s.ballY + ballR >= height - 36 - paddleH &&
+        s.ballY < height - 20 &&
+        s.ballX >= s.playerX &&
+        s.ballX <= s.playerX + playerW &&
+        s.vy > 0
       ) {
-        vy = -Math.abs(vy);
-        vx += (ballX - (playerX + paddleW / 2)) * 3;
-        score += 1;
-        rally += 1;
-        bestRally = Math.max(bestRally, rally);
+        s.vy = -Math.abs(s.vy);
+        s.vx += (s.ballX - (s.playerX + playerW / 2)) * 3;
+        s.rally += 1;
+        s.bestRally = Math.max(s.bestRally, s.rally);
       }
 
-      if (ballY < -40) {
-        // AI missed — player scores, reset ball
-        score += 3;
-        rally = 0;
-        ballX = width / 2;
-        ballY = height / 2;
-        vx = speed * (Math.random() > 0.5 ? 1 : -1) * 0.55;
-        vy = speed;
+      // Scoring
+      if (s.ballY > height + 40) {
+        s.aiScore += 1;
+        if (s.aiScore >= pointsToWin) {
+          stateRef.current = s;
+          setState(s);
+          ended.current = true;
+          onGameOver({
+            score: s.playerScore,
+            bestMetric: s.bestRally,
+            durationSec: Math.round((Date.now() - startMs.current) / 1000),
+          });
+          return;
+        }
+        s = resetBall(true, s);
+      } else if (s.ballY < -40) {
+        s.playerScore += 1;
+        if (s.playerScore >= pointsToWin) {
+          stateRef.current = s;
+          setState(s);
+          ended.current = true;
+          onGameOver({
+            score: s.playerScore,
+            bestMetric: s.bestRally,
+            durationSec: Math.round((Date.now() - startMs.current) / 1000),
+          });
+          return;
+        }
+        s = resetBall(false, s);
       }
 
-      const next = { playerX, aiX, ballX, ballY, vx, vy, score, rally, bestRally };
-      stateRef.current = next;
-      setState(next);
-
-      if (ballY > height + 40) {
-        ended.current = true;
-        onGameOver({
-          score,
-          bestMetric: bestRally,
-          durationSec: Math.round((Date.now() - startMs.current) / 1000),
+      // Orbs
+      orbTimer.current += dt;
+      let nextOrbs = orbsRef.current.map((o) => ({ ...o, y: o.y + o.vy * dt }));
+      if (orbTimer.current > 7) {
+        orbTimer.current = 0;
+        orbSeq += 1;
+        const kinds: OrbKind[] = ['wide', 'shrinkAi', 'slow'];
+        nextOrbs.push({
+          id: `orb-${orbSeq}`,
+          kind: kinds[Math.floor(Math.random() * kinds.length)]!,
+          x: 40 + Math.random() * (width - 80),
+          y: height * 0.35,
+          vy: 70 + Math.random() * 40,
         });
-        return;
       }
+      nextOrbs = nextOrbs.filter((o) => {
+        if (o.y > height + 20) return false;
+        const hitBall = Math.hypot(o.x - s.ballX, o.y - s.ballY) < ballR + 12;
+        const hitPaddle =
+          o.y >= height - 36 - paddleH - 8 &&
+          o.y <= height - 20 &&
+          o.x >= s.playerX &&
+          o.x <= s.playerX + playerW;
+        if (!hitBall && !hitPaddle) return true;
+        if (o.kind === 'wide') {
+          wideRef.current = now + 8000;
+          setWideUntil(wideRef.current);
+        } else if (o.kind === 'shrinkAi') {
+          shrinkRef.current = now + 8000;
+          setShrinkAiUntil(shrinkRef.current);
+        } else {
+          slowRef.current = now + 6000;
+          setSlowUntil(slowRef.current);
+        }
+        return false;
+      });
+      orbsRef.current = nextOrbs;
+      setOrbs(nextOrbs);
 
+      stateRef.current = s;
+      setState(s);
       frame = requestAnimationFrame(tick);
     };
+
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [aiSpeed, height, onGameOver, paddleW, paused, speed, width]);
+  }, [
+    aiError,
+    aiLead,
+    aiSpeed,
+    basePaddleW,
+    baseSpeed,
+    height,
+    onGameOver,
+    paused,
+    pointsToWin,
+    width,
+  ]);
 
   const pan = Gesture.Pan()
     .runOnJS(true)
@@ -147,19 +274,32 @@ export function PongGame({
       pointerX.current = e.x;
     });
 
-  const boardBg = palette.background;
+  const now = Date.now();
+  const playerW = basePaddleW * (now < wideUntil ? 1.45 : 1);
+  const aiW = basePaddleW * (now < shrinkAiUntil ? 0.65 : 1);
+
+  // Simple score pips via circles
+  const pip = (n: number, y: number, color: string) =>
+    Array.from({ length: Math.min(n, pointsToWin) }).map((_, i) => (
+      <Circle key={`${y}-${i}`} cx={18 + i * 12} cy={y} r={4} color={color} />
+    ));
 
   return (
     <GestureDetector gesture={pan}>
       <View style={[styles.fill, { backgroundColor: boardBg }]}>
         <Canvas style={{ width, height }}>
           <Rect x={0} y={0} width={width} height={height} color={boardBg} />
-          <Rect x={0} y={height / 2 - 1} width={width} height={2} color={palette.neutral} opacity={0.2} />
-          <Rect x={state.aiX} y={28} width={paddleW} height={paddleH} color={ballColor} />
+          <Rect x={0} y={height / 2 - 1} width={width} height={2} color={neutral} opacity={0.25} />
+          {pip(state.aiScore, 16, ballColor)}
+          {pip(state.playerScore, height - 16, paddleColor)}
+          {orbs.map((o) => (
+            <Circle key={o.id} cx={o.x} cy={o.y} r={11} color={ballColor} opacity={0.75} />
+          ))}
+          <Rect x={state.aiX} y={28} width={aiW} height={paddleH} color={ballColor} />
           <Rect
             x={state.playerX}
             y={height - 36 - paddleH}
-            width={paddleW}
+            width={playerW}
             height={paddleH}
             color={paddleColor}
           />
