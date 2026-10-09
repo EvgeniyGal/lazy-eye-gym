@@ -53,6 +53,16 @@ export function BreakerGame({
   const pointerX = useRef(width / 2);
   const startMs = useRef(Date.now());
   const ended = useRef(false);
+  const ballRef = useRef(ball);
+  const bricksRef = useRef(bricks);
+  const scoreRef = useRef(score);
+  const clearedRef = useRef(cleared);
+  const paddleXRef = useRef(paddleX);
+  ballRef.current = ball;
+  bricksRef.current = bricks;
+  scoreRef.current = score;
+  clearedRef.current = cleared;
+  paddleXRef.current = paddleX;
 
   useEffect(() => {
     onScore(score, cleared);
@@ -67,67 +77,73 @@ export function BreakerGame({
       const dt = Math.min(0.032, (now - last) / 1000);
       last = now;
 
-      setPaddleX(Math.max(0, Math.min(width - paddleW, pointerX.current - paddleW / 2)));
+      const px = Math.max(0, Math.min(width - paddleW, pointerX.current - paddleW / 2));
+      paddleXRef.current = px;
+      setPaddleX(px);
 
-      setBall((b) => {
-        let { x, y, vx, vy } = b;
-        x += vx * dt;
-        y += vy * dt;
-        if (x <= ballR || x >= width - ballR) vx *= -1;
-        if (y <= ballR) vy = Math.abs(vy);
+      let { x, y, vx, vy } = ballRef.current;
+      x += vx * dt;
+      y += vy * dt;
+      if (x <= ballR || x >= width - ballR) vx *= -1;
+      if (y <= ballR) vy = Math.abs(vy);
 
-        const py = height - 40 - paddleH;
-        if (y + ballR >= py && y < py + paddleH && x >= paddleX && x <= paddleX + paddleW && vy > 0) {
-          vy = -Math.abs(vy);
-          vx += (x - (paddleX + paddleW / 2)) * 4;
+      const py = height - 40 - paddleH;
+      if (y + ballR >= py && y < py + paddleH && x >= px && x <= px + paddleW && vy > 0) {
+        vy = -Math.abs(vy);
+        vx += (x - (px + paddleW / 2)) * 4;
+      }
+
+      let hit = false;
+      let nextScore = scoreRef.current;
+      let nextCleared = clearedRef.current;
+      const nextBricks = bricksRef.current.map((brick) => {
+        if (!brick.alive || hit) return brick;
+        if (x >= brick.x && x <= brick.x + brickW && y >= brick.y && y <= brick.y + brickH) {
+          hit = true;
+          nextScore += 20;
+          nextCleared += 1;
+          return { ...brick, alive: false };
         }
-
-        setBricks((prev) => {
-          let hit = false;
-          const next = prev.map((brick) => {
-            if (!brick.alive || hit) return brick;
-            if (
-              x >= brick.x &&
-              x <= brick.x + brickW &&
-              y >= brick.y &&
-              y <= brick.y + brickH
-            ) {
-              hit = true;
-              setScore((s) => s + 20);
-              setCleared((c) => c + 1);
-              return { ...brick, alive: false };
-            }
-            return brick;
-          });
-          if (hit) vy *= -1;
-          if (next.every((br) => !br.alive)) {
-            ended.current = true;
-            onGameOver({
-              score: score + 20,
-              bestMetric: cleared + 1,
-              durationSec: Math.round((Date.now() - startMs.current) / 1000),
-            });
-          }
-          return next;
-        });
-
-        if (y > height + 30) {
-          ended.current = true;
-          onGameOver({
-            score,
-            bestMetric: cleared,
-            durationSec: Math.round((Date.now() - startMs.current) / 1000),
-          });
-        }
-
-        return { x, y, vx, vy };
+        return brick;
       });
+      if (hit) {
+        vy *= -1;
+        scoreRef.current = nextScore;
+        clearedRef.current = nextCleared;
+        bricksRef.current = nextBricks;
+        setScore(nextScore);
+        setCleared(nextCleared);
+        setBricks(nextBricks);
+      }
+
+      ballRef.current = { x, y, vx, vy };
+      setBall({ x, y, vx, vy });
+
+      if (nextBricks.every((br) => !br.alive) && hit) {
+        ended.current = true;
+        onGameOver({
+          score: nextScore,
+          bestMetric: nextCleared,
+          durationSec: Math.round((Date.now() - startMs.current) / 1000),
+        });
+        return;
+      }
+
+      if (y > height + 30) {
+        ended.current = true;
+        onGameOver({
+          score: scoreRef.current,
+          bestMetric: clearedRef.current,
+          durationSec: Math.round((Date.now() - startMs.current) / 1000),
+        });
+        return;
+      }
 
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [brickW, cleared, height, onGameOver, paddleW, paddleX, paused, score, width]);
+  }, [brickW, height, onGameOver, paddleW, paused, width]);
 
   const pan = Gesture.Pan()
     .runOnJS(true)
@@ -138,10 +154,13 @@ export function BreakerGame({
       pointerX.current = e.x;
     });
 
+  const boardBg = palette.background;
+
   return (
     <GestureDetector gesture={pan}>
-      <View style={styles.fill}>
+      <View style={[styles.fill, { backgroundColor: boardBg }]}>
         <Canvas style={{ width, height }}>
+          <Rect x={0} y={0} width={width} height={height} color={boardBg} />
           <Rect x={0} y={0} width={4} height={height} color={paddleColor} opacity={0.5} />
           <Rect x={width - 4} y={0} width={4} height={height} color={paddleColor} opacity={0.5} />
           {bricks.map((b, i) =>

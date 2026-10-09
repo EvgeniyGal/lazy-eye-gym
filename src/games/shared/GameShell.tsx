@@ -96,7 +96,7 @@ export function GameShell({ gameId }: { gameId: GameId }) {
         </Pressable>
       </View>
 
-      <View style={[styles.canvasWrap, { height: canvasH }]}>
+      <View style={[styles.canvasWrap, { height: canvasH, backgroundColor: palette.background }]}>
         <Scene
           gameId={gameId}
           width={width}

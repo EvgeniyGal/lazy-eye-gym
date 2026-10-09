@@ -53,6 +53,12 @@ export function SnakeGame({
   const nextDir = useRef<Point>({ x: 1, y: 0 });
   const startMs = useRef(Date.now());
   const ended = useRef(false);
+  const snakeRef = useRef(snake);
+  const foodRef = useRef(food);
+  const eatenRef = useRef(eaten);
+  snakeRef.current = snake;
+  foodRef.current = food;
+  eatenRef.current = eaten;
 
   useEffect(() => {
     onScore(snake.length, eaten);
@@ -62,45 +68,52 @@ export function SnakeGame({
     if (paused || ended.current) return;
     const id = setInterval(() => {
       dir.current = nextDir.current;
-      setSnake((prev) => {
-        const head = prev[0]!;
-        let nx = head.x + dir.current.x;
-        let ny = head.y + dir.current.y;
-        if (wrap) {
-          nx = (nx + grid) % grid;
-          ny = (ny + grid) % grid;
-        } else if (nx < 0 || ny < 0 || nx >= grid || ny >= grid) {
-          ended.current = true;
-          onGameOver({
-            score: prev.length,
-            bestMetric: eaten,
-            durationSec: Math.round((Date.now() - startMs.current) / 1000),
-          });
-          return prev;
-        }
-        if (prev.some((p) => p.x === nx && p.y === ny)) {
-          ended.current = true;
-          onGameOver({
-            score: prev.length,
-            bestMetric: eaten,
-            durationSec: Math.round((Date.now() - startMs.current) / 1000),
-          });
-          return prev;
-        }
-        const next = [{ x: nx, y: ny }, ...prev];
-        if (nx === food.x && ny === food.y) {
-          setEaten((e) => e + 1);
-          setScore(next.length);
-          setFood(randomFood(grid, next));
-          return next;
-        }
-        next.pop();
+      const prev = snakeRef.current;
+      const head = prev[0]!;
+      let nx = head.x + dir.current.x;
+      let ny = head.y + dir.current.y;
+      if (wrap) {
+        nx = (nx + grid) % grid;
+        ny = (ny + grid) % grid;
+      } else if (nx < 0 || ny < 0 || nx >= grid || ny >= grid) {
+        ended.current = true;
+        onGameOver({
+          score: prev.length,
+          bestMetric: eatenRef.current,
+          durationSec: Math.round((Date.now() - startMs.current) / 1000),
+        });
+        return;
+      }
+      if (prev.some((p) => p.x === nx && p.y === ny)) {
+        ended.current = true;
+        onGameOver({
+          score: prev.length,
+          bestMetric: eatenRef.current,
+          durationSec: Math.round((Date.now() - startMs.current) / 1000),
+        });
+        return;
+      }
+      const next = [{ x: nx, y: ny }, ...prev];
+      const food = foodRef.current;
+      if (nx === food.x && ny === food.y) {
+        const nextFood = randomFood(grid, next);
+        const nextEaten = eatenRef.current + 1;
+        eatenRef.current = nextEaten;
+        foodRef.current = nextFood;
+        snakeRef.current = next;
+        setEaten(nextEaten);
+        setFood(nextFood);
+        setSnake(next);
         setScore(next.length);
-        return next;
-      });
+        return;
+      }
+      next.pop();
+      snakeRef.current = next;
+      setSnake(next);
+      setScore(next.length);
     }, tickMs);
     return () => clearInterval(id);
-  }, [eaten, food.x, food.y, grid, onGameOver, paused, tickMs, wrap]);
+  }, [grid, onGameOver, paused, tickMs, wrap]);
 
   const pan = Gesture.Pan()
     .runOnJS(true)
@@ -115,18 +128,20 @@ export function SnakeGame({
       nextDir.current = d;
     });
 
+  const boardBg = palette.background;
+
   return (
     <GestureDetector gesture={pan}>
-      <View style={styles.fill}>
+      <View style={[styles.fill, { backgroundColor: boardBg }]}>
         <Canvas style={{ width, height }}>
+          <Rect x={0} y={0} width={width} height={height} color={boardBg} />
           <RoundedRect
             x={ox}
             y={oy}
             width={size}
             height={size}
             r={12}
-            color={gridColor}
-            opacity={0.2}
+            color={boardBg}
           />
           {Array.from({ length: grid }).map((_, i) => (
             <React.Fragment key={i}>
@@ -136,7 +151,7 @@ export function SnakeGame({
                 width={1}
                 height={size}
                 color={gridColor}
-                opacity={0.25}
+                opacity={0.45}
               />
               <Rect
                 x={ox}
@@ -144,7 +159,7 @@ export function SnakeGame({
                 width={size}
                 height={1}
                 color={gridColor}
-                opacity={0.25}
+                opacity={0.45}
               />
             </React.Fragment>
           ))}

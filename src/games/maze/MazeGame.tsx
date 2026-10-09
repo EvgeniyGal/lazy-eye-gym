@@ -178,10 +178,13 @@ export function MazeGame({
       }
     });
 
+  const boardBg = palette.background;
+
   return (
     <GestureDetector gesture={pan}>
-      <View style={styles.fill}>
+      <View style={[styles.fill, { backgroundColor: boardBg }]}>
         <Canvas style={{ width, height }}>
+          <Rect x={0} y={0} width={width} height={height} color={boardBg} />
           {maze.map((row, r) =>
             row.map((v, c) =>
               v === 1 ? (
