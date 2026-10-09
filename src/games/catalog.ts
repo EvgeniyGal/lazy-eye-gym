@@ -31,7 +31,7 @@ export const GAMES: GameDefinition[] = [
     shortTitle: '2048',
     tag: 'STRATEGY & FUSION',
     category: 'spatial',
-    blurb: 'Each number tile is randomly red or cyan — fuse both eyes to track merges.',
+    blurb: 'Number tiles are randomly red or cyan; pick a grid eye colour before you start.',
     dichopticSplit: {
       leftLabel: 'Random red tiles',
       rightLabel: 'Random cyan tiles',
@@ -40,6 +40,7 @@ export const GAMES: GameDefinition[] = [
     metricLabel: 'Best tile',
     defaultSettings: {
       difficulty: 'medium',
+      gridEye: 'left',
     },
     fields: [
       {
@@ -50,6 +51,15 @@ export const GAMES: GameDefinition[] = [
           { label: 'Easy', value: 'easy' },
           { label: 'Medium', value: 'medium' },
           { label: 'Hard', value: 'hard' },
+        ],
+      },
+      {
+        key: 'gridEye',
+        label: 'Grid colour (glasses)',
+        type: 'eye',
+        options: [
+          { label: 'Left / Red', value: 'left' },
+          { label: 'Right / Cyan', value: 'right' },
         ],
       },
     ],

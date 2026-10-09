@@ -6,12 +6,15 @@ import {
   matchFont,
 } from '@shopify/react-native-skia';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
 import type { GameSceneProps } from '../types';
+
+const NUMBER_GREEN = '#39ff14';
+const EMPTY_CELL = '#000000';
 
 type Dir = 'up' | 'down' | 'left' | 'right';
 
@@ -226,11 +229,14 @@ export function TwentyFortyEightGame({
   width,
   height,
   palette,
+  settings,
   paused,
   onScore,
   onGameOver,
 }: GameSceneProps) {
-  const [tiles, setTiles] = useState<Tile[]>(() => seedBoard());
+  const initialGridEye = (settings.gridEye as EyeSide) || 'left';
+  const [gridEye, setGridEye] = useState<EyeSide | null>(null);
+  const [tiles, setTiles] = useState<Tile[]>([]);
   const [score, setScore] = useState(0);
   const [busy, setBusy] = useState(false);
   const startMs = useRef(Date.now());
@@ -243,6 +249,7 @@ export function TwentyFortyEightGame({
 
   const leftColor = colorForEye(palette, 'left');
   const rightColor = colorForEye(palette, 'right');
+  const gridColor = gridEye === 'right' ? rightColor : leftColor;
 
   const pad = 16;
   const boardSize = Math.min(width - pad * 2, height - pad * 2);
@@ -251,15 +258,32 @@ export function TwentyFortyEightGame({
   const cell = boardSize / SIZE;
   const gap = 8;
 
-  const font = useMemo(
-    () =>
+  const fonts = useMemo(() => {
+    const family = Platform.select({ ios: 'Helvetica', default: 'sans-serif' })!;
+    const make = (scale: number) =>
       matchFont({
-        fontFamily: Platform.select({ ios: 'Helvetica', default: 'sans-serif' })!,
-        fontSize: cell * 0.28,
-        fontWeight: '700',
-      }),
-    [cell],
-  );
+        fontFamily: family,
+        fontSize: cell * scale,
+        fontWeight: '800',
+      });
+    return {
+      sm: make(0.55),
+      md: make(0.7),
+      // ~3× previous size (was 0.28 × cell)
+      lg: make(0.84),
+    };
+  }, [cell]);
+
+  const startGame = useCallback((eye: EyeSide) => {
+    setGridEye(eye);
+    const seeded = seedBoard();
+    setTiles(seeded);
+    tilesRef.current = seeded;
+    setScore(0);
+    scoreRef.current = 0;
+    startMs.current = Date.now();
+    ended.current = false;
+  }, []);
 
   useEffect(() => {
     onScore(score, maxTile(tiles));
@@ -273,7 +297,7 @@ export function TwentyFortyEightGame({
 
   const applyMove = useCallback(
     (dir: Dir) => {
-      if (paused || ended.current || busy) return;
+      if (!gridEye || paused || ended.current || busy) return;
       const plan = planMove(tilesRef.current, dir);
       if (!plan.changed) return;
 
@@ -330,7 +354,7 @@ export function TwentyFortyEightGame({
 
       frameRef.current = requestAnimationFrame(tick);
     },
-    [busy, onGameOver, paused],
+    [busy, gridEye, onGameOver, paused],
   );
 
   const pan = Gesture.Pan()
@@ -343,18 +367,53 @@ export function TwentyFortyEightGame({
       else applyMove(e.translationY > 0 ? 'down' : 'up');
     });
 
+  if (!gridEye) {
+    return (
+      <View style={[styles.fill, styles.chooser]}>
+        <Text style={styles.chooserTitle}>Choose grid colour</Text>
+        <Text style={styles.chooserSub}>
+          Grid lines use one glass channel. Empty cells stay black. Number tiles are solid red or
+          cyan from your glasses.
+        </Text>
+        <View style={styles.chooserRow}>
+          <Pressable
+            style={[styles.chooserBtn, { borderColor: leftColor, backgroundColor: '#0a0a0a' }]}
+            onPress={() => startGame('left')}
+          >
+            <View style={[styles.swatch, { backgroundColor: leftColor }]} />
+            <Text style={styles.chooserBtnText}>Left / Red grid</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.chooserBtn, { borderColor: rightColor, backgroundColor: '#0a0a0a' }]}
+            onPress={() => startGame('right')}
+          >
+            <View style={[styles.swatch, { backgroundColor: rightColor }]} />
+            <Text style={styles.chooserBtnText}>Right / Cyan grid</Text>
+          </Pressable>
+        </View>
+        <Pressable style={styles.defaultHint} onPress={() => startGame(initialGridEye)}>
+          <Text style={styles.defaultHintText}>
+            Use last setup ({initialGridEye === 'left' ? 'Left / Red' : 'Right / Cyan'})
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <GestureDetector gesture={pan}>
       <View style={styles.fill}>
         <Canvas style={{ width, height }}>
+          {/* Grid background = chosen glass colour; gaps show through as the grid */}
           <RoundedRect
             x={originX}
             y={originY}
             width={boardSize}
             height={boardSize}
             r={16}
-            color="#171f33"
+            color={gridColor}
           />
+          {/* Empty cells — black */}
           {Array.from({ length: SIZE * SIZE }).map((_, i) => {
             const r = Math.floor(i / SIZE);
             const c = i % SIZE;
@@ -366,25 +425,30 @@ export function TwentyFortyEightGame({
                 width={cell - gap}
                 height={cell - gap}
                 r={10}
-                color="#2d3449"
+                color={EMPTY_CELL}
               />
             );
           })}
+          {/* Number tiles — solid glass colours, no outline */}
           {tiles.map((tile) => {
             const x = originX + tile.x * cell + gap / 2;
             const y = originY + tile.y * cell + gap / 2;
             const w = cell - gap;
             const fill = tile.eye === 'left' ? leftColor : rightColor;
             const label = String(tile.value);
+            const font =
+              label.length >= 4 ? fonts.sm : label.length === 3 ? fonts.md : fonts.lg;
+            const fontSize = cell * (label.length >= 4 ? 0.55 : label.length === 3 ? 0.7 : 0.84);
+            const textWidth = label.length * fontSize * 0.52;
             return (
               <Group key={tile.id}>
                 <RoundedRect x={x} y={y} width={w} height={w} r={10} color={fill} />
                 <SkText
-                  x={x + w / 2 - label.length * cell * 0.08}
-                  y={y + w / 2 + cell * 0.1}
+                  x={x + w / 2 - textWidth / 2}
+                  y={y + w / 2 + fontSize * 0.35}
                   text={label}
                   font={font}
-                  color="#0b1326"
+                  color={NUMBER_GREEN}
                 />
               </Group>
             );
@@ -397,4 +461,56 @@ export function TwentyFortyEightGame({
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  chooser: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    gap: 16,
+    backgroundColor: '#000000',
+  },
+  chooserTitle: {
+    color: '#dae2fd',
+    fontSize: 22,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  chooserSub: {
+    color: '#b9cacb',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  chooserRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  chooserBtn: {
+    flex: 1,
+    borderWidth: 2,
+    borderRadius: 16,
+    paddingVertical: 20,
+    alignItems: 'center',
+    gap: 10,
+  },
+  swatch: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+  },
+  chooserBtnText: {
+    color: '#dae2fd',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  defaultHint: {
+    marginTop: 8,
+    padding: 10,
+  },
+  defaultHintText: {
+    color: '#849495',
+    fontSize: 13,
+    fontWeight: '600',
+  },
 });
