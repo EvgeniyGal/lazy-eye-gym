@@ -70,10 +70,10 @@ export const GAMES: GameDefinition[] = [
     shortTitle: 'Pong',
     tag: 'DYNAMIC TRACKING',
     category: 'reflex',
-    blurb: 'Pick a level — ball speed, paddle size, points, and AI are bundled. Power orbs keep fusion sharp.',
+    blurb: 'Level presets plus mid-court power orbs (+ grow, − shrink rival, » turbo, ↻ reverse) either side can grab.',
     dichopticSplit: {
       leftLabel: 'Player paddle',
-      rightLabel: 'Ball, AI & orbs',
+      rightLabel: 'Ball, AI & labeled orbs',
     },
     recordLabel: 'Best score',
     metricLabel: 'Longest rally',

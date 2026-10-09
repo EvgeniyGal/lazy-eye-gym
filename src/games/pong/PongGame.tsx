@@ -1,20 +1,39 @@
-import { Canvas, Circle, Rect } from '@shopify/react-native-skia';
-import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import {
+  Canvas,
+  Circle,
+  Group,
+  Rect,
+  Text as SkText,
+  matchFont,
+} from '@shopify/react-native-skia';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
 import type { GameSceneProps } from '../types';
 
-type OrbKind = 'wide' | 'shrinkAi' | 'slow';
+/** Power-ups both paddles can grab to trick each other. */
+type OrbKind = 'grow' | 'shrink' | 'turbo' | 'reverse';
+
+type Side = 'player' | 'ai';
 
 type Orb = {
   id: string;
   kind: OrbKind;
   x: number;
   y: number;
+  vx: number;
   vy: number;
+};
+
+type Buffs = {
+  playerWideUntil: number;
+  aiWideUntil: number;
+  playerShrinkUntil: number;
+  aiShrinkUntil: number;
+  turboUntil: number;
 };
 
 type State = {
@@ -29,6 +48,15 @@ type State = {
   rally: number;
   bestRally: number;
   serveToPlayer: boolean;
+};
+
+const ORB_KINDS: OrbKind[] = ['grow', 'shrink', 'turbo', 'reverse'];
+
+const ORB_GLYPH: Record<OrbKind, string> = {
+  grow: '+',
+  shrink: '−',
+  turbo: '»',
+  reverse: '↻',
 };
 
 let orbSeq = 0;
@@ -68,6 +96,16 @@ function resolveLevel(settings: Record<string, string | number | boolean>): Leve
   return 'easy';
 }
 
+function emptyBuffs(): Buffs {
+  return {
+    playerWideUntil: 0,
+    aiWideUntil: 0,
+    playerShrinkUntil: 0,
+    aiShrinkUntil: 0,
+    turboUntil: 0,
+  };
+}
+
 export function PongGame({
   width,
   height,
@@ -81,6 +119,7 @@ export function PongGame({
   const basePaddleW = Math.min(140, width * 0.28) * level.paddleSize;
   const paddleH = 14;
   const ballR = 9;
+  const orbR = 14;
   const baseSpeed = 220 * level.speed;
   const pointsToWin = level.pointsToWin;
   const aiLead = level.aiLead;
@@ -93,6 +132,18 @@ export function PongGame({
   const ballColor = colorForEye(palette, ballEye);
   const boardBg = palette.background;
   const neutral = palette.neutral;
+  const onLight = boardBg === '#f4f4f4';
+  const glyphColor = onLight ? '#111111' : '#f5f5f5';
+
+  const glyphFont = useMemo(
+    () =>
+      matchFont({
+        fontFamily: Platform.select({ ios: 'Helvetica', default: 'sans-serif' })!,
+        fontSize: 16,
+        fontWeight: '800',
+      }),
+    [],
+  );
 
   const [state, setState] = useState<State>(() => ({
     playerX: width / 2 - basePaddleW / 2,
@@ -108,24 +159,18 @@ export function PongGame({
     serveToPlayer: true,
   }));
   const [orbs, setOrbs] = useState<Orb[]>([]);
-  const [wideUntil, setWideUntil] = useState(0);
-  const [shrinkAiUntil, setShrinkAiUntil] = useState(0);
-  const [slowUntil, setSlowUntil] = useState(0);
+  const [buffs, setBuffs] = useState<Buffs>(() => emptyBuffs());
 
   const startMs = useRef(Date.now());
   const ended = useRef(false);
   const pointerX = useRef(width / 2);
   const stateRef = useRef(state);
   const orbsRef = useRef(orbs);
-  const wideRef = useRef(wideUntil);
-  const shrinkRef = useRef(shrinkAiUntil);
-  const slowRef = useRef(slowUntil);
+  const buffsRef = useRef(buffs);
   const orbTimer = useRef(0);
   stateRef.current = state;
   orbsRef.current = orbs;
-  wideRef.current = wideUntil;
-  shrinkRef.current = shrinkAiUntil;
-  slowRef.current = slowUntil;
+  buffsRef.current = buffs;
 
   useEffect(() => {
     onScore(state.playerScore, state.bestRally);
@@ -149,39 +194,74 @@ export function PongGame({
       };
     };
 
+    const applyOrb = (kind: OrbKind, collector: Side, s: State, now: number) => {
+      const b = { ...buffsRef.current };
+      const until = now + 8000;
+      if (kind === 'grow') {
+        if (collector === 'player') b.playerWideUntil = until;
+        else b.aiWideUntil = until;
+      } else if (kind === 'shrink') {
+        // Shrink the opponent — the trick shot
+        if (collector === 'player') b.aiShrinkUntil = until;
+        else b.playerShrinkUntil = until;
+      } else if (kind === 'turbo') {
+        b.turboUntil = now + 6000;
+        // Nudge ball toward the opponent
+        const towardAi = collector === 'player';
+        s.vy = towardAi ? -Math.abs(s.vy) * 1.25 : Math.abs(s.vy) * 1.25;
+        s.vx *= 1.15;
+      } else if (kind === 'reverse') {
+        s.vx *= -1;
+        s.vy *= -1;
+      }
+      buffsRef.current = b;
+      setBuffs(b);
+    };
+
     const tick = () => {
       if (ended.current) return;
       const now = Date.now();
       const dt = Math.min(0.032, (now - last) / 1000);
       last = now;
 
-      const isWide = now < wideRef.current;
-      const isShrinkAi = now < shrinkRef.current;
-      const isSlow = now < slowRef.current;
-      const playerW = basePaddleW * (isWide ? 1.45 : 1);
-      const aiW = basePaddleW * (isShrinkAi ? 0.65 : 1);
-      const moveScale = isSlow ? 0.6 : 1;
+      const b = buffsRef.current;
+      let playerW = basePaddleW;
+      let aiW = basePaddleW;
+      if (now < b.playerWideUntil) playerW *= 1.5;
+      if (now < b.aiWideUntil) aiW *= 1.5;
+      if (now < b.playerShrinkUntil) playerW *= 0.55;
+      if (now < b.aiShrinkUntil) aiW *= 0.55;
+      const turbo = now < b.turboUntil ? 1.35 : 1;
 
       let s = { ...stateRef.current };
       s.playerX = Math.max(0, Math.min(width - playerW, pointerX.current - playerW / 2));
 
-      // Predictive AI with error
-      const predictX = s.ballX + s.vx * aiLead * (height / Math.max(80, Math.abs(s.vy)));
-      const aiTarget = predictX - aiW / 2 + (Math.random() - 0.5) * aiError;
+      // Predictive AI — also steers toward nearby orbs when helpful
+      let aiTargetX = s.ballX + s.vx * aiLead * (height / Math.max(80, Math.abs(s.vy)));
+      const nearbyOrb = orbsRef.current.find(
+        (o) => o.y < height * 0.45 && Math.abs(o.x - (s.aiX + aiW / 2)) < 120,
+      );
+      if (nearbyOrb && Math.random() > 0.35) {
+        aiTargetX = nearbyOrb.x;
+      }
+      const aiTarget = aiTargetX - aiW / 2 + (Math.random() - 0.5) * aiError;
       if (s.aiX < aiTarget) s.aiX = Math.min(aiTarget, s.aiX + aiSpeed * dt);
       if (s.aiX > aiTarget) s.aiX = Math.max(aiTarget, s.aiX - aiSpeed * dt);
       s.aiX = Math.max(0, Math.min(width - aiW, s.aiX));
 
       const rallyBoost = 1 + Math.min(0.75, s.rally * 0.04);
-      s.ballX += s.vx * dt * moveScale * rallyBoost;
-      s.ballY += s.vy * dt * moveScale * rallyBoost;
+      s.ballX += s.vx * dt * turbo * rallyBoost;
+      s.ballY += s.vy * dt * turbo * rallyBoost;
 
       if (s.ballX <= ballR || s.ballX >= width - ballR) s.vx *= -1;
       s.ballX = Math.max(ballR, Math.min(width - ballR, s.ballX));
 
+      const aiPadY = 28;
+      const playerPadY = height - 36 - paddleH;
+
       // AI paddle (top)
       if (
-        s.ballY - ballR <= 28 + paddleH &&
+        s.ballY - ballR <= aiPadY + paddleH &&
         s.ballY > 20 &&
         s.ballX >= s.aiX &&
         s.ballX <= s.aiX + aiW &&
@@ -195,7 +275,7 @@ export function PongGame({
 
       // Player paddle (bottom)
       if (
-        s.ballY + ballR >= height - 36 - paddleH &&
+        s.ballY + ballR >= playerPadY &&
         s.ballY < height - 20 &&
         s.ballX >= s.playerX &&
         s.ballX <= s.playerX + playerW &&
@@ -238,45 +318,66 @@ export function PongGame({
         s = resetBall(false, s);
       }
 
-      // Orbs
+      // Power orbs — drift both ways so either side can claim them
       orbTimer.current += dt;
-      let nextOrbs = orbsRef.current.map((o) => ({ ...o, y: o.y + o.vy * dt }));
-      if (orbTimer.current > 7) {
+      let nextOrbs = orbsRef.current.map((o) => ({
+        ...o,
+        x: o.x + o.vx * dt,
+        y: o.y + o.vy * dt,
+      }));
+      nextOrbs = nextOrbs.map((o) => {
+        if (o.x < orbR || o.x > width - orbR) return { ...o, vx: -o.vx, x: Math.max(orbR, Math.min(width - orbR, o.x)) };
+        return o;
+      });
+
+      if (orbTimer.current > 5.5 && nextOrbs.length < 3) {
         orbTimer.current = 0;
         orbSeq += 1;
-        const kinds: OrbKind[] = ['wide', 'shrinkAi', 'slow'];
+        const towardPlayer = Math.random() > 0.5;
         nextOrbs.push({
           id: `orb-${orbSeq}`,
-          kind: kinds[Math.floor(Math.random() * kinds.length)]!,
-          x: 40 + Math.random() * (width - 80),
-          y: height * 0.35,
-          vy: 70 + Math.random() * 40,
+          kind: ORB_KINDS[Math.floor(Math.random() * ORB_KINDS.length)]!,
+          x: 48 + Math.random() * (width - 96),
+          y: height * 0.5 + (towardPlayer ? -20 : 20),
+          vx: (Math.random() - 0.5) * 60,
+          vy: (towardPlayer ? 1 : -1) * (55 + Math.random() * 45),
         });
       }
+
       nextOrbs = nextOrbs.filter((o) => {
-        if (o.y > height + 20) return false;
-        const hitBall = Math.hypot(o.x - s.ballX, o.y - s.ballY) < ballR + 12;
-        const hitPaddle =
-          o.y >= height - 36 - paddleH - 8 &&
-          o.y <= height - 20 &&
-          o.x >= s.playerX &&
-          o.x <= s.playerX + playerW;
-        if (!hitBall && !hitPaddle) return true;
-        if (o.kind === 'wide') {
-          wideRef.current = now + 8000;
-          setWideUntil(wideRef.current);
-        } else if (o.kind === 'shrinkAi') {
-          shrinkRef.current = now + 8000;
-          setShrinkAiUntil(shrinkRef.current);
-        } else {
-          slowRef.current = now + 6000;
-          setSlowUntil(slowRef.current);
+        if (o.y < -30 || o.y > height + 30) return false;
+
+        const hitPlayer =
+          o.y + orbR >= playerPadY &&
+          o.y - orbR <= playerPadY + paddleH &&
+          o.x >= s.playerX - 4 &&
+          o.x <= s.playerX + playerW + 4;
+        const hitAi =
+          o.y - orbR <= aiPadY + paddleH &&
+          o.y + orbR >= aiPadY &&
+          o.x >= s.aiX - 4 &&
+          o.x <= s.aiX + aiW + 4;
+        const hitBall = Math.hypot(o.x - s.ballX, o.y - s.ballY) < ballR + orbR;
+
+        if (hitPlayer) {
+          applyOrb(o.kind, 'player', s, now);
+          return false;
         }
-        return false;
+        if (hitAi) {
+          applyOrb(o.kind, 'ai', s, now);
+          return false;
+        }
+        if (hitBall) {
+          // Ball claim goes to whoever the ball is moving toward (receiver is at risk / reward)
+          const collector: Side = s.vy > 0 ? 'player' : 'ai';
+          applyOrb(o.kind, collector, s, now);
+          return false;
+        }
+        return true;
       });
+
       orbsRef.current = nextOrbs;
       setOrbs(nextOrbs);
-
       stateRef.current = s;
       setState(s);
       frame = requestAnimationFrame(tick);
@@ -307,10 +408,13 @@ export function PongGame({
     });
 
   const now = Date.now();
-  const playerW = basePaddleW * (now < wideUntil ? 1.45 : 1);
-  const aiW = basePaddleW * (now < shrinkAiUntil ? 0.65 : 1);
+  let playerW = basePaddleW;
+  let aiW = basePaddleW;
+  if (now < buffs.playerWideUntil) playerW *= 1.5;
+  if (now < buffs.aiWideUntil) aiW *= 1.5;
+  if (now < buffs.playerShrinkUntil) playerW *= 0.55;
+  if (now < buffs.aiShrinkUntil) aiW *= 0.55;
 
-  // Simple score pips via circles
   const pip = (n: number, y: number, color: string) =>
     Array.from({ length: Math.min(n, pointsToWin) }).map((_, i) => (
       <Circle key={`${y}-${i}`} cx={18 + i * 12} cy={y} r={4} color={color} />
@@ -324,9 +428,25 @@ export function PongGame({
           <Rect x={0} y={height / 2 - 1} width={width} height={2} color={neutral} opacity={0.25} />
           {pip(state.aiScore, 16, ballColor)}
           {pip(state.playerScore, height - 16, paddleColor)}
-          {orbs.map((o) => (
-            <Circle key={o.id} cx={o.x} cy={o.y} r={11} color={ballColor} opacity={0.75} />
-          ))}
+
+          {orbs.map((o) => {
+            const glyph = ORB_GLYPH[o.kind];
+            const tw = glyphFont.measureText(glyph).width;
+            return (
+              <Group key={o.id}>
+                <Circle cx={o.x} cy={o.y} r={orbR} color={ballColor} opacity={0.9} />
+                <Circle cx={o.x} cy={o.y} r={orbR - 3} color={boardBg} opacity={0.92} />
+                <SkText
+                  x={o.x - tw / 2}
+                  y={o.y + 6}
+                  text={glyph}
+                  font={glyphFont}
+                  color={glyphColor}
+                />
+              </Group>
+            );
+          })}
+
           <Rect x={state.aiX} y={28} width={aiW} height={paddleH} color={ballColor} />
           <Rect
             x={state.playerX}
