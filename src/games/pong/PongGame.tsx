@@ -118,17 +118,16 @@ function OrbIcon({
   }
   if (kind === 'turbo') {
     // Two chevrons » pointing right
-    const chevron = (ox: number) => {
-      const p = Skia.Path.Make();
-      p.moveTo(cx + ox - 4, cy - 8);
-      p.lineTo(cx + ox + 4, cy);
-      p.lineTo(cx + ox - 4, cy + 8);
-      p.lineTo(cx + ox - 1, cy + 8);
-      p.lineTo(cx + ox + 7, cy);
-      p.lineTo(cx + ox - 1, cy - 8);
-      p.close();
-      return p;
-    };
+    const chevron = (ox: number) =>
+      Skia.PathBuilder.Make()
+        .moveTo(cx + ox - 4, cy - 8)
+        .lineTo(cx + ox + 4, cy)
+        .lineTo(cx + ox - 4, cy + 8)
+        .lineTo(cx + ox - 1, cy + 8)
+        .lineTo(cx + ox + 7, cy)
+        .lineTo(cx + ox - 1, cy - 8)
+        .close()
+        .detach();
     return (
       <Group>
         <Path path={chevron(-5)} color={cut} />
@@ -137,18 +136,19 @@ function OrbIcon({
     );
   }
   // reverse — ring + two arrowheads (cutout)
-  const ring = Skia.Path.Make();
-  ring.addCircle(cx, cy, 7.5);
-  const tipA = Skia.Path.Make();
-  tipA.moveTo(cx + 6, cy - 6);
-  tipA.lineTo(cx + 11, cy - 1);
-  tipA.lineTo(cx + 4, cy + 1);
-  tipA.close();
-  const tipB = Skia.Path.Make();
-  tipB.moveTo(cx - 6, cy + 6);
-  tipB.lineTo(cx - 11, cy + 1);
-  tipB.lineTo(cx - 4, cy - 1);
-  tipB.close();
+  const ring = Skia.PathBuilder.Make().addCircle(cx, cy, 7.5).detach();
+  const tipA = Skia.PathBuilder.Make()
+    .moveTo(cx + 6, cy - 6)
+    .lineTo(cx + 11, cy - 1)
+    .lineTo(cx + 4, cy + 1)
+    .close()
+    .detach();
+  const tipB = Skia.PathBuilder.Make()
+    .moveTo(cx - 6, cy + 6)
+    .lineTo(cx - 11, cy + 1)
+    .lineTo(cx - 4, cy - 1)
+    .close()
+    .detach();
   return (
     <Group>
       <Path path={ring} color={cut} style="stroke" strokeWidth={3.5} />

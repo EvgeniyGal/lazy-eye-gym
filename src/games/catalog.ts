@@ -119,16 +119,17 @@ export const GAMES: GameDefinition[] = [
     shortTitle: 'Maze',
     tag: 'SPATIAL PURSUIT',
     category: 'spatial',
-    blurb: 'Pac-Man maze with power pellets, fruit, tunnel wrap, and four ghost behaviours.',
+    blurb: 'Larger tiles, camera follows Pac-Man, chomping mouth, and optional game sounds.',
     dichopticSplit: {
       leftLabel: 'Maze walls',
-      rightLabel: 'Pellets, fruit, player & ghosts',
+      rightLabel: 'Pellets, fruit, Pac-Man & ghosts',
     },
     recordLabel: 'Best score',
     metricLabel: 'Level reached',
     defaultSettings: {
       speed: 1,
       lives: 3,
+      sound: true,
       wallEye: 'left',
       actorEye: 'right',
     },
@@ -148,6 +149,11 @@ export const GAMES: GameDefinition[] = [
         min: 1,
         max: 5,
         step: 1,
+      },
+      {
+        key: 'sound',
+        label: 'Game sounds',
+        type: 'toggle',
       },
       {
         key: 'wallEye',

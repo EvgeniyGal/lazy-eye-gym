@@ -45,7 +45,8 @@
           "color": "#00f0ff",
           "defaultChannel": "lazyeye-reminders"
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true
