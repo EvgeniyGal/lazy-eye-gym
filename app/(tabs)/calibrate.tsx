@@ -43,17 +43,15 @@ export default function CalibrateScreen() {
     const next = { ...prefs, ...patch };
     updatePrefs(patch);
     const result = await syncReminders(next);
-    if (!result.ok && result.message) {
-      setReminderNote(result.message);
-      if ('remindersEnabled' in patch && patch.remindersEnabled) {
-        updatePrefs({ remindersEnabled: false });
-      }
-    } else if (next.remindersEnabled) {
+    if (result.ok && next.remindersEnabled) {
       setReminderNote(
         `Reminder set for ${formatClock(next.reminderHour, next.reminderMinute)} (${next.reminderFrequency}).`,
       );
-    } else {
+    } else if (result.ok) {
       setReminderNote('Reminders turned off.');
+    } else {
+      // Keep prefs (including enabled) so settings survive; scheduling may need a dev build.
+      setReminderNote(result.message ?? 'Could not schedule reminder.');
     }
   };
 

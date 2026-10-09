@@ -1,58 +1,28 @@
-import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 import type { AppPrefs } from '@/src/anaglyph/types';
 
 const CHANNEL_ID = 'lazyeye-reminders';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+type NotificationsModule = typeof import('expo-notifications');
 
-async function ensureAndroidChannel() {
-  if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-    name: 'Training reminders',
-    importance: Notifications.AndroidImportance.DEFAULT,
-  });
-}
-
-async function requestPermission(): Promise<boolean> {
-  if (Platform.OS === 'web') return false;
-  void Device.isDevice;
-
-  const current = await Notifications.getPermissionsAsync();
-  if (current.granted || current.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) {
-    return true;
-  }
-  const asked = await Notifications.requestPermissionsAsync();
+function isExpoGo() {
   return (
-    asked.granted || asked.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL
+    Constants.appOwnership === 'expo' ||
+    Constants.executionEnvironment === 'storeClient'
   );
 }
 
-async function cancelReminderNotifications() {
-  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-  await Promise.all(
-    scheduled
-      .filter((item) => item.identifier.startsWith('lazyeye-reminder'))
-      .map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)),
-  );
-}
-
-function content() {
-  return {
-    title: 'Time for LazyEye Gym?',
-    body: 'A short dichoptic session when you are ready — play any game you like.',
-    sound: true as const,
-    ...(Platform.OS === 'android' ? { channelId: CHANNEL_ID } : {}),
-  };
+async function loadNotifications(): Promise<NotificationsModule | null> {
+  if (Platform.OS === 'web' || isExpoGo()) {
+    return null;
+  }
+  try {
+    return await import('expo-notifications');
+  } catch {
+    return null;
+  }
 }
 
 function atHourMinute(base: Date, hour: number, minute: number) {
@@ -68,7 +38,6 @@ function nextEvery2DayDates(hour: number, minute: number, count: number) {
   if (cursor.getTime() <= now.getTime()) {
     cursor.setDate(cursor.getDate() + 1);
   }
-  // Align so gaps are 2 days from the first upcoming slot
   const dates: Date[] = [];
   for (let i = 0; i < count; i += 1) {
     const d = new Date(cursor);
@@ -83,26 +52,78 @@ export async function syncReminders(prefs: AppPrefs): Promise<{ ok: boolean; mes
     return { ok: false, message: 'Reminders are available on iOS and Android.' };
   }
 
-  await ensureAndroidChannel();
-  await cancelReminderNotifications();
+  if (isExpoGo()) {
+    // expo-notifications throws on import in Expo Go (SDK 53+). Prefs still save.
+    return {
+      ok: false,
+      message:
+        'Reminder preferences are saved. Scheduling needs a development build (not available in Expo Go).',
+    };
+  }
+
+  const Notifications = await loadNotifications();
+  if (!Notifications) {
+    return {
+      ok: false,
+      message: 'Notifications are unavailable on this install. Use a development build.',
+    };
+  }
+
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
+      name: 'Training reminders',
+      importance: Notifications.AndroidImportance.DEFAULT,
+    });
+  }
+
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(
+    scheduled
+      .filter((item) => item.identifier.startsWith('lazyeye-reminder'))
+      .map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)),
+  );
 
   if (!prefs.remindersEnabled) {
     return { ok: true };
   }
 
-  const allowed = await requestPermission();
+  const current = await Notifications.getPermissionsAsync();
+  let allowed =
+    current.granted ||
+    current.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
+  if (!allowed) {
+    const asked = await Notifications.requestPermissionsAsync();
+    allowed =
+      asked.granted ||
+      asked.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
+  }
   if (!allowed) {
     return { ok: false, message: 'Notification permission was denied.' };
   }
 
   const hour = Math.min(23, Math.max(0, Math.round(prefs.reminderHour)));
   const minute = Math.min(59, Math.max(0, Math.round(prefs.reminderMinute)));
+  const content = {
+    title: 'Time for LazyEye Gym?',
+    body: 'A short dichoptic session when you are ready — play any game you like.',
+    sound: true as const,
+    ...(Platform.OS === 'android' ? { channelId: CHANNEL_ID } : {}),
+  };
 
   try {
     if (prefs.reminderFrequency === 'daily') {
       await Notifications.scheduleNotificationAsync({
         identifier: 'lazyeye-reminder-daily',
-        content: content(),
+        content,
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
           hour,
@@ -112,7 +133,7 @@ export async function syncReminders(prefs: AppPrefs): Promise<{ ok: boolean; mes
     } else if (prefs.reminderFrequency === 'weekly') {
       await Notifications.scheduleNotificationAsync({
         identifier: 'lazyeye-reminder-weekly',
-        content: content(),
+        content,
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
           weekday: 1,
@@ -124,7 +145,7 @@ export async function syncReminders(prefs: AppPrefs): Promise<{ ok: boolean; mes
       for (let weekday = 2; weekday <= 6; weekday += 1) {
         await Notifications.scheduleNotificationAsync({
           identifier: `lazyeye-reminder-weekday-${weekday}`,
-          content: content(),
+          content,
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
             weekday,
@@ -139,7 +160,7 @@ export async function syncReminders(prefs: AppPrefs): Promise<{ ok: boolean; mes
         dates.map((date, index) =>
           Notifications.scheduleNotificationAsync({
             identifier: `lazyeye-reminder-every2days-${index}`,
-            content: content(),
+            content,
             trigger: {
               type: Notifications.SchedulableTriggerInputTypes.DATE,
               date,
