@@ -251,21 +251,37 @@ export function TwentyFortyEightGame({
   const originY = (height - boardSize) / 2;
   const cell = boardSize / SIZE;
   const gap = 8;
+  const tileInner = cell - gap;
 
-  const fonts = useMemo(() => {
+  /** Font size as a fraction of the tile so 1–4+ digit values stay inside. */
+  const fontsByDigits = useMemo(() => {
     const family = Platform.select({ ios: 'Helvetica', default: 'sans-serif' })!;
-    const make = (scale: number) =>
-      matchFont({
-        fontFamily: family,
-        fontSize: cell * scale,
-        fontWeight: '800',
-      });
-    return {
-      sm: make(0.55),
-      md: make(0.7),
-      lg: make(0.84),
+    const scales: Record<number, number> = {
+      1: 0.62,
+      2: 0.44,
+      3: 0.33,
+      4: 0.25,
+      5: 0.2,
     };
-  }, [cell]);
+    const make = (digits: number) => {
+      const fontSize = tileInner * (scales[digits] ?? scales[5]!);
+      return {
+        font: matchFont({
+          fontFamily: family,
+          fontSize,
+          fontWeight: '800',
+        }),
+        fontSize,
+      };
+    };
+    return {
+      1: make(1),
+      2: make(2),
+      3: make(3),
+      4: make(4),
+      5: make(5),
+    };
+  }, [tileInner]);
 
   const startGame = useCallback((eye: EyeSide) => {
     setGridEye(eye);
@@ -431,17 +447,16 @@ export function TwentyFortyEightGame({
           {tiles.map((tile) => {
             const x = originX + tile.x * cell + gap / 2;
             const y = originY + tile.y * cell + gap / 2;
-            const w = cell - gap;
+            const w = tileInner;
             const label = String(tile.value);
-            const font =
-              label.length >= 4 ? fonts.sm : label.length === 3 ? fonts.md : fonts.lg;
-            const fontSize = cell * (label.length >= 4 ? 0.55 : label.length === 3 ? 0.7 : 0.84);
-            const textWidth = label.length * fontSize * 0.52;
+            const digitKey = Math.min(5, Math.max(1, label.length));
+            const { font, fontSize } = fontsByDigits[digitKey as 1 | 2 | 3 | 4 | 5];
+            const textWidth = font.measureText(label).width;
             return (
               <Group key={tile.id}>
                 <RoundedRect x={x} y={y} width={w} height={w} r={10} color={tileColor} />
                 <SkText
-                  x={x + w / 2 - textWidth / 2}
+                  x={x + (w - textWidth) / 2}
                   y={y + w / 2 + fontSize * 0.35}
                   text={label}
                   font={font}
