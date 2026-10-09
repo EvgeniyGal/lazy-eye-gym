@@ -380,7 +380,7 @@ export function BreakerGame({
   return (
     <GestureDetector gesture={pan}>
       <View style={[styles.fill, { backgroundColor: boardBg }]}>
-        <Canvas style={{ width, height }}>
+        <Canvas style={{ width, height, backgroundColor: boardBg }}>
           <Rect x={0} y={0} width={width} height={height} color={boardBg} />
           <Rect x={0} y={0} width={4} height={height} color={paddleColor} opacity={0.5} />
           <Rect x={width - 4} y={0} width={4} height={height} color={paddleColor} opacity={0.5} />

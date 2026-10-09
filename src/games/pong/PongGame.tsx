@@ -33,6 +33,41 @@ type State = {
 
 let orbSeq = 0;
 
+const LEVELS = {
+  easy: {
+    speed: 0.75,
+    paddleSize: 1.35,
+    pointsToWin: 5,
+    aiLead: 0.22,
+    aiError: 52,
+    aiSpeed: 130,
+  },
+  hard: {
+    speed: 1.15,
+    paddleSize: 1.0,
+    pointsToWin: 7,
+    aiLead: 0.6,
+    aiError: 18,
+    aiSpeed: 230,
+  },
+  extraHard: {
+    speed: 1.5,
+    paddleSize: 0.78,
+    pointsToWin: 9,
+    aiLead: 0.9,
+    aiError: 6,
+    aiSpeed: 340,
+  },
+} as const;
+
+type LevelKey = keyof typeof LEVELS;
+
+function resolveLevel(settings: Record<string, string | number | boolean>): LevelKey {
+  const raw = String(settings.difficulty ?? 'easy');
+  if (raw === 'hard' || raw === 'extraHard') return raw;
+  return 'easy';
+}
+
 export function PongGame({
   width,
   height,
@@ -42,18 +77,15 @@ export function PongGame({
   onScore,
   onGameOver,
 }: GameSceneProps) {
-  const basePaddleW = Math.min(140, width * 0.28) * Number(settings.paddleSize ?? 1);
+  const level = LEVELS[resolveLevel(settings)];
+  const basePaddleW = Math.min(140, width * 0.28) * level.paddleSize;
   const paddleH = 14;
   const ballR = 9;
-  const baseSpeed = 220 * Number(settings.speed ?? 1);
-  const pointsToWin = Number(settings.pointsToWin ?? 7);
-  const aiDifficulty = String(settings.aiDifficulty ?? 'medium');
-  const aiLead =
-    aiDifficulty === 'hard' ? 0.85 : aiDifficulty === 'easy' ? 0.25 : 0.55;
-  const aiError =
-    aiDifficulty === 'hard' ? 8 : aiDifficulty === 'easy' ? 48 : 22;
-  const aiSpeed =
-    aiDifficulty === 'hard' ? 320 : aiDifficulty === 'easy' ? 140 : 210;
+  const baseSpeed = 220 * level.speed;
+  const pointsToWin = level.pointsToWin;
+  const aiLead = level.aiLead;
+  const aiError = level.aiError;
+  const aiSpeed = level.aiSpeed;
 
   const paddleEye = (settings.paddleEye as EyeSide) || 'left';
   const ballEye = (settings.ballEye as EyeSide) || 'right';
@@ -287,7 +319,7 @@ export function PongGame({
   return (
     <GestureDetector gesture={pan}>
       <View style={[styles.fill, { backgroundColor: boardBg }]}>
-        <Canvas style={{ width, height }}>
+        <Canvas style={{ width, height, backgroundColor: boardBg }}>
           <Rect x={0} y={0} width={width} height={height} color={boardBg} />
           <Rect x={0} y={height / 2 - 1} width={width} height={2} color={neutral} opacity={0.25} />
           {pip(state.aiScore, 16, ballColor)}

@@ -415,7 +415,7 @@ export function TwentyFortyEightGame({
   return (
     <GestureDetector gesture={pan}>
       <View style={[styles.fill, { backgroundColor: boardBg }]}>
-        <Canvas style={{ width, height }}>
+        <Canvas style={{ width, height, backgroundColor: boardBg }}>
           {/* Scene clear — optical profile background */}
           <RoundedRect x={0} y={0} width={width} height={height} r={0} color={boardBg} />
           {/* Grid = chosen eye colour; gaps show optical background */}

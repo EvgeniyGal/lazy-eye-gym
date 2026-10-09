@@ -58,7 +58,10 @@ export default function RootLayout() {
           <Bootstrap>
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
               <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="game/[id]" options={{ animation: 'fade' }} />
+              <Stack.Screen
+                name="game/[id]"
+                options={{ animation: 'fade', contentStyle: { backgroundColor: 'transparent' } }}
+              />
             </Stack>
           </Bootstrap>
         </ThemeProvider>

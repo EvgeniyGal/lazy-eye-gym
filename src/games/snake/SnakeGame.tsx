@@ -217,7 +217,7 @@ export function SnakeGame({
   return (
     <GestureDetector gesture={pan}>
       <View style={[styles.fill, { backgroundColor: boardBg }]}>
-        <Canvas style={{ width, height }}>
+        <Canvas style={{ width, height, backgroundColor: boardBg }}>
           <Rect x={0} y={0} width={width} height={height} color={boardBg} />
           <RoundedRect x={ox} y={oy} width={size} height={size} r={12} color={boardBg} />
           {Array.from({ length: grid }).map((_, i) => (

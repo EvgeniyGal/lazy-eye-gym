@@ -477,7 +477,7 @@ export function MazeGame({
   return (
     <GestureDetector gesture={pan}>
       <View style={[styles.fill, { backgroundColor: boardBg }]}>
-        <Canvas style={{ width, height }}>
+        <Canvas style={{ width, height, backgroundColor: boardBg }}>
           <Rect x={0} y={0} width={width} height={height} color={boardBg} />
           {MAZE.map((row, r) =>
             row.map((v, c) =>

@@ -5,6 +5,7 @@ import { Text, View } from 'react-native';
 import { GameShell } from '@/src/games/shared/GameShell';
 import type { GameId } from '@/src/games/catalog';
 import { getGame } from '@/src/games/catalog';
+import { useAppStore } from '@/src/state/AppStore';
 import { colors, spacing } from '@/src/theme/tokens';
 
 const VALID: GameId[] = ['2048', 'pong', 'maze', 'breaker', 'snake'];
@@ -12,6 +13,7 @@ const VALID: GameId[] = ['2048', 'pong', 'maze', 'breaker', 'snake'];
 export default function GameSessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const gameId = String(id) as GameId;
+  const { palette } = useAppStore();
 
   if (!VALID.includes(gameId) || !getGame(gameId)) {
     return (
@@ -21,5 +23,9 @@ export default function GameSessionScreen() {
     );
   }
 
-  return <GameShell gameId={gameId} />;
+  return (
+    <View style={{ flex: 1, backgroundColor: palette.background }}>
+      <GameShell gameId={gameId} />
+    </View>
+  );
 }
