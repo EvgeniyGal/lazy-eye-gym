@@ -13,7 +13,7 @@ import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
 import type { GameSceneProps } from '../types';
 
-const NUMBER_GREEN = '#39ff14';
+const NUMBER_COLOR = '#000000';
 const EMPTY_CELL = '#000000';
 
 type Dir = 'up' | 'down' | 'left' | 'right';
@@ -448,7 +448,7 @@ export function TwentyFortyEightGame({
                   y={y + w / 2 + fontSize * 0.35}
                   text={label}
                   font={font}
-                  color={NUMBER_GREEN}
+                  color={NUMBER_COLOR}
                 />
               </Group>
             );
