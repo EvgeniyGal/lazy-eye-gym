@@ -1,13 +1,6 @@
-import {
-  Canvas,
-  Circle,
-  Group,
-  Rect,
-  Text as SkText,
-  matchFont,
-} from '@shopify/react-native-skia';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Canvas, Circle, Group, Path, Rect, Skia } from '@shopify/react-native-skia';
+import React, { useEffect, useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import type { EyeSide } from '@/src/anaglyph/color';
@@ -22,6 +15,7 @@ type Side = 'player' | 'ai';
 type Orb = {
   id: string;
   kind: OrbKind;
+  eye: EyeSide;
   x: number;
   y: number;
   vx: number;
@@ -51,13 +45,6 @@ type State = {
 };
 
 const ORB_KINDS: OrbKind[] = ['grow', 'shrink', 'turbo', 'reverse'];
-
-const ORB_GLYPH: Record<OrbKind, string> = {
-  grow: '+',
-  shrink: '−',
-  turbo: '»',
-  reverse: '↻',
-};
 
 let orbSeq = 0;
 
@@ -106,6 +93,71 @@ function emptyBuffs(): Buffs {
   };
 }
 
+/** Cutout icons punched through the solid orb (drawn in optical background). */
+function OrbIcon({
+  kind,
+  cx,
+  cy,
+  cut,
+}: {
+  kind: OrbKind;
+  cx: number;
+  cy: number;
+  cut: string;
+}) {
+  if (kind === 'grow') {
+    return (
+      <Group>
+        <Rect x={cx - 8} y={cy - 2.5} width={16} height={5} r={1.5} color={cut} />
+        <Rect x={cx - 2.5} y={cy - 8} width={5} height={16} r={1.5} color={cut} />
+      </Group>
+    );
+  }
+  if (kind === 'shrink') {
+    return <Rect x={cx - 9} y={cy - 2.5} width={18} height={5} r={1.5} color={cut} />;
+  }
+  if (kind === 'turbo') {
+    // Two chevrons » pointing right
+    const chevron = (ox: number) => {
+      const p = Skia.Path.Make();
+      p.moveTo(cx + ox - 4, cy - 8);
+      p.lineTo(cx + ox + 4, cy);
+      p.lineTo(cx + ox - 4, cy + 8);
+      p.lineTo(cx + ox - 1, cy + 8);
+      p.lineTo(cx + ox + 7, cy);
+      p.lineTo(cx + ox - 1, cy - 8);
+      p.close();
+      return p;
+    };
+    return (
+      <Group>
+        <Path path={chevron(-5)} color={cut} />
+        <Path path={chevron(2)} color={cut} />
+      </Group>
+    );
+  }
+  // reverse — ring + two arrowheads (cutout)
+  const ring = Skia.Path.Make();
+  ring.addCircle(cx, cy, 7.5);
+  const tipA = Skia.Path.Make();
+  tipA.moveTo(cx + 6, cy - 6);
+  tipA.lineTo(cx + 11, cy - 1);
+  tipA.lineTo(cx + 4, cy + 1);
+  tipA.close();
+  const tipB = Skia.Path.Make();
+  tipB.moveTo(cx - 6, cy + 6);
+  tipB.lineTo(cx - 11, cy + 1);
+  tipB.lineTo(cx - 4, cy - 1);
+  tipB.close();
+  return (
+    <Group>
+      <Path path={ring} color={cut} style="stroke" strokeWidth={3.5} />
+      <Path path={tipA} color={cut} />
+      <Path path={tipB} color={cut} />
+    </Group>
+  );
+}
+
 export function PongGame({
   width,
   height,
@@ -119,7 +171,7 @@ export function PongGame({
   const basePaddleW = Math.min(140, width * 0.28) * level.paddleSize;
   const paddleH = 14;
   const ballR = 9;
-  const orbR = 14;
+  const orbR = 20;
   const baseSpeed = 220 * level.speed;
   const pointsToWin = level.pointsToWin;
   const aiLead = level.aiLead;
@@ -127,23 +179,12 @@ export function PongGame({
   const aiSpeed = level.aiSpeed;
 
   const paddleEye = (settings.paddleEye as EyeSide) || 'left';
-  const ballEye = (settings.ballEye as EyeSide) || 'right';
+  const ballEyeSetting = (settings.ballEye as EyeSide) || 'right';
   const paddleColor = colorForEye(palette, paddleEye);
-  const ballColor = colorForEye(palette, ballEye);
+  const leftColor = colorForEye(palette, 'left');
+  const rightColor = colorForEye(palette, 'right');
   const boardBg = palette.background;
   const neutral = palette.neutral;
-  const onLight = boardBg === '#f4f4f4';
-  const glyphColor = onLight ? '#111111' : '#f5f5f5';
-
-  const glyphFont = useMemo(
-    () =>
-      matchFont({
-        fontFamily: Platform.select({ ios: 'Helvetica', default: 'sans-serif' })!,
-        fontSize: 16,
-        fontWeight: '800',
-      }),
-    [],
-  );
 
   const [state, setState] = useState<State>(() => ({
     playerX: width / 2 - basePaddleW / 2,
@@ -160,6 +201,7 @@ export function PongGame({
   }));
   const [orbs, setOrbs] = useState<Orb[]>([]);
   const [buffs, setBuffs] = useState<Buffs>(() => emptyBuffs());
+  const [ballEye, setBallEye] = useState<EyeSide>(ballEyeSetting);
 
   const startMs = useRef(Date.now());
   const ended = useRef(false);
@@ -167,10 +209,15 @@ export function PongGame({
   const stateRef = useRef(state);
   const orbsRef = useRef(orbs);
   const buffsRef = useRef(buffs);
+  const ballEyeRef = useRef(ballEye);
   const orbTimer = useRef(0);
   stateRef.current = state;
   orbsRef.current = orbs;
   buffsRef.current = buffs;
+  ballEyeRef.current = ballEye;
+
+  const ballColor = colorForEye(palette, ballEye);
+  const aiPaddleColor = colorForEye(palette, ballEyeSetting);
 
   useEffect(() => {
     onScore(state.playerScore, state.bestRally);
@@ -194,19 +241,23 @@ export function PongGame({
       };
     };
 
+    const flipBallColor = () => {
+      const next: EyeSide = ballEyeRef.current === 'left' ? 'right' : 'left';
+      ballEyeRef.current = next;
+      setBallEye(next);
+    };
+
     const applyOrb = (kind: OrbKind, collector: Side, s: State, now: number) => {
-      const b = { ...buffsRef.current };
+      const buff = { ...buffsRef.current };
       const until = now + 8000;
       if (kind === 'grow') {
-        if (collector === 'player') b.playerWideUntil = until;
-        else b.aiWideUntil = until;
+        if (collector === 'player') buff.playerWideUntil = until;
+        else buff.aiWideUntil = until;
       } else if (kind === 'shrink') {
-        // Shrink the opponent — the trick shot
-        if (collector === 'player') b.aiShrinkUntil = until;
-        else b.playerShrinkUntil = until;
+        if (collector === 'player') buff.aiShrinkUntil = until;
+        else buff.playerShrinkUntil = until;
       } else if (kind === 'turbo') {
-        b.turboUntil = now + 6000;
-        // Nudge ball toward the opponent
+        buff.turboUntil = now + 6000;
         const towardAi = collector === 'player';
         s.vy = towardAi ? -Math.abs(s.vy) * 1.25 : Math.abs(s.vy) * 1.25;
         s.vx *= 1.15;
@@ -214,8 +265,9 @@ export function PongGame({
         s.vx *= -1;
         s.vy *= -1;
       }
-      buffsRef.current = b;
-      setBuffs(b);
+      buffsRef.current = buff;
+      setBuffs(buff);
+      flipBallColor();
     };
 
     const tick = () => {
@@ -224,19 +276,18 @@ export function PongGame({
       const dt = Math.min(0.032, (now - last) / 1000);
       last = now;
 
-      const b = buffsRef.current;
+      const buff = buffsRef.current;
       let playerW = basePaddleW;
       let aiW = basePaddleW;
-      if (now < b.playerWideUntil) playerW *= 1.5;
-      if (now < b.aiWideUntil) aiW *= 1.5;
-      if (now < b.playerShrinkUntil) playerW *= 0.55;
-      if (now < b.aiShrinkUntil) aiW *= 0.55;
-      const turbo = now < b.turboUntil ? 1.35 : 1;
+      if (now < buff.playerWideUntil) playerW *= 1.5;
+      if (now < buff.aiWideUntil) aiW *= 1.5;
+      if (now < buff.playerShrinkUntil) playerW *= 0.55;
+      if (now < buff.aiShrinkUntil) aiW *= 0.55;
+      const turbo = now < buff.turboUntil ? 1.35 : 1;
 
       let s = { ...stateRef.current };
       s.playerX = Math.max(0, Math.min(width - playerW, pointerX.current - playerW / 2));
 
-      // Predictive AI — also steers toward nearby orbs when helpful
       let aiTargetX = s.ballX + s.vx * aiLead * (height / Math.max(80, Math.abs(s.vy)));
       const nearbyOrb = orbsRef.current.find(
         (o) => o.y < height * 0.45 && Math.abs(o.x - (s.aiX + aiW / 2)) < 120,
@@ -259,7 +310,6 @@ export function PongGame({
       const aiPadY = 28;
       const playerPadY = height - 36 - paddleH;
 
-      // AI paddle (top)
       if (
         s.ballY - ballR <= aiPadY + paddleH &&
         s.ballY > 20 &&
@@ -273,7 +323,6 @@ export function PongGame({
         s.bestRally = Math.max(s.bestRally, s.rally);
       }
 
-      // Player paddle (bottom)
       if (
         s.ballY + ballR >= playerPadY &&
         s.ballY < height - 20 &&
@@ -287,7 +336,6 @@ export function PongGame({
         s.bestRally = Math.max(s.bestRally, s.rally);
       }
 
-      // Scoring
       if (s.ballY > height + 40) {
         s.aiScore += 1;
         if (s.aiScore >= pointsToWin) {
@@ -318,7 +366,6 @@ export function PongGame({
         s = resetBall(false, s);
       }
 
-      // Power orbs — drift both ways so either side can claim them
       orbTimer.current += dt;
       let nextOrbs = orbsRef.current.map((o) => ({
         ...o,
@@ -326,7 +373,9 @@ export function PongGame({
         y: o.y + o.vy * dt,
       }));
       nextOrbs = nextOrbs.map((o) => {
-        if (o.x < orbR || o.x > width - orbR) return { ...o, vx: -o.vx, x: Math.max(orbR, Math.min(width - orbR, o.x)) };
+        if (o.x < orbR || o.x > width - orbR) {
+          return { ...o, vx: -o.vx, x: Math.max(orbR, Math.min(width - orbR, o.x)) };
+        }
         return o;
       });
 
@@ -337,6 +386,7 @@ export function PongGame({
         nextOrbs.push({
           id: `orb-${orbSeq}`,
           kind: ORB_KINDS[Math.floor(Math.random() * ORB_KINDS.length)]!,
+          eye: Math.random() > 0.5 ? 'left' : 'right',
           x: 48 + Math.random() * (width - 96),
           y: height * 0.5 + (towardPlayer ? -20 : 20),
           vx: (Math.random() - 0.5) * 60,
@@ -368,7 +418,6 @@ export function PongGame({
           return false;
         }
         if (hitBall) {
-          // Ball claim goes to whoever the ball is moving toward (receiver is at risk / reward)
           const collector: Side = s.vy > 0 ? 'player' : 'ai';
           applyOrb(o.kind, collector, s, now);
           return false;
@@ -426,28 +475,22 @@ export function PongGame({
         <Canvas style={{ width, height, backgroundColor: boardBg }}>
           <Rect x={0} y={0} width={width} height={height} color={boardBg} />
           <Rect x={0} y={height / 2 - 1} width={width} height={2} color={neutral} opacity={0.25} />
-          {pip(state.aiScore, 16, ballColor)}
+          {pip(state.aiScore, 16, aiPaddleColor)}
           {pip(state.playerScore, height - 16, paddleColor)}
 
           {orbs.map((o) => {
-            const glyph = ORB_GLYPH[o.kind];
-            const tw = glyphFont.measureText(glyph).width;
+            const fill = o.eye === 'left' ? leftColor : rightColor;
             return (
               <Group key={o.id}>
-                <Circle cx={o.x} cy={o.y} r={orbR} color={ballColor} opacity={0.9} />
-                <Circle cx={o.x} cy={o.y} r={orbR - 3} color={boardBg} opacity={0.92} />
-                <SkText
-                  x={o.x - tw / 2}
-                  y={o.y + 6}
-                  text={glyph}
-                  font={glyphFont}
-                  color={glyphColor}
-                />
+                {/* Solid dichoptic disc */}
+                <Circle cx={o.x} cy={o.y} r={orbR} color={fill} />
+                {/* Transparent cutout sign (optical background) */}
+                <OrbIcon kind={o.kind} cx={o.x} cy={o.y} cut={boardBg} />
               </Group>
             );
           })}
 
-          <Rect x={state.aiX} y={28} width={aiW} height={paddleH} color={ballColor} />
+          <Rect x={state.aiX} y={28} width={aiW} height={paddleH} color={aiPaddleColor} />
           <Rect
             x={state.playerX}
             y={height - 36 - paddleH}
