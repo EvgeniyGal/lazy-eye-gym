@@ -95,10 +95,10 @@ export default function HomeScreen() {
         />
 
         <View style={styles.quickRow}>
-          <Pressable style={styles.quick} onPress={() => router.push('/(tabs)/calibrate')}>
-            <Ionicons name="options-outline" size={22} color={colors.primary} />
-            <Text style={styles.quickTitle}>Quick Calibration</Text>
-            <Text style={styles.quickSub}>Tune red/cyan balance</Text>
+          <Pressable style={styles.quick} onPress={() => router.push('/(tabs)/settings')}>
+            <Ionicons name="settings-outline" size={22} color={colors.primary} />
+            <Text style={styles.quickTitle}>Settings</Text>
+            <Text style={styles.quickSub}>Glasses, intensity, reminders</Text>
           </Pressable>
           <Pressable style={styles.quick} onPress={() => router.push('/(tabs)/guide')}>
             <Ionicons name="eye-outline" size={22} color={colors.secondary} />

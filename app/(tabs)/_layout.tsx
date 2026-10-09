@@ -36,10 +36,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="calibrate"
+        name="settings"
         options={{
-          title: 'Calibrate',
-          tabBarIcon: ({ color, size }) => <Ionicons name="options-outline" size={size} color={color} />,
+          title: 'Settings',
+          tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

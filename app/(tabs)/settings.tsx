@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DichopticText } from '@/src/components/DichopticText';
+import { ColorDragSlider } from '@/src/components/ColorDragSlider';
 import {
   Card,
   HeaderBar,
@@ -13,7 +13,8 @@ import {
   Title,
   ToggleRow,
 } from '@/src/components/ui';
-import { backgroundCss } from '@/src/anaglyph/color';
+import { backgroundCss, hslToHex } from '@/src/anaglyph/color';
+import { colorForEye } from '@/src/anaglyph/palette';
 import type { ReminderFrequency } from '@/src/anaglyph/types';
 import { syncReminders } from '@/src/notifications/reminders';
 import { useAppStore } from '@/src/state/AppStore';
@@ -23,7 +24,7 @@ function formatClock(hour: number, minute: number) {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
-export default function CalibrateScreen() {
+export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const {
     prefs,
@@ -33,11 +34,17 @@ export default function CalibrateScreen() {
     setIntensity,
     saveProfile,
     swapEyes,
-    applyRedCyanPreset,
+    palette,
   } = useAppStore();
   const [reminderNote, setReminderNote] = useState<string | null>(null);
 
   const previewBg = backgroundCss(activeProfile.background);
+  const previewOnLight = activeProfile.background === 'white';
+  const previewLabel = previewOnLight ? '#111' : '#eee';
+  const leftColor = hslToHex(activeProfile.leftHue, activeProfile.leftLightness);
+  const rightColor = hslToHex(activeProfile.rightHue, activeProfile.rightLightness);
+  const leftIntensityColor = colorForEye(palette, 'left');
+  const rightIntensityColor = colorForEye(palette, 'right');
 
   const applyReminderPatch = async (patch: Partial<typeof prefs>) => {
     const next = { ...prefs, ...patch };
@@ -50,7 +57,6 @@ export default function CalibrateScreen() {
     } else if (result.ok) {
       setReminderNote('Reminders turned off.');
     } else {
-      // Keep prefs (including enabled) so settings survive; scheduling may need a dev build.
       setReminderNote(result.message ?? 'Could not schedule reminder.');
     }
   };
@@ -58,75 +64,21 @@ export default function CalibrateScreen() {
   return (
     <Screen>
       <View style={{ paddingTop: insets.top }}>
-        <HeaderBar title="Calibrate" />
+        <HeaderBar title="Settings" />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Title>Vision & Anaglyph Setup</Title>
+        <Title>Settings</Title>
         <Subtitle>
-          Personalize your dichoptic contrast balance to defeat lazy eye suppression effectively.
+          Configure glasses colours, dichoptic intensity, and local play reminders.
         </Subtitle>
 
         <Card>
           <Text style={styles.section}>Optical profile</Text>
-          <View style={styles.presetRow}>
-            <Pressable style={styles.preset} onPress={applyRedCyanPreset}>
-              <Text style={styles.presetText}>Red/Cyan</Text>
-            </Pressable>
-            <Pressable
-              style={styles.preset}
-              onPress={() =>
-                saveProfile({
-                  ...activeProfile,
-                  leftHue: 0,
-                  rightHue: 120,
-                  name: 'Red/Green',
-                })
-              }
-            >
-              <Text style={styles.presetText}>Red/Green</Text>
-            </Pressable>
-            <Pressable style={[styles.preset, styles.presetActive]}>
-              <Text style={[styles.presetText, styles.presetTextActive]}>Custom</Text>
-            </Pressable>
-          </View>
+          <Subtitle style={{ marginBottom: spacing.md }}>
+            Set left and right lens colours to match your anaglyph glasses. Drag the bars to adjust.
+          </Subtitle>
 
-          <View style={styles.eyeRow}>
-            <View style={[styles.eyeCard, { borderColor: colors.secondary }]}>
-              <Text style={[styles.eyeLabel, { color: colors.secondary }]}>Left Eye</Text>
-              <Text style={styles.eyeMeta}>Hue {Math.round(activeProfile.leftHue)}°</Text>
-              <Text style={styles.eyeMeta}>Light {Math.round(activeProfile.leftLightness)}%</Text>
-            </View>
-            <View style={[styles.eyeCard, { borderColor: colors.primary }]}>
-              <Text style={[styles.eyeLabel, { color: colors.primary }]}>Right Eye</Text>
-              <Text style={styles.eyeMeta}>Hue {Math.round(activeProfile.rightHue)}°</Text>
-              <Text style={styles.eyeMeta}>Light {Math.round(activeProfile.rightLightness)}%</Text>
-            </View>
-          </View>
-
-          <PrimaryButton label="Swap Eyes" icon="swap-horizontal" onPress={swapEyes} />
-
-          <Text style={[styles.section, { marginTop: spacing.lg }]}>Left hue</Text>
-          <HueStepper
-            value={activeProfile.leftHue}
-            onChange={(leftHue) => saveProfile({ ...activeProfile, leftHue })}
-          />
-          <Text style={styles.section}>Left lightness</Text>
-          <LightStepper
-            value={activeProfile.leftLightness}
-            onChange={(leftLightness) => saveProfile({ ...activeProfile, leftLightness })}
-          />
-          <Text style={styles.section}>Right hue</Text>
-          <HueStepper
-            value={activeProfile.rightHue}
-            onChange={(rightHue) => saveProfile({ ...activeProfile, rightHue })}
-          />
-          <Text style={styles.section}>Right lightness</Text>
-          <LightStepper
-            value={activeProfile.rightLightness}
-            onChange={(rightLightness) => saveProfile({ ...activeProfile, rightLightness })}
-          />
-
-          <Text style={[styles.section, { marginTop: spacing.md }]}>Background</Text>
+          <Text style={styles.section}>Background</Text>
           <Segmented
             options={[
               { label: 'Black', value: 'black' },
@@ -142,35 +94,102 @@ export default function CalibrateScreen() {
             }
           />
 
-          <View style={[styles.preview, { backgroundColor: previewBg }]}>
-            <DichopticText
-              text="Fusion Preview AaBb"
-              colors={activeProfile}
-              background={activeProfile.background}
-              enabled
-              style={styles.previewText}
+          <View style={styles.eyePanel}>
+            <Text style={[styles.eyeTitle, { color: leftColor }]}>Left eye</Text>
+            <ColorDragSlider
+              label="Hue"
+              kind="hue"
+              value={activeProfile.leftHue}
+              min={0}
+              max={360}
+              unit="°"
+              onChange={(leftHue) => saveProfile({ ...activeProfile, leftHue })}
+            />
+            <ColorDragSlider
+              label="Lightness"
+              kind="lightness"
+              value={activeProfile.leftLightness}
+              min={8}
+              max={92}
+              unit="%"
+              onChange={(leftLightness) => saveProfile({ ...activeProfile, leftLightness })}
             />
           </View>
+
+          <View style={[styles.preview, { backgroundColor: previewBg }]}>
+            <View style={styles.circles}>
+              <View style={styles.circleWrap}>
+                <View style={[styles.circle, { backgroundColor: leftColor }]} />
+                <Text style={[styles.circleLabel, { color: previewLabel }]}>Left</Text>
+              </View>
+              <View style={styles.circleWrap}>
+                <View style={[styles.circle, { backgroundColor: rightColor }]} />
+                <Text style={[styles.circleLabel, { color: previewLabel }]}>Right</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.eyePanel}>
+            <Text style={[styles.eyeTitle, { color: rightColor }]}>Right eye</Text>
+            <ColorDragSlider
+              label="Hue"
+              kind="hue"
+              value={activeProfile.rightHue}
+              min={0}
+              max={360}
+              unit="°"
+              onChange={(rightHue) => saveProfile({ ...activeProfile, rightHue })}
+            />
+            <ColorDragSlider
+              label="Lightness"
+              kind="lightness"
+              value={activeProfile.rightLightness}
+              min={8}
+              max={92}
+              unit="%"
+              onChange={(rightLightness) => saveProfile({ ...activeProfile, rightLightness })}
+            />
+          </View>
+
+          <PrimaryButton label="Swap Eyes" icon="swap-horizontal" onPress={swapEyes} />
         </Card>
 
         <Card>
           <Text style={styles.section}>Dichoptic intensity</Text>
           <Subtitle>
-            Dim the dominant eye or boost the amblyopic eye until symbols in both test boxes are
-            equally vivid.
+            Dim the dominant eye or boost the amblyopic eye until both colours feel equally vivid.
+            Preview uses your optical background so glasses filtering matches play.
           </Subtitle>
-          <IntensityRow
-            label="Left eye (red lens)"
-            value={intensity.left}
-            accent={colors.secondary}
-            onChange={(left) => setIntensity({ ...intensity, left })}
-          />
-          <IntensityRow
-            label="Right eye (cyan lens)"
-            value={intensity.right}
-            accent={colors.primary}
-            onChange={(right) => setIntensity({ ...intensity, right })}
-          />
+          <View style={[styles.intensityStage, { backgroundColor: previewBg }]}>
+            <View style={styles.circles}>
+              <View style={styles.circleWrap}>
+                <View style={[styles.circle, { backgroundColor: leftIntensityColor }]} />
+                <Text style={[styles.circleLabel, { color: previewLabel }]}>Left</Text>
+              </View>
+              <View style={styles.circleWrap}>
+                <View style={[styles.circle, { backgroundColor: rightIntensityColor }]} />
+                <Text style={[styles.circleLabel, { color: previewLabel }]}>Right</Text>
+              </View>
+            </View>
+            <IntensityRow
+              label="Left eye"
+              value={intensity.left}
+              fill={leftIntensityColor}
+              solid={leftColor}
+              onLight={previewOnLight}
+              trackBg={previewOnLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.18)'}
+              onChange={(left) => setIntensity({ ...intensity, left })}
+            />
+            <IntensityRow
+              label="Right eye"
+              value={intensity.right}
+              fill={rightIntensityColor}
+              solid={rightColor}
+              onLight={previewOnLight}
+              trackBg={previewOnLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.18)'}
+              onChange={(right) => setIntensity({ ...intensity, right })}
+            />
+          </View>
           <View style={styles.presetRow}>
             <Pressable
               style={styles.preset}
@@ -201,40 +220,6 @@ export default function CalibrateScreen() {
               <Text style={styles.presetText}>Right +20%</Text>
             </Pressable>
           </View>
-        </Card>
-
-        <Card>
-          <Text style={styles.section}>Engine & feedback</Text>
-          <Text style={[styles.section, { marginTop: spacing.md }]}>Drift speed</Text>
-          <Segmented
-            options={[
-              { label: 'Easy', value: 'easy' },
-              { label: 'Medium', value: 'medium' },
-              { label: 'Fast', value: 'fast' },
-            ]}
-            value={prefs.driftSpeed}
-            onChange={(driftSpeed) =>
-              updatePrefs({ driftSpeed: driftSpeed as 'easy' | 'medium' | 'fast' })
-            }
-          />
-          <ToggleRow
-            label="Sound effects"
-            description="Audio cues during play"
-            value={prefs.soundEffects}
-            onChange={(soundEffects) => updatePrefs({ soundEffects })}
-          />
-          <ToggleRow
-            label="Haptic feedback"
-            description="Tactile clicks on fusion events"
-            value={prefs.hapticFeedback}
-            onChange={(hapticFeedback) => updatePrefs({ hapticFeedback })}
-          />
-          <ToggleRow
-            label="Auto-pause on eye strain"
-            description="Nudge to rest about every 20 minutes in-game"
-            value={prefs.autoPauseOnStrain}
-            onChange={(autoPauseOnStrain) => updatePrefs({ autoPauseOnStrain })}
-          />
         </Card>
 
         <Card>
@@ -321,72 +306,86 @@ export default function CalibrateScreen() {
           {reminderNote ? <Text style={styles.reminderNote}>{reminderNote}</Text> : null}
         </Card>
 
-        <Text style={styles.saved}>Settings saved automatically to local ocular profile.</Text>
+        <Card>
+          <Text style={styles.section}>Engine & feedback</Text>
+          <Text style={[styles.section, { marginTop: spacing.md }]}>Drift speed</Text>
+          <Segmented
+            options={[
+              { label: 'Easy', value: 'easy' },
+              { label: 'Medium', value: 'medium' },
+              { label: 'Fast', value: 'fast' },
+            ]}
+            value={prefs.driftSpeed}
+            onChange={(driftSpeed) =>
+              updatePrefs({ driftSpeed: driftSpeed as 'easy' | 'medium' | 'fast' })
+            }
+          />
+          <ToggleRow
+            label="Sound effects"
+            description="Audio cues during play"
+            value={prefs.soundEffects}
+            onChange={(soundEffects) => updatePrefs({ soundEffects })}
+          />
+          <ToggleRow
+            label="Haptic feedback"
+            description="Tactile clicks on fusion events"
+            value={prefs.hapticFeedback}
+            onChange={(hapticFeedback) => updatePrefs({ hapticFeedback })}
+          />
+          <ToggleRow
+            label="Auto-pause on eye strain"
+            description="Nudge to rest about every 20 minutes in-game"
+            value={prefs.autoPauseOnStrain}
+            onChange={(autoPauseOnStrain) => updatePrefs({ autoPauseOnStrain })}
+          />
+        </Card>
+
+        <Text style={styles.saved}>Settings saved automatically on this device.</Text>
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
     </Screen>
   );
 }
 
-function HueStepper({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  return (
-    <View style={styles.stepRow}>
-      <Text style={styles.stepBtn} onPress={() => onChange((value + 350) % 360)}>
-        −
-      </Text>
-      <Text style={styles.stepVal}>{Math.round(value)}°</Text>
-      <Text style={styles.stepBtn} onPress={() => onChange((value + 10) % 360)}>
-        +
-      </Text>
-    </View>
-  );
-}
-
-function LightStepper({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  return (
-    <View style={styles.stepRow}>
-      <Text
-        style={styles.stepBtn}
-        onPress={() => onChange(Math.max(8, value - 5))}
-      >
-        −
-      </Text>
-      <Text style={styles.stepVal}>{Math.round(value)}%</Text>
-      <Text
-        style={styles.stepBtn}
-        onPress={() => onChange(Math.min(92, value + 5))}
-      >
-        +
-      </Text>
-    </View>
-  );
-}
-
 function IntensityRow({
   label,
   value,
-  accent,
+  fill,
+  solid,
+  onLight,
+  trackBg,
   onChange,
 }: {
   label: string;
   value: number;
-  accent: string;
+  fill: string;
+  solid: string;
+  onLight: boolean;
+  trackBg: string;
   onChange: (v: number) => void;
 }) {
+  const chrome = onLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)';
+  const chromeText = onLight ? '#111' : '#f5f5f5';
   return (
-    <View style={{ marginTop: spacing.md }}>
+    <View style={{ marginTop: spacing.md, alignSelf: 'stretch' }}>
       <View style={styles.intensityHead}>
-        <Text style={styles.intensityLabel}>{label}</Text>
-        <Text style={[styles.intensityVal, { color: accent }]}>{value}%</Text>
+        <Text style={[styles.intensityLabel, { color: chromeText }]}>{label}</Text>
+        <Text style={[styles.intensityVal, { color: solid }]}>{value}%</Text>
       </View>
-      <View style={styles.stepRow}>
-        <Text style={styles.stepBtn} onPress={() => onChange(Math.max(0, value - 5))}>
+      <View style={[styles.stepRow, { marginBottom: 0 }]}>
+        <Text
+          style={[styles.stepBtn, { backgroundColor: chrome, color: chromeText }]}
+          onPress={() => onChange(Math.max(0, value - 5))}
+        >
           −
         </Text>
-        <View style={styles.track}>
-          <View style={[styles.fill, { width: `${value}%`, backgroundColor: accent }]} />
+        <View style={[styles.track, { backgroundColor: trackBg }]}>
+          <View style={[styles.fill, { width: `${value}%`, backgroundColor: fill }]} />
         </View>
-        <Text style={styles.stepBtn} onPress={() => onChange(Math.min(100, value + 5))}>
+        <Text
+          style={[styles.stepBtn, { backgroundColor: chrome, color: chromeText }]}
+          onPress={() => onChange(Math.min(100, value + 5))}
+        >
           +
         </Text>
       </View>
@@ -405,10 +404,56 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginBottom: spacing.sm,
   },
+  preview: {
+    borderRadius: radii.lg,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  intensityStage: {
+    borderRadius: radii.lg,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  circles: {
+    flexDirection: 'row',
+    gap: spacing.xxl,
+    alignItems: 'center',
+  },
+  circleWrap: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  circle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+  },
+  circleLabel: {
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  eyePanel: {
+    marginTop: spacing.lg,
+    padding: spacing.md,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+  },
+  eyeTitle: {
+    fontWeight: '800',
+    fontSize: 16,
+    marginBottom: spacing.md,
+  },
   presetRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginBottom: spacing.md,
+    marginTop: spacing.md,
     flexWrap: 'wrap',
   },
   preset: {
@@ -419,47 +464,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.outlineVariant,
   },
-  presetActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
   presetText: {
     color: colors.onSurfaceVariant,
     fontWeight: '600',
     fontSize: 12,
-  },
-  presetTextActive: {
-    color: colors.onPrimary,
-  },
-  eyeRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  eyeCard: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    backgroundColor: colors.surfaceHigh,
-    gap: 4,
-  },
-  eyeLabel: {
-    fontWeight: '800',
-  },
-  eyeMeta: {
-    color: colors.onSurfaceVariant,
-    fontSize: 12,
-  },
-  preview: {
-    marginTop: spacing.lg,
-    borderRadius: radii.md,
-    padding: spacing.lg,
-    alignItems: 'center',
-  },
-  previewText: {
-    fontSize: 22,
-    fontWeight: '700',
   },
   timeRow: {
     flexDirection: 'row',

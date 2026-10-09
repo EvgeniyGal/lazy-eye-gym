@@ -14,7 +14,7 @@ const FAQ = [
   },
   {
     q: 'Which glasses do I need?',
-    a: 'Standard red/cyan anaglyph glasses. Default assumption: red over left, cyan over right — swap in Calibrate if your pair differs.',
+    a: 'Standard red/cyan anaglyph glasses. Default assumption: red over left, cyan over right — swap in Settings if your pair differs.',
   },
   {
     q: 'How long should I train?',
@@ -65,12 +65,12 @@ export default function GuideScreen() {
             {
               n: '1',
               t: 'Wear anaglyph glasses',
-              d: 'Red over left eye, cyan over right eye (or swap in Calibrate).',
+              d: 'Red over left eye, cyan over right eye (or swap in Settings).',
             },
             {
               n: '2',
-              t: 'Calibrate eye assignment',
-              d: 'Match hues to your lenses and balance intensity until both eyes feel equally vivid.',
+              t: 'Set up eye colours',
+              d: 'In Settings, match hues to your lenses and balance intensity until both eyes feel equally vivid.',
             },
             {
               n: '3',

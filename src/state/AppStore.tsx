@@ -40,7 +40,6 @@ type AppContextValue = {
   saveProfile: (profile: GlassProfile) => void;
   removeProfile: (id: string) => void;
   swapEyes: () => void;
-  applyRedCyanPreset: () => void;
   getGameSettings: (gameId: GameId) => Record<string, string | number | boolean>;
   setGameSettings: (gameId: GameId, settings: Record<string, string | number | boolean>) => void;
   refresh: () => void;
@@ -122,19 +121,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const swapped = swapEyeColors(activeProfile);
       setProfiles(upsertProfile(swapped));
       setActiveProfileId(swapped.id);
-      setProfiles(listProfiles());
-    },
-    applyRedCyanPreset: () => {
-      const next = {
-        ...activeProfile,
-        leftHue: 0,
-        leftLightness: 50,
-        rightHue: 180,
-        rightLightness: 50,
-        name: activeProfile.name || 'Red/Cyan',
-      };
-      setProfiles(upsertProfile(next));
-      setActiveProfileId(next.id);
       setProfiles(listProfiles());
     },
     getGameSettings: (gameId) => {
