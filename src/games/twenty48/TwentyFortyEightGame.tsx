@@ -253,15 +253,15 @@ export function TwentyFortyEightGame({
   const gap = 8;
   const tileInner = cell - gap;
 
-  /** Font size as a fraction of the tile so 1–4+ digit values stay inside. */
+  /** Font size as a fraction of the tile — tighter padding on multi-digit values. */
   const fontsByDigits = useMemo(() => {
     const family = Platform.select({ ios: 'Helvetica', default: 'sans-serif' })!;
     const scales: Record<number, number> = {
-      1: 0.62,
-      2: 0.44,
-      3: 0.33,
-      4: 0.25,
-      5: 0.2,
+      1: 0.64,
+      2: 0.54,
+      3: 0.42,
+      4: 0.34,
+      5: 0.28,
     };
     const make = (digits: number) => {
       const fontSize = tileInner * (scales[digits] ?? scales[5]!);
@@ -450,18 +450,15 @@ export function TwentyFortyEightGame({
             const w = tileInner;
             const label = String(tile.value);
             const digitKey = Math.min(5, Math.max(1, label.length));
-            const { font, fontSize } = fontsByDigits[digitKey as 1 | 2 | 3 | 4 | 5];
-            const textWidth = font.measureText(label).width;
+            const { font } = fontsByDigits[digitKey as 1 | 2 | 3 | 4 | 5];
+            // measureText bounds include left bearing (bounds.x); subtract it so glyphs are truly centered
+            const bounds = font.measureText(label);
+            const textX = x + (w - bounds.width) / 2 - bounds.x;
+            const textY = y + (w - bounds.height) / 2 - bounds.y;
             return (
               <Group key={tile.id}>
                 <RoundedRect x={x} y={y} width={w} height={w} r={10} color={tileColor} />
-                <SkText
-                  x={x + (w - textWidth) / 2}
-                  y={y + w / 2 + fontSize * 0.35}
-                  text={label}
-                  font={font}
-                  color={boardBg}
-                />
+                <SkText x={textX} y={textY} text={label} font={font} color={boardBg} />
               </Group>
             );
           })}
