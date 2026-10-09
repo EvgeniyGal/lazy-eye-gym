@@ -37,7 +37,15 @@
         }
       ],
       "expo-sqlite",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#00f0ff",
+          "defaultChannel": "lazyeye-reminders"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

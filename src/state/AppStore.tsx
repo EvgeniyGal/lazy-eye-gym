@@ -61,7 +61,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = () => {
     setProfiles(listProfiles());
-    setPrefs(getJSON(PREFS_KEY, DEFAULT_PREFS));
+    setPrefs({ ...DEFAULT_PREFS, ...getJSON(PREFS_KEY, DEFAULT_PREFS) });
     setIntensityState(getJSON(INTENSITY_KEY, DEFAULT_INTENSITY));
     setGameSettingsState({ ...defaultGameSettings(), ...getJSON(GAME_SETTINGS_KEY, {}) });
   };
@@ -70,6 +70,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     void (async () => {
       await hydrateStorage();
       refresh();
+      const loaded = { ...DEFAULT_PREFS, ...getJSON(PREFS_KEY, DEFAULT_PREFS) };
+      if (loaded.remindersEnabled) {
+        void import('@/src/notifications/reminders').then(({ syncReminders }) =>
+          syncReminders(loaded),
+        );
+      }
       setReady(true);
     })();
   }, []);

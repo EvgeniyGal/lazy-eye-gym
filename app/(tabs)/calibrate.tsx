@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,8 +14,14 @@ import {
   ToggleRow,
 } from '@/src/components/ui';
 import { backgroundCss } from '@/src/anaglyph/color';
+import type { ReminderFrequency } from '@/src/anaglyph/types';
+import { syncReminders } from '@/src/notifications/reminders';
 import { useAppStore } from '@/src/state/AppStore';
 import { colors, radii, spacing } from '@/src/theme/tokens';
+
+function formatClock(hour: number, minute: number) {
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
 
 export default function CalibrateScreen() {
   const insets = useSafeAreaInsets();
@@ -29,8 +35,27 @@ export default function CalibrateScreen() {
     swapEyes,
     applyRedCyanPreset,
   } = useAppStore();
+  const [reminderNote, setReminderNote] = useState<string | null>(null);
 
   const previewBg = backgroundCss(activeProfile.background);
+
+  const applyReminderPatch = async (patch: Partial<typeof prefs>) => {
+    const next = { ...prefs, ...patch };
+    updatePrefs(patch);
+    const result = await syncReminders(next);
+    if (!result.ok && result.message) {
+      setReminderNote(result.message);
+      if ('remindersEnabled' in patch && patch.remindersEnabled) {
+        updatePrefs({ remindersEnabled: false });
+      }
+    } else if (next.remindersEnabled) {
+      setReminderNote(
+        `Reminder set for ${formatClock(next.reminderHour, next.reminderMinute)} (${next.reminderFrequency}).`,
+      );
+    } else {
+      setReminderNote('Reminders turned off.');
+    }
+  };
 
   return (
     <Screen>
@@ -208,10 +233,94 @@ export default function CalibrateScreen() {
           />
           <ToggleRow
             label="Auto-pause on eye strain"
-            description="Reminders every ~20 minutes"
+            description="Nudge to rest about every 20 minutes in-game"
             value={prefs.autoPauseOnStrain}
             onChange={(autoPauseOnStrain) => updatePrefs({ autoPauseOnStrain })}
           />
+        </Card>
+
+        <Card>
+          <Text style={styles.section}>Reminders</Text>
+          <Subtitle>
+            Local notifications only — choose how often and when you want a gentle nudge to play.
+          </Subtitle>
+          <ToggleRow
+            label="Enable reminders"
+            description="Schedule on this device"
+            value={prefs.remindersEnabled}
+            onChange={(remindersEnabled) => void applyReminderPatch({ remindersEnabled })}
+          />
+          <Text style={[styles.section, { marginTop: spacing.md }]}>Time</Text>
+          <View style={styles.timeRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.timeLabel}>Hour</Text>
+              <View style={styles.stepRow}>
+                <Text
+                  style={styles.stepBtn}
+                  onPress={() =>
+                    void applyReminderPatch({
+                      reminderHour: (prefs.reminderHour + 23) % 24,
+                    })
+                  }
+                >
+                  −
+                </Text>
+                <Text style={styles.stepVal}>{String(prefs.reminderHour).padStart(2, '0')}</Text>
+                <Text
+                  style={styles.stepBtn}
+                  onPress={() =>
+                    void applyReminderPatch({
+                      reminderHour: (prefs.reminderHour + 1) % 24,
+                    })
+                  }
+                >
+                  +
+                </Text>
+              </View>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.timeLabel}>Minute</Text>
+              <View style={styles.stepRow}>
+                <Text
+                  style={styles.stepBtn}
+                  onPress={() =>
+                    void applyReminderPatch({
+                      reminderMinute: (prefs.reminderMinute + 45) % 60,
+                    })
+                  }
+                >
+                  −
+                </Text>
+                <Text style={styles.stepVal}>{String(prefs.reminderMinute).padStart(2, '0')}</Text>
+                <Text
+                  style={styles.stepBtn}
+                  onPress={() =>
+                    void applyReminderPatch({
+                      reminderMinute: (prefs.reminderMinute + 15) % 60,
+                    })
+                  }
+                >
+                  +
+                </Text>
+              </View>
+            </View>
+          </View>
+          <Text style={styles.section}>Frequency</Text>
+          <Segmented
+            options={[
+              { label: 'Daily', value: 'daily' },
+              { label: 'Weekdays', value: 'weekdays' },
+              { label: 'Every 2d', value: 'every2days' },
+              { label: 'Weekly', value: 'weekly' },
+            ]}
+            value={prefs.reminderFrequency}
+            onChange={(reminderFrequency) =>
+              void applyReminderPatch({
+                reminderFrequency: reminderFrequency as ReminderFrequency,
+              })
+            }
+          />
+          {reminderNote ? <Text style={styles.reminderNote}>{reminderNote}</Text> : null}
         </Card>
 
         <Text style={styles.saved}>Settings saved automatically to local ocular profile.</Text>
@@ -353,6 +462,22 @@ const styles = StyleSheet.create({
   previewText: {
     fontSize: 22,
     fontWeight: '700',
+  },
+  timeRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  timeLabel: {
+    color: colors.onSurfaceVariant,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
+  },
+  reminderNote: {
+    color: colors.tertiary,
+    fontSize: 12,
+    marginTop: spacing.md,
+    fontWeight: '600',
   },
   stepRow: {
     flexDirection: 'row',
