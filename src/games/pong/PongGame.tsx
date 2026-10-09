@@ -407,19 +407,14 @@ export function PongGame({
           o.y + orbR >= aiPadY &&
           o.x >= s.aiX - 4 &&
           o.x <= s.aiX + aiW + 4;
-        const hitBall = Math.hypot(o.x - s.ballX, o.y - s.ballY) < ballR + orbR;
 
+        // Only paddles claim power-ups — ball contact does nothing
         if (hitPlayer) {
           applyOrb(o.kind, 'player', s, now);
           return false;
         }
         if (hitAi) {
           applyOrb(o.kind, 'ai', s, now);
-          return false;
-        }
-        if (hitBall) {
-          const collector: Side = s.vy > 0 ? 'player' : 'ai';
-          applyOrb(o.kind, collector, s, now);
           return false;
         }
         return true;
