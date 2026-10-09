@@ -13,15 +13,11 @@ import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
 import type { GameSceneProps } from '../types';
 
-const NUMBER_COLOR = '#000000';
-const EMPTY_CELL = '#000000';
-
 type Dir = 'up' | 'down' | 'left' | 'right';
 
 type Tile = {
   id: string;
   value: number;
-  eye: EyeSide;
   row: number;
   col: number;
   x: number;
@@ -31,7 +27,6 @@ type Tile = {
 type AnimSpec = {
   id: string;
   value: number;
-  eye: EyeSide;
   fromX: number;
   fromY: number;
   toX: number;
@@ -51,19 +46,14 @@ function nextId() {
   return `t-${tileSeq}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function randomEye(): EyeSide {
-  return Math.random() < 0.5 ? 'left' : 'right';
-}
-
 function easeOutCubic(t: number) {
   return 1 - (1 - t) ** 3;
 }
 
-function createTile(row: number, col: number, value?: number, eye?: EyeSide): Tile {
+function createTile(row: number, col: number, value?: number): Tile {
   return {
     id: nextId(),
     value: value ?? (Math.random() < 0.9 ? 2 : 4),
-    eye: eye ?? randomEye(),
     row,
     col,
     x: col,
@@ -137,22 +127,19 @@ function planMove(tiles: Tile[], dir: Dir) {
       const blocker = nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE ? resultGrid[nr]![nc] : null;
 
       if (blocker && blocker.value === tile.value && !mergedIds.has(blocker.id)) {
-        const merged = createTile(nr, nc, tile.value * 2, randomEye());
+        const merged = createTile(nr, nc, tile.value * 2);
         mergedIds.add(blocker.id);
         mergedIds.add(merged.id);
 
-        // Both source tiles slide into the merge cell, then disappear
         anims.push({
           id: tile.id,
           value: tile.value,
-          eye: tile.eye,
           fromX: col,
           fromY: row,
           toX: nc,
           toY: nr,
           keep: false,
         });
-        // Update previous blocker anim destination if it was a simple move
         const prevAnim = anims.find((a) => a.id === blocker.id && a.keep);
         if (prevAnim) {
           prevAnim.keep = false;
@@ -162,7 +149,6 @@ function planMove(tiles: Tile[], dir: Dir) {
           anims.push({
             id: blocker.id,
             value: blocker.value,
-            eye: blocker.eye,
             fromX: blocker.col,
             fromY: blocker.row,
             toX: nc,
@@ -175,7 +161,6 @@ function planMove(tiles: Tile[], dir: Dir) {
         anims.push({
           id: merged.id,
           value: merged.value,
-          eye: merged.eye,
           fromX: nc,
           fromY: nr,
           toX: nc,
@@ -192,7 +177,6 @@ function planMove(tiles: Tile[], dir: Dir) {
         anims.push({
           id: tile.id,
           value: tile.value,
-          eye: tile.eye,
           fromX: col,
           fromY: row,
           toX: c,
@@ -225,6 +209,10 @@ function maxTile(tiles: Tile[]) {
   return tiles.reduce((m, t) => Math.max(m, t.value), 0);
 }
 
+function otherEye(eye: EyeSide): EyeSide {
+  return eye === 'left' ? 'right' : 'left';
+}
+
 export function TwentyFortyEightGame({
   width,
   height,
@@ -247,9 +235,15 @@ export function TwentyFortyEightGame({
   tilesRef.current = tiles;
   scoreRef.current = score;
 
+  const boardBg = palette.background;
   const leftColor = colorForEye(palette, 'left');
   const rightColor = colorForEye(palette, 'right');
   const gridColor = gridEye === 'right' ? rightColor : leftColor;
+  const tileColor =
+    gridEye == null
+      ? leftColor
+      : colorForEye(palette, otherEye(gridEye));
+  const onLightBg = boardBg === '#f4f4f4';
 
   const pad = 16;
   const boardSize = Math.min(width - pad * 2, height - pad * 2);
@@ -269,7 +263,6 @@ export function TwentyFortyEightGame({
     return {
       sm: make(0.55),
       md: make(0.7),
-      // ~3× previous size (was 0.28 × cell)
       lg: make(0.84),
     };
   }, [cell]);
@@ -317,7 +310,6 @@ export function TwentyFortyEightGame({
           .map((a) => ({
             id: a.id,
             value: a.value,
-            eye: a.eye,
             row: a.toY,
             col: a.toX,
             x: a.fromX + (a.toX - a.fromX) * e,
@@ -368,32 +360,36 @@ export function TwentyFortyEightGame({
     });
 
   if (!gridEye) {
+    const hintColor = onLightBg ? '#333' : '#b9cacb';
+    const titleColor = onLightBg ? '#111' : '#dae2fd';
     return (
-      <View style={[styles.fill, styles.chooser]}>
-        <Text style={styles.chooserTitle}>Choose grid colour</Text>
-        <Text style={styles.chooserSub}>
-          Grid lines use one glass channel. Empty cells stay black. Number tiles are solid red or
-          cyan from your glasses.
+      <View style={[styles.fill, styles.chooser, { backgroundColor: boardBg }]}>
+        <Text style={[styles.chooserTitle, { color: titleColor }]}>Choose grid colour</Text>
+        <Text style={[styles.chooserSub, { color: hintColor }]}>
+          Grid uses one eye channel. Number tiles use the other eye, on your optical background.
+          Digits match the background so they stay transparent.
         </Text>
         <View style={styles.chooserRow}>
           <Pressable
-            style={[styles.chooserBtn, { borderColor: leftColor, backgroundColor: '#0a0a0a' }]}
+            style={[styles.chooserBtn, { borderColor: leftColor, backgroundColor: boardBg }]}
             onPress={() => startGame('left')}
           >
             <View style={[styles.swatch, { backgroundColor: leftColor }]} />
-            <Text style={styles.chooserBtnText}>Left / Red grid</Text>
+            <Text style={[styles.chooserBtnText, { color: titleColor }]}>Left grid</Text>
+            <Text style={[styles.chooserBtnHint, { color: hintColor }]}>Tiles → right eye</Text>
           </Pressable>
           <Pressable
-            style={[styles.chooserBtn, { borderColor: rightColor, backgroundColor: '#0a0a0a' }]}
+            style={[styles.chooserBtn, { borderColor: rightColor, backgroundColor: boardBg }]}
             onPress={() => startGame('right')}
           >
             <View style={[styles.swatch, { backgroundColor: rightColor }]} />
-            <Text style={styles.chooserBtnText}>Right / Cyan grid</Text>
+            <Text style={[styles.chooserBtnText, { color: titleColor }]}>Right grid</Text>
+            <Text style={[styles.chooserBtnHint, { color: hintColor }]}>Tiles → left eye</Text>
           </Pressable>
         </View>
         <Pressable style={styles.defaultHint} onPress={() => startGame(initialGridEye)}>
-          <Text style={styles.defaultHintText}>
-            Use last setup ({initialGridEye === 'left' ? 'Left / Red' : 'Right / Cyan'})
+          <Text style={[styles.defaultHintText, { color: hintColor }]}>
+            Use last setup ({initialGridEye === 'left' ? 'Left' : 'Right'} grid)
           </Text>
         </Pressable>
       </View>
@@ -402,9 +398,11 @@ export function TwentyFortyEightGame({
 
   return (
     <GestureDetector gesture={pan}>
-      <View style={styles.fill}>
+      <View style={[styles.fill, { backgroundColor: boardBg }]}>
         <Canvas style={{ width, height }}>
-          {/* Grid background = chosen glass colour; gaps show through as the grid */}
+          {/* Scene clear — optical profile background */}
+          <RoundedRect x={0} y={0} width={width} height={height} r={0} color={boardBg} />
+          {/* Grid = chosen eye colour; gaps show optical background */}
           <RoundedRect
             x={originX}
             y={originY}
@@ -413,7 +411,7 @@ export function TwentyFortyEightGame({
             r={16}
             color={gridColor}
           />
-          {/* Empty cells — black */}
+          {/* Empty cells — optical background */}
           {Array.from({ length: SIZE * SIZE }).map((_, i) => {
             const r = Math.floor(i / SIZE);
             const c = i % SIZE;
@@ -425,16 +423,15 @@ export function TwentyFortyEightGame({
                 width={cell - gap}
                 height={cell - gap}
                 r={10}
-                color={EMPTY_CELL}
+                color={boardBg}
               />
             );
           })}
-          {/* Number tiles — solid glass colours, no outline */}
+          {/* Number tiles — other eye colour; digits = background (transparent) */}
           {tiles.map((tile) => {
             const x = originX + tile.x * cell + gap / 2;
             const y = originY + tile.y * cell + gap / 2;
             const w = cell - gap;
-            const fill = tile.eye === 'left' ? leftColor : rightColor;
             const label = String(tile.value);
             const font =
               label.length >= 4 ? fonts.sm : label.length === 3 ? fonts.md : fonts.lg;
@@ -442,13 +439,13 @@ export function TwentyFortyEightGame({
             const textWidth = label.length * fontSize * 0.52;
             return (
               <Group key={tile.id}>
-                <RoundedRect x={x} y={y} width={w} height={w} r={10} color={fill} />
+                <RoundedRect x={x} y={y} width={w} height={w} r={10} color={tileColor} />
                 <SkText
                   x={x + w / 2 - textWidth / 2}
                   y={y + w / 2 + fontSize * 0.35}
                   text={label}
                   font={font}
-                  color={NUMBER_COLOR}
+                  color={boardBg}
                 />
               </Group>
             );
@@ -466,16 +463,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
     gap: 16,
-    backgroundColor: '#000000',
   },
   chooserTitle: {
-    color: '#dae2fd',
     fontSize: 22,
     fontWeight: '800',
     textAlign: 'center',
   },
   chooserSub: {
-    color: '#b9cacb',
     fontSize: 14,
     lineHeight: 20,
     textAlign: 'center',
@@ -492,7 +486,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 20,
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   swatch: {
     width: 36,
@@ -500,16 +494,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   chooserBtnText: {
-    color: '#dae2fd',
     fontWeight: '700',
     fontSize: 15,
+  },
+  chooserBtnHint: {
+    fontWeight: '600',
+    fontSize: 12,
   },
   defaultHint: {
     marginTop: 8,
     padding: 10,
   },
   defaultHintText: {
-    color: '#849495',
     fontSize: 13,
     fontWeight: '600',
   },

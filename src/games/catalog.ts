@@ -31,10 +31,10 @@ export const GAMES: GameDefinition[] = [
     shortTitle: '2048',
     tag: 'STRATEGY & FUSION',
     category: 'spatial',
-    blurb: 'Number tiles are randomly red or cyan; pick a grid eye colour before you start.',
+    blurb: 'Pick a grid eye; tiles use the other eye on your optical background with transparent digits.',
     dichopticSplit: {
-      leftLabel: 'Random red tiles',
-      rightLabel: 'Random cyan tiles',
+      leftLabel: 'Grid (chosen eye)',
+      rightLabel: 'Tiles (other eye)',
     },
     recordLabel: 'Best score',
     metricLabel: 'Best tile',
