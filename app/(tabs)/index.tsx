@@ -1,11 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Body, Card, HeaderBar, PrimaryButton, Screen, Subtitle, Title } from '@/src/components/ui';
-import { getTrainingStats } from '@/src/db/sessions';
+import {
+  formatDuration,
+  getPlaytimeByGame,
+  getTrainingStats,
+  type GamePlaytime,
+} from '@/src/db/sessions';
 import { GAMES } from '@/src/games/catalog';
 import { useAppStore } from '@/src/state/AppStore';
 import { colors, radii, spacing } from '@/src/theme/tokens';
@@ -13,53 +18,59 @@ import { colors, radii, spacing } from '@/src/theme/tokens';
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { prefs, setLazyEyeEnabled } = useAppStore();
-  const [stats, setStats] = useState({
-    sessionCount: 0,
-    totalMinutes: 0,
-    scoreSum: 0,
-    streak: 0,
-    todaySeconds: 0,
-  });
+  const { prefs } = useAppStore();
+  const [todaySeconds, setTodaySeconds] = useState(0);
+  const [totalMinutes, setTotalMinutes] = useState(0);
+  const [byGame, setByGame] = useState<GamePlaytime[]>([]);
 
   useFocusEffect(
     useCallback(() => {
-      void getTrainingStats().then(setStats);
+      void (async () => {
+        const [stats, playtime] = await Promise.all([getTrainingStats(), getPlaytimeByGame()]);
+        setTodaySeconds(stats.todaySeconds);
+        setTotalMinutes(stats.totalMinutes);
+        setByGame(playtime);
+      })();
     }, []),
   );
 
-  const todayMins = Math.round(stats.todaySeconds / 60);
-  const dailyGoal = 20;
-  const progress = Math.min(100, Math.round((todayMins / dailyGoal) * 100));
+  const playtimeRows = useMemo(() => {
+    const map = new Map(byGame.map((row) => [row.gameId, row]));
+    return GAMES.map((game) => {
+      const stats = map.get(game.id);
+      return {
+        game,
+        durationSec: stats?.durationSec ?? 0,
+        sessionCount: stats?.sessionCount ?? 0,
+      };
+    });
+  }, [byGame]);
+
+  const hasAnyPlaytime = playtimeRows.some((row) => row.durationSec > 0 || row.sessionCount > 0);
 
   return (
     <Screen>
       <View style={{ paddingTop: insets.top }}>
-        <HeaderBar
-          title="Home"
-          lazyEyeEnabled={prefs.lazyEyeEnabled}
-          onToggle3D={() => setLazyEyeEnabled(!prefs.lazyEyeEnabled)}
-        />
+        <HeaderBar title="Home" />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Card style={styles.hero}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>• Daily Session Ready</Text>
-          </View>
           <Title>Welcome back, {prefs.displayName}!</Title>
           <Subtitle>
-            Train your binocular visual cortex with balanced, dichoptic neural exercises.
+            Play whenever you like — no planned sessions. Pick any game and train at your own pace.
           </Subtitle>
-          <View style={styles.metrics}>
-            <View style={styles.ring}>
-              <Text style={styles.ringText}>{progress}%</Text>
+          <View style={styles.summaryRow}>
+            <View style={styles.chip}>
+              <Text style={styles.chipLabel}>Today</Text>
+              <Text style={styles.chipValue}>{formatDuration(todaySeconds)}</Text>
             </View>
-            <View style={{ flex: 1, gap: 6 }}>
-              <Text style={styles.metricStrong}>Day {stats.streak} Streak</Text>
-              <Text style={styles.metricMute}>
-                {todayMins} of {dailyGoal} mins trained today
+            <View style={styles.chip}>
+              <Text style={styles.chipLabel}>All time</Text>
+              <Text style={styles.chipValue}>
+                {totalMinutes >= 60
+                  ? formatDuration(totalMinutes * 60)
+                  : `${totalMinutes}m`}
               </Text>
-              <Text style={styles.xp}>+{Math.min(99, stats.sessionCount * 5)} XP today</Text>
             </View>
           </View>
         </Card>
@@ -78,7 +89,7 @@ export default function HomeScreen() {
         </Card>
 
         <PrimaryButton
-          label="Start Gym / Select Game"
+          label="Select Game"
           icon="play"
           onPress={() => router.push('/(tabs)/games')}
         />
@@ -96,46 +107,31 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.sectionHead}>
-          <Text style={styles.sectionTitle}>Recommended Routine</Text>
-          <Text style={styles.sectionMeta}>13 Mins Total</Text>
-        </View>
-        {GAMES.slice(0, 2).map((game) => (
-          <Pressable
-            key={game.id}
-            style={styles.routine}
-            onPress={() => router.push(`/(tabs)/games/${game.id}`)}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.routineTag}>{game.tag}</Text>
-              <Text style={styles.routineTitle}>{game.title}</Text>
-              <Text style={styles.routineSub}>{game.blurb}</Text>
-            </View>
-            <View style={styles.playCircle}>
-              <Ionicons name="play" size={16} color={colors.primary} />
-            </View>
-          </Pressable>
-        ))}
-
         <Card>
-          <Text style={styles.sectionTitle}>Training progress</Text>
-          <Subtitle style={{ marginTop: 4 }}>
-            Local session stats only — not a clinical stereo-acuity measurement.
+          <Text style={styles.sectionTitle}>Playtime by game</Text>
+          <Subtitle style={{ marginTop: 4, marginBottom: spacing.md }}>
+            How long you have played each game on this device.
           </Subtitle>
-          <View style={styles.statRow}>
-            <View style={styles.stat}>
-              <Text style={[styles.statNum, { color: colors.secondary }]}>{stats.streak}</Text>
-              <Text style={styles.statLabel}>Day streak</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={[styles.statNum, { color: colors.primary }]}>{stats.sessionCount}</Text>
-              <Text style={styles.statLabel}>Sessions</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statNum}>{stats.totalMinutes}m</Text>
-              <Text style={styles.statLabel}>Total time</Text>
-            </View>
-          </View>
+          {!hasAnyPlaytime ? (
+            <Text style={styles.empty}>No playtime yet — pick a game to start.</Text>
+          ) : (
+            playtimeRows.map(({ game, durationSec, sessionCount }) => (
+              <Pressable
+                key={game.id}
+                style={styles.playRow}
+                onPress={() => router.push(`/(tabs)/games/${game.id}`)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.playTitle}>{game.title}</Text>
+                  <Text style={styles.playMeta}>
+                    {sessionCount} session{sessionCount === 1 ? '' : 's'}
+                  </Text>
+                </View>
+                <Text style={styles.playTime}>{formatDuration(durationSec)}</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.onSurfaceVariant} />
+              </Pressable>
+            ))
+          )}
         </Card>
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
@@ -151,50 +147,31 @@ const styles = StyleSheet.create({
   hero: {
     gap: spacing.sm,
   },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(0,240,255,0.12)',
-    borderRadius: radii.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  badgeText: {
-    color: colors.primary,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  metrics: {
+  summaryRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
+    gap: spacing.md,
     marginTop: spacing.md,
   },
-  ring: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 4,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+  chip: {
+    flex: 1,
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
   },
-  ringText: {
-    color: colors.onSurface,
-    fontWeight: '800',
-  },
-  metricStrong: {
-    color: colors.onSurface,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  metricMute: {
+  chipLabel: {
     color: colors.onSurfaceVariant,
-    fontSize: 13,
-  },
-  xp: {
-    color: colors.tertiary,
+    fontSize: 11,
     fontWeight: '700',
-    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  chipValue: {
+    color: colors.onSurface,
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 4,
   },
   notice: {
     borderTopWidth: 2,
@@ -229,76 +206,37 @@ const styles = StyleSheet.create({
     color: colors.onSurfaceVariant,
     fontSize: 12,
   },
-  sectionHead: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
   sectionTitle: {
     color: colors.onSurface,
     fontWeight: '700',
     fontSize: 16,
   },
-  sectionMeta: {
+  empty: {
     color: colors.onSurfaceVariant,
-    fontSize: 12,
+    fontSize: 14,
+    lineHeight: 20,
   },
-  routine: {
+  playRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.outlineVariant,
   },
-  routineTag: {
-    color: colors.primary,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-  },
-  routineTitle: {
+  playTitle: {
     color: colors.onSurface,
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: 15,
+  },
+  playMeta: {
+    color: colors.onSurfaceVariant,
+    fontSize: 12,
     marginTop: 2,
   },
-  routineSub: {
-    color: colors.onSurfaceVariant,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  playCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.lg,
-  },
-  stat: {
-    flex: 1,
-    backgroundColor: colors.surfaceHigh,
-    borderRadius: radii.md,
-    padding: spacing.md,
-  },
-  statNum: {
-    color: colors.onSurface,
-    fontSize: 20,
+  playTime: {
+    color: colors.primary,
     fontWeight: '800',
-  },
-  statLabel: {
-    color: colors.onSurfaceVariant,
-    fontSize: 11,
-    marginTop: 4,
-    textTransform: 'uppercase',
+    fontSize: 14,
   },
 });

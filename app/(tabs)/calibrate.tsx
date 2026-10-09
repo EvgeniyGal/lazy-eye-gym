@@ -21,7 +21,6 @@ export default function CalibrateScreen() {
   const insets = useSafeAreaInsets();
   const {
     prefs,
-    setLazyEyeEnabled,
     updatePrefs,
     activeProfile,
     intensity,
@@ -36,11 +35,7 @@ export default function CalibrateScreen() {
   return (
     <Screen>
       <View style={{ paddingTop: insets.top }}>
-        <HeaderBar
-          title="Calibrate"
-          lazyEyeEnabled={prefs.lazyEyeEnabled}
-          onToggle3D={() => setLazyEyeEnabled(!prefs.lazyEyeEnabled)}
-        />
+        <HeaderBar title="Calibrate" />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Title>Vision & Anaglyph Setup</Title>
@@ -129,7 +124,7 @@ export default function CalibrateScreen() {
               text="Fusion Preview AaBb"
               colors={activeProfile}
               background={activeProfile.background}
-              enabled={prefs.lazyEyeEnabled}
+              enabled
               style={styles.previewText}
             />
           </View>

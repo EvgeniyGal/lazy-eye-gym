@@ -14,6 +14,8 @@ export type IntensityBalance = {
   right: number;
 };
 
+export type ReminderFrequency = 'daily' | 'weekdays' | 'every2days' | 'weekly';
+
 export type AppPrefs = {
   lazyEyeEnabled: boolean;
   soundEffects: boolean;
@@ -21,6 +23,10 @@ export type AppPrefs = {
   autoPauseOnStrain: boolean;
   driftSpeed: 'easy' | 'medium' | 'fast';
   displayName: string;
+  remindersEnabled: boolean;
+  reminderHour: number;
+  reminderMinute: number;
+  reminderFrequency: ReminderFrequency;
 };
 
 export type DichopticPalette = {
@@ -54,6 +60,10 @@ export const DEFAULT_PREFS: AppPrefs = {
   autoPauseOnStrain: true,
   driftSpeed: 'medium',
   displayName: 'Vision Athlete',
+  remindersEnabled: false,
+  reminderHour: 18,
+  reminderMinute: 0,
+  reminderFrequency: 'daily',
 };
 
 export const ACTIVE_PROFILE_KEY = 'anaglyph.activeProfileId';

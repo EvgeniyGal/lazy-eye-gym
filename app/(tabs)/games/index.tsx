@@ -13,7 +13,7 @@ import { colors, radii, spacing } from '@/src/theme/tokens';
 export default function GamesHubScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { prefs, setLazyEyeEnabled, activeProfile } = useAppStore();
+  const { activeProfile } = useAppStore();
   const [category, setCategory] = useState<GameCategory>('all');
   const [records, setRecords] = useState<Record<string, { score: number; metric: number }>>({});
 
@@ -37,11 +37,7 @@ export default function GamesHubScreen() {
   return (
     <Screen>
       <View style={{ paddingTop: insets.top }}>
-        <HeaderBar
-          title="Games"
-          lazyEyeEnabled={prefs.lazyEyeEnabled}
-          onToggle3D={() => setLazyEyeEnabled(!prefs.lazyEyeEnabled)}
-        />
+        <HeaderBar title="Games" />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Title>Training Arena</Title>

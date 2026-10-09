@@ -25,17 +25,12 @@ const FAQ = [
 export default function GuideScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { prefs, setLazyEyeEnabled } = useAppStore();
   const [open, setOpen] = useState(0);
 
   return (
     <Screen>
       <View style={{ paddingTop: insets.top }}>
-        <HeaderBar
-          title="Guide"
-          lazyEyeEnabled={prefs.lazyEyeEnabled}
-          onToggle3D={() => setLazyEyeEnabled(!prefs.lazyEyeEnabled)}
-        />
+        <HeaderBar title="Guide" />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Title>How It Works</Title>
@@ -60,7 +55,7 @@ export default function GuideScreen() {
           </View>
           <View style={styles.fusion}>
             <Text style={styles.fusionTitle}>Visual Cortex Fusion</Text>
-            <Text style={styles.fusionTag}>ACTIVE 3D</Text>
+            <Text style={styles.fusionTag}>DICHOPTIC 2D</Text>
           </View>
         </Card>
 

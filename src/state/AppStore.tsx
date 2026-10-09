@@ -34,7 +34,6 @@ type AppContextValue = {
   intensity: IntensityBalance;
   palette: DichopticPalette;
   gameSettings: GameSettingsMap;
-  setLazyEyeEnabled: (value: boolean) => void;
   updatePrefs: (patch: Partial<AppPrefs>) => void;
   setIntensity: (next: IntensityBalance) => void;
   selectProfile: (id: string) => void;
@@ -80,8 +79,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [profiles]);
 
   const palette = useMemo(
-    () => buildPalette(activeProfile, intensity, prefs.lazyEyeEnabled),
-    [activeProfile, intensity, prefs.lazyEyeEnabled],
+    () => buildPalette(activeProfile, intensity, true),
+    [activeProfile, intensity],
   );
 
   const value: AppContextValue = {
@@ -93,11 +92,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     palette,
     gameSettings,
     refresh,
-    setLazyEyeEnabled: (lazyEyeEnabled) => {
-      const next = { ...prefs, lazyEyeEnabled };
-      setPrefs(next);
-      setJSON(PREFS_KEY, next);
-    },
     updatePrefs: (patch) => {
       const next = { ...prefs, ...patch };
       setPrefs(next);

@@ -2,12 +2,15 @@ import * as Crypto from 'expo-crypto';
 import * as SQLite from 'expo-sqlite';
 
 import {
+  computePlaytimeByGame,
   computeTrainingStats,
+  type GamePlaytime,
   type GameSession,
   type TrainingStats,
 } from './sessionTypes';
 
-export type { GameSession } from './sessionTypes';
+export type { GamePlaytime, GameSession } from './sessionTypes';
+export { formatDuration } from './sessionTypes';
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -108,4 +111,10 @@ export async function getTrainingStats(): Promise<TrainingStats> {
   const db = await getDb();
   const rows = await db.getAllAsync<GameSession>(`SELECT * FROM sessions`);
   return computeTrainingStats(rows);
+}
+
+export async function getPlaytimeByGame(): Promise<GamePlaytime[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<GameSession>(`SELECT * FROM sessions`);
+  return computePlaytimeByGame(rows);
 }

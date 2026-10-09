@@ -131,15 +131,7 @@ export function StatBox({ label, value, accent }: { label: string; value: string
   );
 }
 
-export function HeaderBar({
-  title,
-  lazyEyeEnabled,
-  onToggle3D,
-}: {
-  title: string;
-  lazyEyeEnabled: boolean;
-  onToggle3D: () => void;
-}) {
+export function HeaderBar({ title }: { title: string }) {
   return (
     <View style={styles.header}>
       <View style={styles.brandRow}>
@@ -147,11 +139,7 @@ export function HeaderBar({
         <Text style={styles.brand}>LazyEye Gym</Text>
       </View>
       <Text style={styles.headerTitle}>{title}</Text>
-      <Pressable onPress={onToggle3D} style={[styles.toggle3d, lazyEyeEnabled && styles.toggle3dOn]}>
-        <View style={[styles.dot, { backgroundColor: '#ff4d4d' }]} />
-        <View style={[styles.dot, { backgroundColor: colors.primary }]} />
-        <Text style={styles.toggle3dText}>{lazyEyeEnabled ? '3D ON' : '3D OFF'}</Text>
-      </Pressable>
+      <View style={styles.headerSpacer} />
     </View>
   );
 }
@@ -306,30 +294,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
-  toggle3d: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.surfaceHigh,
-    borderRadius: radii.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    minWidth: 92,
-    justifyContent: 'center',
-  },
-  toggle3dOn: {
-    borderColor: colors.primaryDim,
-  },
-  toggle3dText: {
-    color: colors.onSurface,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  headerSpacer: {
+    width: 110,
   },
 });

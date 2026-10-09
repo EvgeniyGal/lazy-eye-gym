@@ -16,7 +16,7 @@ export default function GameDetailScreen() {
   const game = getGame(String(id));
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { prefs, setLazyEyeEnabled, getGameSettings, setGameSettings } = useAppStore();
+  const { getGameSettings, setGameSettings } = useAppStore();
   const [best, setBest] = useState(0);
   const [metric, setMetric] = useState(0);
   const [history, setHistory] = useState<GameSession[]>([]);
@@ -51,11 +51,7 @@ export default function GameDetailScreen() {
   return (
     <Screen>
       <View style={{ paddingTop: insets.top }}>
-        <HeaderBar
-          title={game.shortTitle}
-          lazyEyeEnabled={prefs.lazyEyeEnabled}
-          onToggle3D={() => setLazyEyeEnabled(!prefs.lazyEyeEnabled)}
-        />
+        <HeaderBar title={game.shortTitle} />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Pressable onPress={() => router.back()} style={styles.back}>

@@ -18,6 +18,49 @@ export type TrainingStats = {
   todaySeconds: number;
 };
 
+export type GamePlaytime = {
+  gameId: string;
+  durationSec: number;
+  sessionCount: number;
+  todaySeconds: number;
+};
+
+export function computePlaytimeByGame(sessions: GameSession[]): GamePlaytime[] {
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const map = new Map<string, GamePlaytime>();
+
+  for (const session of sessions) {
+    const current = map.get(session.gameId) ?? {
+      gameId: session.gameId,
+      durationSec: 0,
+      sessionCount: 0,
+      todaySeconds: 0,
+    };
+    current.durationSec += session.durationSec;
+    current.sessionCount += 1;
+    if (session.endedAt.startsWith(todayKey)) {
+      current.todaySeconds += session.durationSec;
+    }
+    map.set(session.gameId, current);
+  }
+
+  return [...map.values()].sort((a, b) => b.durationSec - a.durationSec);
+}
+
+export function formatDuration(totalSeconds: number): string {
+  const sec = Math.max(0, Math.round(totalSeconds));
+  const hours = Math.floor(sec / 3600);
+  const minutes = Math.floor((sec % 3600) / 60);
+  const seconds = sec % 60;
+  if (hours > 0) {
+    return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+  }
+  return `${seconds}s`;
+}
+
 export function computeTrainingStats(sessions: GameSession[]): TrainingStats {
   const sessionCount = sessions.length;
   const totalSeconds = sessions.reduce((sum, s) => sum + s.durationSec, 0);

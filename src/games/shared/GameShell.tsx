@@ -19,7 +19,7 @@ export function GameShell({ gameId }: { gameId: GameId }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const { palette, activeProfile, getGameSettings, prefs } = useAppStore();
+  const { palette, activeProfile, getGameSettings } = useAppStore();
   const game = getGame(gameId)!;
   const settings = getGameSettings(gameId);
 
@@ -51,11 +51,10 @@ export function GameShell({ gameId }: { gameId: GameId }) {
         settingsJson: JSON.stringify(settings),
         profileSnapshotJson: JSON.stringify({
           profile: activeProfile,
-          lazyEyeEnabled: prefs.lazyEyeEnabled,
         }),
       });
     },
-    [activeProfile, gameId, prefs.lazyEyeEnabled, settings],
+    [activeProfile, gameId, settings],
   );
 
   useEffect(() => {

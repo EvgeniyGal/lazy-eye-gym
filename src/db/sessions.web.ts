@@ -2,12 +2,15 @@ import * as Crypto from 'expo-crypto';
 
 import { getJSON, hydrateStorage, setJSON } from '@/src/storage/mmkv';
 import {
+  computePlaytimeByGame,
   computeTrainingStats,
+  type GamePlaytime,
   type GameSession,
   type TrainingStats,
 } from './sessionTypes';
 
-export type { GameSession } from './sessionTypes';
+export type { GamePlaytime, GameSession } from './sessionTypes';
+export { formatDuration } from './sessionTypes';
 
 const SESSIONS_KEY = 'lazyeye.sessions';
 
@@ -68,4 +71,8 @@ export async function getRecentSessions(limit = 20): Promise<GameSession[]> {
 
 export async function getTrainingStats(): Promise<TrainingStats> {
   return computeTrainingStats(await readAll());
+}
+
+export async function getPlaytimeByGame(): Promise<GamePlaytime[]> {
+  return computePlaytimeByGame(await readAll());
 }
