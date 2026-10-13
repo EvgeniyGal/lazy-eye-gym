@@ -13,6 +13,7 @@ import { BreakerGame } from '../breaker/BreakerGame';
 import { MazeGame } from '../maze/MazeGame';
 import { PongGame } from '../pong/PongGame';
 import { SnakeGame } from '../snake/SnakeGame';
+import { TetrisGame } from '../tetris/TetrisGame';
 import { TwentyFortyEightGame } from '../twenty48/TwentyFortyEightGame';
 
 export function GameShell({ gameId }: { gameId: GameId }) {
@@ -101,6 +102,8 @@ export function GameShell({ gameId }: { gameId: GameId }) {
         return BreakerGame;
       case 'snake':
         return SnakeGame;
+      case 'tetris':
+        return TetrisGame;
       default:
         return TwentyFortyEightGame;
     }

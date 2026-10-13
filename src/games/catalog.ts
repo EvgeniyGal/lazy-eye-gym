@@ -1,6 +1,6 @@
 import type { EyeSide } from '@/src/anaglyph/color';
 
-export type GameId = '2048' | 'pong' | 'maze' | 'breaker' | 'snake';
+export type GameId = '2048' | 'pong' | 'maze' | 'breaker' | 'snake' | 'tetris';
 
 export type GameCategory = 'all' | 'reflex' | 'spatial';
 
@@ -268,6 +268,45 @@ export const GAMES: GameDefinition[] = [
       {
         key: 'snakeEye',
         label: 'Snake eye',
+        type: 'eye',
+        options: [
+          { label: 'Left', value: 'left' },
+          { label: 'Right', value: 'right' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'tetris',
+    title: 'Tetris Dichoptic',
+    shortTitle: 'Tetris',
+    tag: 'SPATIAL & TIMING',
+    category: 'spatial',
+    blurb: 'Classic stack-and-clear — each tetromino has its own dichoptic colour (eye + strength).',
+    dichopticSplit: {
+      leftLabel: 'I / T / Z / L (or flipped)',
+      rightLabel: 'O / S / J (or flipped)',
+    },
+    recordLabel: 'Best score',
+    metricLabel: 'Lines cleared',
+    defaultSettings: {
+      difficulty: 'easy',
+      pieceEye: 'left',
+    },
+    fields: [
+      {
+        key: 'difficulty',
+        label: 'Level',
+        type: 'segment',
+        options: [
+          { label: 'Easy', value: 'easy' },
+          { label: 'Hard', value: 'hard' },
+          { label: 'Extra hard', value: 'extraHard' },
+        ],
+      },
+      {
+        key: 'pieceEye',
+        label: 'Falling piece eye',
         type: 'eye',
         options: [
           { label: 'Left', value: 'left' },
