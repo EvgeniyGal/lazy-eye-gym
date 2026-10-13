@@ -267,7 +267,7 @@ export function PongGame({
       buffsRef.current = buff;
       setBuffs(buff);
       flipBallColor();
-      sfxRef.current('power');
+      sfxRef.current('pong_orb');
     };
 
     const tick = () => {
@@ -306,7 +306,7 @@ export function PongGame({
 
       if (s.ballX <= ballR || s.ballX >= width - ballR) {
         s.vx *= -1;
-        sfxRef.current('hit');
+        sfxRef.current('pong_wall');
       }
       s.ballX = Math.max(ballR, Math.min(width - ballR, s.ballX));
 
@@ -324,7 +324,7 @@ export function PongGame({
         s.vx += (s.ballX - (s.aiX + aiW / 2)) * 3;
         s.rally += 1;
         s.bestRally = Math.max(s.bestRally, s.rally);
-        sfxRef.current('hit');
+        sfxRef.current('pong_paddle');
       }
 
       if (
@@ -338,12 +338,12 @@ export function PongGame({
         s.vx += (s.ballX - (s.playerX + playerW / 2)) * 3;
         s.rally += 1;
         s.bestRally = Math.max(s.bestRally, s.rally);
-        sfxRef.current('hit');
+        sfxRef.current('pong_paddle');
       }
 
       if (s.ballY > height + 40) {
         s.aiScore += 1;
-        sfxRef.current('death');
+        sfxRef.current('pong_miss');
         if (s.aiScore >= pointsToWin) {
           stateRef.current = s;
           setState(s);
@@ -358,12 +358,12 @@ export function PongGame({
         s = resetBall(true, s);
       } else if (s.ballY < -40) {
         s.playerScore += 1;
-        sfxRef.current('score');
+        sfxRef.current('pong_score');
         if (s.playerScore >= pointsToWin) {
           stateRef.current = s;
           setState(s);
           ended.current = true;
-          sfxRef.current('level');
+          sfxRef.current('pong_win');
           onGameOver({
             score: s.playerScore,
             bestMetric: s.bestRally,

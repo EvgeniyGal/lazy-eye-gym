@@ -117,7 +117,7 @@ export function SnakeGame({
         ny = (ny + grid) % grid;
       } else if (nx < 0 || ny < 0 || nx >= grid || ny >= grid) {
         ended.current = true;
-        sfxRef.current('death');
+        sfxRef.current('snk_die');
         onGameOver({
           score: scoreRef.current,
           bestMetric: eatenRef.current,
@@ -129,7 +129,7 @@ export function SnakeGame({
       const obs = obstaclesRef.current;
       if (prev.some((p) => p.x === nx && p.y === ny) || obs.some((o) => o.x === nx && o.y === ny)) {
         ended.current = true;
-        sfxRef.current('death');
+        sfxRef.current('snk_die');
         onGameOver({
           score: scoreRef.current,
           bestMetric: eatenRef.current,
@@ -162,15 +162,15 @@ export function SnakeGame({
           points = 30;
           pulseRef.current = now + 4000;
           setSpeedPulseUntil(pulseRef.current);
-          sfxRef.current('power');
+          sfxRef.current('snk_bonus');
         } else if (f.kind === 'shrink') {
           points = 5;
           if (next.length > 4) {
             next = next.slice(0, Math.max(3, next.length - 2));
           }
-          sfxRef.current('ghost');
+          sfxRef.current('snk_bonus');
         } else {
-          sfxRef.current('score');
+          sfxRef.current('snk_eat');
         }
 
         const gained = points * mult;

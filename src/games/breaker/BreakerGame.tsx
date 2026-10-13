@@ -514,7 +514,7 @@ export function BreakerGame({
           nextScore += 10 * brick.maxHp;
           nextCleared += 1;
           nextBricks = nextBricks.filter((_, i) => i !== hitIndex);
-          sfxRef.current('ghost');
+          sfxRef.current('brk_break');
           if (Math.random() < 0.28) {
             dropSeq += 1;
             nextDrops.push({
@@ -528,7 +528,7 @@ export function BreakerGame({
         } else {
           nextBricks = nextBricks.map((b, i) => (i === hitIndex ? { ...b, hp } : b));
           nextScore += 5;
-          sfxRef.current('hit');
+          sfxRef.current('brk_hit');
         }
       };
 
@@ -638,7 +638,7 @@ export function BreakerGame({
           powersRef.current = nextP;
           setPowers(nextP);
           nextScore += 15;
-          sfxRef.current('power');
+          sfxRef.current('brk_power');
           return false;
         });
 
@@ -663,7 +663,7 @@ export function BreakerGame({
         nextScore += 150 * (nextStage);
         scoreRef.current = nextScore;
         setScore(nextScore);
-        sfxRef.current('level');
+        sfxRef.current('brk_stage');
 
         if (nextStage >= TOTAL_STAGES) {
           finish();
@@ -687,7 +687,7 @@ export function BreakerGame({
         const left = livesRef.current - 1;
         livesRef.current = left;
         setLives(left);
-        sfxRef.current('death');
+        sfxRef.current('brk_life');
         if (left <= 0) {
           finish();
           return;

@@ -346,8 +346,8 @@ export function TwentyFortyEightGame({
         const nextScore = scoreRef.current + plan.scoreGain;
         setScore(nextScore);
         scoreRef.current = nextScore;
-        if (plan.scoreGain > 0) sfxRef.current('score');
-        else sfxRef.current('move');
+        if (plan.scoreGain > 0) sfxRef.current('t48_merge');
+        else sfxRef.current('t48_move');
 
         const settled = plan.settled.map((t) => ({ ...t, x: t.col, y: t.row }));
         const spawned = spawnTile(settled);
@@ -358,7 +358,7 @@ export function TwentyFortyEightGame({
 
         if (!canMove(settled)) {
           ended.current = true;
-          sfxRef.current('death');
+          sfxRef.current('t48_over');
           onGameOver({
             score: nextScore,
             bestMetric: maxTile(settled),

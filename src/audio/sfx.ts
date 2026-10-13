@@ -1,21 +1,78 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 
-/** Logical cue names used by games. */
+/** Logical cue names used by games (maze + per-game tailored). */
 export type SfxName =
+  // Maze
   | 'chomp'
   | 'power'
   | 'ghost'
   | 'death'
   | 'fruit'
   | 'level'
+  // Legacy aliases (still resolve)
   | 'hit'
   | 'score'
   | 'clear'
   | 'lock'
-  | 'move';
+  | 'move'
+  // Pong
+  | 'pong_paddle'
+  | 'pong_wall'
+  | 'pong_score'
+  | 'pong_miss'
+  | 'pong_win'
+  | 'pong_orb'
+  // Breaker
+  | 'brk_hit'
+  | 'brk_break'
+  | 'brk_power'
+  | 'brk_life'
+  | 'brk_stage'
+  // Snake
+  | 'snk_eat'
+  | 'snk_bonus'
+  | 'snk_die'
+  // Tetris
+  | 'tet_rotate'
+  | 'tet_lock'
+  | 'tet_clear'
+  | 'tet_tetris'
+  | 'tet_over'
+  // 2048
+  | 't48_move'
+  | 't48_merge'
+  | 't48_over';
 
-type AssetKey = 'chomp' | 'power' | 'ghost' | 'death' | 'fruit' | 'level';
+type AssetKey =
+  | 'chomp'
+  | 'power'
+  | 'ghost'
+  | 'death'
+  | 'fruit'
+  | 'level'
+  | 'pong_paddle'
+  | 'pong_wall'
+  | 'pong_score'
+  | 'pong_miss'
+  | 'pong_win'
+  | 'pong_orb'
+  | 'brk_hit'
+  | 'brk_break'
+  | 'brk_power'
+  | 'brk_life'
+  | 'brk_stage'
+  | 'snk_eat'
+  | 'snk_bonus'
+  | 'snk_die'
+  | 'tet_rotate'
+  | 'tet_lock'
+  | 'tet_clear'
+  | 'tet_tetris'
+  | 'tet_over'
+  | 't48_move'
+  | 't48_merge'
+  | 't48_over';
 
 export type SfxOptions = {
   soundEnabled: boolean;
@@ -29,11 +86,32 @@ const sources: Record<AssetKey, number> = {
   death: require('../../assets/sfx/death.wav'),
   fruit: require('../../assets/sfx/fruit.wav'),
   level: require('../../assets/sfx/level.wav'),
+  pong_paddle: require('../../assets/sfx/pong_paddle.wav'),
+  pong_wall: require('../../assets/sfx/pong_wall.wav'),
+  pong_score: require('../../assets/sfx/pong_score.wav'),
+  pong_miss: require('../../assets/sfx/pong_miss.wav'),
+  pong_win: require('../../assets/sfx/pong_win.wav'),
+  pong_orb: require('../../assets/sfx/pong_orb.wav'),
+  brk_hit: require('../../assets/sfx/brk_hit.wav'),
+  brk_break: require('../../assets/sfx/brk_break.wav'),
+  brk_power: require('../../assets/sfx/brk_power.wav'),
+  brk_life: require('../../assets/sfx/brk_life.wav'),
+  brk_stage: require('../../assets/sfx/brk_stage.wav'),
+  snk_eat: require('../../assets/sfx/snk_eat.wav'),
+  snk_bonus: require('../../assets/sfx/snk_bonus.wav'),
+  snk_die: require('../../assets/sfx/snk_die.wav'),
+  tet_rotate: require('../../assets/sfx/tet_rotate.wav'),
+  tet_lock: require('../../assets/sfx/tet_lock.wav'),
+  tet_clear: require('../../assets/sfx/tet_clear.wav'),
+  tet_tetris: require('../../assets/sfx/tet_tetris.wav'),
+  tet_over: require('../../assets/sfx/tet_over.wav'),
+  t48_move: require('../../assets/sfx/t48_move.wav'),
+  t48_merge: require('../../assets/sfx/t48_merge.wav'),
+  t48_over: require('../../assets/sfx/t48_over.wav'),
 };
 
 const chompAlt = require('../../assets/sfx/chomp2.wav');
 
-/** Map game cues → wav assets. */
 const RESOLVE: Record<SfxName, AssetKey> = {
   chomp: 'chomp',
   power: 'power',
@@ -41,11 +119,33 @@ const RESOLVE: Record<SfxName, AssetKey> = {
   death: 'death',
   fruit: 'fruit',
   level: 'level',
-  hit: 'ghost',
-  score: 'fruit',
-  clear: 'level',
-  lock: 'chomp',
-  move: 'chomp',
+  hit: 'brk_hit',
+  score: 'pong_score',
+  clear: 'tet_clear',
+  lock: 'tet_lock',
+  move: 't48_move',
+  pong_paddle: 'pong_paddle',
+  pong_wall: 'pong_wall',
+  pong_score: 'pong_score',
+  pong_miss: 'pong_miss',
+  pong_win: 'pong_win',
+  pong_orb: 'pong_orb',
+  brk_hit: 'brk_hit',
+  brk_break: 'brk_break',
+  brk_power: 'brk_power',
+  brk_life: 'brk_life',
+  brk_stage: 'brk_stage',
+  snk_eat: 'snk_eat',
+  snk_bonus: 'snk_bonus',
+  snk_die: 'snk_die',
+  tet_rotate: 'tet_rotate',
+  tet_lock: 'tet_lock',
+  tet_clear: 'tet_clear',
+  tet_tetris: 'tet_tetris',
+  tet_over: 'tet_over',
+  t48_move: 't48_move',
+  t48_merge: 't48_merge',
+  t48_over: 't48_over',
 };
 
 let ready = false;
@@ -125,9 +225,28 @@ function replay(player: AudioPlayer | undefined | null) {
 }
 
 function hapticFor(name: SfxName) {
-  if (name === 'death') {
+  if (
+    name === 'death' ||
+    name === 'pong_miss' ||
+    name === 'brk_life' ||
+    name === 'snk_die' ||
+    name === 'tet_over' ||
+    name === 't48_over'
+  ) {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-  } else if (name === 'power' || name === 'ghost' || name === 'level' || name === 'clear' || name === 'hit') {
+  } else if (
+    name === 'power' ||
+    name === 'ghost' ||
+    name === 'level' ||
+    name === 'clear' ||
+    name === 'hit' ||
+    name === 'pong_paddle' ||
+    name === 'brk_break' ||
+    name === 'brk_stage' ||
+    name === 'tet_tetris' ||
+    name === 'pong_win' ||
+    name === 't48_merge'
+  ) {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   } else {
     void Haptics.selectionAsync();

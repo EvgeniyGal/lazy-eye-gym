@@ -286,7 +286,7 @@ export function TetrisGame({
   const finish = () => {
     if (ended.current) return;
     ended.current = true;
-    sfxRef.current('death');
+    sfxRef.current('tet_over');
     onGameOver({
       score: scoreRef.current,
       bestMetric: linesRef.current,
@@ -319,9 +319,9 @@ export function TetrisGame({
       setScore(scoreRef.current);
       setLines(linesRef.current);
       setLevel(levelRef.current);
-      sfxRef.current(cleared.cleared >= 4 ? 'level' : 'clear');
+      sfxRef.current(cleared.cleared >= 4 ? 'tet_tetris' : 'tet_clear');
     } else {
-      sfxRef.current('lock');
+      sfxRef.current('tet_lock');
     }
     boardRef.current = nextBoard;
     setBoard(nextBoard);
@@ -355,7 +355,7 @@ export function TetrisGame({
     setActive(rotated);
     grounded.current = false;
     lockUntil.current = 0;
-    sfxRef.current('move');
+    sfxRef.current('tet_rotate');
   };
 
   const hardDrop = () => {
