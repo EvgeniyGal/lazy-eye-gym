@@ -7,7 +7,7 @@ import {
   PROFILES_KEY,
   type GlassProfile,
 } from '@/src/anaglyph/types';
-import { getJSON, getString, setJSON, setString } from './mmkv';
+import { getJSON, getString, isStorageHydrated, setJSON, setString } from './mmkv';
 
 function nowIso() {
   return new Date().toISOString();
@@ -27,9 +27,16 @@ export function createDefaultProfile(): GlassProfile {
   };
 }
 
+/**
+ * List profiles from the hydrated store.
+ * Does NOT invent/persist a default until storage has been hydrated — otherwise a
+ * first-render call would wipe saved glasses on disk.
+ */
 export function listProfiles(): GlassProfile[] {
   const stored = getJSON<GlassProfile[]>(PROFILES_KEY, []);
   if (stored.length === 0) {
+    // Before hydrate, memory is empty even when disk has data — never seed yet.
+    if (!isStorageHydrated()) return [];
     const fresh = [createDefaultProfile()];
     setJSON(PROFILES_KEY, fresh);
     setString(ACTIVE_PROFILE_KEY, fresh[0]!.id);
@@ -42,7 +49,7 @@ export function listProfiles(): GlassProfile[] {
 
 export function getActiveProfile(): GlassProfile {
   const profiles = listProfiles();
-  return profiles.find((p) => p.isActive) ?? profiles[0]!;
+  return profiles.find((p) => p.isActive) ?? profiles[0] ?? createDefaultProfile();
 }
 
 export function setActiveProfileId(id: string) {
@@ -54,10 +61,12 @@ export function setActiveProfileId(id: string) {
   return next;
 }
 
-export function upsertProfile(input: Omit<GlassProfile, 'createdAt' | 'updatedAt' | 'isActive'> & {
-  id?: string;
-  isActive?: boolean;
-}) {
+export function upsertProfile(
+  input: Omit<GlassProfile, 'createdAt' | 'updatedAt' | 'isActive'> & {
+    id?: string;
+    isActive?: boolean;
+  },
+) {
   const profiles = listProfiles();
   const stamp = nowIso();
   if (input.id && profiles.some((p) => p.id === input.id)) {

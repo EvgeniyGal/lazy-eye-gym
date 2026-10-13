@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { AppState } from 'react-native';
 
 import { buildPalette } from '@/src/anaglyph/palette';
 import {
+  DEFAULT_COLORS,
   DEFAULT_INTENSITY,
   DEFAULT_PREFS,
   GAME_SETTINGS_KEY,
@@ -16,13 +18,12 @@ import type { GameId } from '@/src/games/catalog';
 import { GAMES } from '@/src/games/catalog';
 import {
   deleteProfile,
-  getActiveProfile,
   listProfiles,
   setActiveProfileId,
   swapEyeColors,
   upsertProfile,
 } from '@/src/storage/profiles';
-import { getJSON, hydrateStorage, setJSON } from '@/src/storage/mmkv';
+import { flushStorage, getJSON, hydrateStorage, setJSON } from '@/src/storage/mmkv';
 
 type GameSettingsMap = Record<string, Record<string, string | number | boolean>>;
 
@@ -47,6 +48,17 @@ type AppContextValue = {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+/** In-memory placeholder only — never persisted; used before hydrate finishes. */
+const PLACEHOLDER_PROFILE: GlassProfile = {
+  id: '__placeholder__',
+  name: 'Default',
+  isActive: true,
+  ...DEFAULT_COLORS,
+  background: 'black',
+  createdAt: '',
+  updatedAt: '',
+};
+
 function defaultGameSettings(): GameSettingsMap {
   return Object.fromEntries(GAMES.map((g) => [g.id, { ...g.defaultSettings }]));
 }
@@ -60,16 +72,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = () => {
     setProfiles(listProfiles());
-    setPrefs({ ...DEFAULT_PREFS, ...getJSON(PREFS_KEY, DEFAULT_PREFS) });
-    setIntensityState(getJSON(INTENSITY_KEY, DEFAULT_INTENSITY));
+    setPrefs({ ...DEFAULT_PREFS, ...getJSON(PREFS_KEY, {}) });
+    setIntensityState({ ...DEFAULT_INTENSITY, ...getJSON(INTENSITY_KEY, {}) });
     setGameSettingsState({ ...defaultGameSettings(), ...getJSON(GAME_SETTINGS_KEY, {}) });
   };
 
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
       await hydrateStorage();
+      if (cancelled) return;
       refresh();
-      const loaded = { ...DEFAULT_PREFS, ...getJSON(PREFS_KEY, DEFAULT_PREFS) };
+      const loaded = { ...DEFAULT_PREFS, ...getJSON(PREFS_KEY, {}) };
       if (loaded.remindersEnabled) {
         void import('@/src/notifications/reminders').then(({ syncReminders }) =>
           syncReminders(loaded),
@@ -77,10 +91,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       setReady(true);
     })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Flush pending AsyncStorage writes when the app backgrounds / closes
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'background' || state === 'inactive') {
+        void flushStorage();
+      }
+    });
+    return () => sub.remove();
   }, []);
 
   const activeProfile = useMemo(() => {
-    return profiles.find((p) => p.isActive) ?? profiles[0] ?? getActiveProfile();
+    return profiles.find((p) => p.isActive) ?? profiles[0] ?? PLACEHOLDER_PROFILE;
   }, [profiles]);
 
   const palette = useMemo(
