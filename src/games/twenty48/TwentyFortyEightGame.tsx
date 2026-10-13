@@ -11,6 +11,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
+import { useGameAudio } from '@/src/audio/useGameAudio';
 import type { GameSceneProps } from '../types';
 
 type Dir = 'up' | 'down' | 'left' | 'right';
@@ -222,6 +223,9 @@ export function TwentyFortyEightGame({
   onScore,
   onGameOver,
 }: GameSceneProps) {
+  const { sfx } = useGameAudio(settings);
+  const sfxRef = useRef(sfx);
+  sfxRef.current = sfx;
   const initialGridEye = (settings.gridEye as EyeSide) || 'left';
   const [gridEye, setGridEye] = useState<EyeSide | null>(null);
   const [tiles, setTiles] = useState<Tile[]>([]);
@@ -342,6 +346,8 @@ export function TwentyFortyEightGame({
         const nextScore = scoreRef.current + plan.scoreGain;
         setScore(nextScore);
         scoreRef.current = nextScore;
+        if (plan.scoreGain > 0) sfxRef.current('score');
+        else sfxRef.current('move');
 
         const settled = plan.settled.map((t) => ({ ...t, x: t.col, y: t.row }));
         const spawned = spawnTile(settled);
@@ -352,6 +358,7 @@ export function TwentyFortyEightGame({
 
         if (!canMove(settled)) {
           ended.current = true;
+          sfxRef.current('death');
           onGameOver({
             score: nextScore,
             bestMetric: maxTile(settled),

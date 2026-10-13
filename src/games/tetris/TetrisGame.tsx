@@ -6,6 +6,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { withOpacity, type EyeSide } from '@/src/anaglyph/color';
 import { colorForEye, solidForEye } from '@/src/anaglyph/palette';
 import type { DichopticPalette } from '@/src/anaglyph/types';
+import { useGameAudio } from '@/src/audio/useGameAudio';
 import type { GameSceneProps } from '../types';
 
 const COLS = 10;
@@ -218,6 +219,9 @@ export function TetrisGame({
   onScore,
   onGameOver,
 }: GameSceneProps) {
+  const { sfx } = useGameAudio(settings);
+  const sfxRef = useRef(sfx);
+  sfxRef.current = sfx;
   const levelKey = resolveLevel(settings);
   const baseGravity = LEVELS[levelKey].gravityMs;
   const pieceEye = (settings.pieceEye as EyeSide) || 'left';
@@ -282,6 +286,7 @@ export function TetrisGame({
   const finish = () => {
     if (ended.current) return;
     ended.current = true;
+    sfxRef.current('death');
     onGameOver({
       score: scoreRef.current,
       bestMetric: linesRef.current,
@@ -314,6 +319,9 @@ export function TetrisGame({
       setScore(scoreRef.current);
       setLines(linesRef.current);
       setLevel(levelRef.current);
+      sfxRef.current(cleared.cleared >= 4 ? 'level' : 'clear');
+    } else {
+      sfxRef.current('lock');
     }
     boardRef.current = nextBoard;
     setBoard(nextBoard);
@@ -347,6 +355,7 @@ export function TetrisGame({
     setActive(rotated);
     grounded.current = false;
     lockUntil.current = 0;
+    sfxRef.current('move');
   };
 
   const hardDrop = () => {

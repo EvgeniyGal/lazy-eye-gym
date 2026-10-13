@@ -20,9 +20,10 @@ export function GameShell({ gameId }: { gameId: GameId }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const { palette, activeProfile, getGameSettings } = useAppStore();
+  const { palette, activeProfile, getGameSettings, setGameSettings, prefs } = useAppStore();
   const game = getGame(gameId)!;
   const settings = getGameSettings(gameId);
+  const soundOn = Boolean(settings.sound ?? true) && prefs.soundEffects;
 
   const [paused, setPaused] = useState(false);
   const [score, setScore] = useState(0);
@@ -133,6 +134,22 @@ export function GameShell({ gameId }: { gameId: GameId }) {
             Score {score} · {game.metricLabel} {metric}
           </Text>
         </View>
+        <Pressable
+          onPress={() =>
+            setGameSettings(gameId, {
+              ...settings,
+              sound: !(settings.sound ?? true),
+            })
+          }
+          style={[styles.iconBtn, { backgroundColor: hudBtnBg, marginRight: 8 }]}
+          accessibilityLabel={soundOn ? 'Mute sounds' : 'Unmute sounds'}
+        >
+          <Ionicons
+            name={Boolean(settings.sound ?? true) ? 'volume-high' : 'volume-mute'}
+            size={20}
+            color={hudFg}
+          />
+        </Pressable>
         <Pressable
           onPress={() => setPaused((p) => !p)}
           style={[styles.iconBtn, { backgroundColor: hudBtnBg }]}

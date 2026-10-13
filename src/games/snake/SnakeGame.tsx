@@ -5,6 +5,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
+import { useGameAudio } from '@/src/audio/useGameAudio';
 import type { GameSceneProps } from '../types';
 
 type Point = { x: number; y: number };
@@ -37,6 +38,9 @@ export function SnakeGame({
   onScore,
   onGameOver,
 }: GameSceneProps) {
+  const { sfx } = useGameAudio(settings);
+  const sfxRef = useRef(sfx);
+  sfxRef.current = sfx;
   const grid = Number(settings.gridSize ?? 16);
   const wrap = Boolean(settings.wrap);
   const baseTickMs = 180 / Number(settings.speed ?? 1);
@@ -113,6 +117,7 @@ export function SnakeGame({
         ny = (ny + grid) % grid;
       } else if (nx < 0 || ny < 0 || nx >= grid || ny >= grid) {
         ended.current = true;
+        sfxRef.current('death');
         onGameOver({
           score: scoreRef.current,
           bestMetric: eatenRef.current,
@@ -124,6 +129,7 @@ export function SnakeGame({
       const obs = obstaclesRef.current;
       if (prev.some((p) => p.x === nx && p.y === ny) || obs.some((o) => o.x === nx && o.y === ny)) {
         ended.current = true;
+        sfxRef.current('death');
         onGameOver({
           score: scoreRef.current,
           bestMetric: eatenRef.current,
@@ -156,11 +162,15 @@ export function SnakeGame({
           points = 30;
           pulseRef.current = now + 4000;
           setSpeedPulseUntil(pulseRef.current);
+          sfxRef.current('power');
         } else if (f.kind === 'shrink') {
           points = 5;
           if (next.length > 4) {
             next = next.slice(0, Math.max(3, next.length - 2));
           }
+          sfxRef.current('ghost');
+        } else {
+          sfxRef.current('score');
         }
 
         const gained = points * mult;

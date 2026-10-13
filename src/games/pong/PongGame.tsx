@@ -5,6 +5,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
+import { useGameAudio } from '@/src/audio/useGameAudio';
 import type { GameSceneProps } from '../types';
 
 /** Power-ups both paddles can grab to trick each other. */
@@ -162,6 +163,9 @@ export function PongGame({
   onScore,
   onGameOver,
 }: GameSceneProps) {
+  const { sfx } = useGameAudio(settings);
+  const sfxRef = useRef(sfx);
+  sfxRef.current = sfx;
   const level = LEVELS[resolveLevel(settings)];
   const basePaddleW = Math.min(140, width * 0.28) * level.paddleSize;
   const paddleH = 14;
@@ -263,6 +267,7 @@ export function PongGame({
       buffsRef.current = buff;
       setBuffs(buff);
       flipBallColor();
+      sfxRef.current('power');
     };
 
     const tick = () => {
@@ -299,7 +304,10 @@ export function PongGame({
       s.ballX += s.vx * dt * turbo * rallyBoost;
       s.ballY += s.vy * dt * turbo * rallyBoost;
 
-      if (s.ballX <= ballR || s.ballX >= width - ballR) s.vx *= -1;
+      if (s.ballX <= ballR || s.ballX >= width - ballR) {
+        s.vx *= -1;
+        sfxRef.current('hit');
+      }
       s.ballX = Math.max(ballR, Math.min(width - ballR, s.ballX));
 
       const aiPadY = 28;
@@ -316,6 +324,7 @@ export function PongGame({
         s.vx += (s.ballX - (s.aiX + aiW / 2)) * 3;
         s.rally += 1;
         s.bestRally = Math.max(s.bestRally, s.rally);
+        sfxRef.current('hit');
       }
 
       if (
@@ -329,10 +338,12 @@ export function PongGame({
         s.vx += (s.ballX - (s.playerX + playerW / 2)) * 3;
         s.rally += 1;
         s.bestRally = Math.max(s.bestRally, s.rally);
+        sfxRef.current('hit');
       }
 
       if (s.ballY > height + 40) {
         s.aiScore += 1;
+        sfxRef.current('death');
         if (s.aiScore >= pointsToWin) {
           stateRef.current = s;
           setState(s);
@@ -347,10 +358,12 @@ export function PongGame({
         s = resetBall(true, s);
       } else if (s.ballY < -40) {
         s.playerScore += 1;
+        sfxRef.current('score');
         if (s.playerScore >= pointsToWin) {
           stateRef.current = s;
           setState(s);
           ended.current = true;
+          sfxRef.current('level');
           onGameOver({
             score: s.playerScore,
             bestMetric: s.bestRally,

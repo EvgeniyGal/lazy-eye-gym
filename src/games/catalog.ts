@@ -40,6 +40,7 @@ export const GAMES: GameDefinition[] = [
     metricLabel: 'Best tile',
     defaultSettings: {
       difficulty: 'medium',
+      sound: true,
       gridEye: 'left',
     },
     fields: [
@@ -52,6 +53,11 @@ export const GAMES: GameDefinition[] = [
           { label: 'Medium', value: 'medium' },
           { label: 'Hard', value: 'hard' },
         ],
+      },
+      {
+        key: 'sound',
+        label: 'Game sounds',
+        type: 'toggle',
       },
       {
         key: 'gridEye',
@@ -79,6 +85,7 @@ export const GAMES: GameDefinition[] = [
     metricLabel: 'Longest rally',
     defaultSettings: {
       difficulty: 'easy',
+      sound: true,
       paddleEye: 'left',
       ballEye: 'right',
     },
@@ -92,6 +99,11 @@ export const GAMES: GameDefinition[] = [
           { label: 'Hard', value: 'hard' },
           { label: 'Extra hard', value: 'extraHard' },
         ],
+      },
+      {
+        key: 'sound',
+        label: 'Game sounds',
+        type: 'toggle',
       },
       {
         key: 'paddleEye',
@@ -190,6 +202,7 @@ export const GAMES: GameDefinition[] = [
     metricLabel: 'Bricks cleared',
     defaultSettings: {
       difficulty: 'easy',
+      sound: true,
       paddleEye: 'left',
     },
     fields: [
@@ -202,6 +215,11 @@ export const GAMES: GameDefinition[] = [
           { label: 'Hard', value: 'hard' },
           { label: 'Extra hard', value: 'extraHard' },
         ],
+      },
+      {
+        key: 'sound',
+        label: 'Game sounds',
+        type: 'toggle',
       },
       {
         key: 'paddleEye',
@@ -231,6 +249,7 @@ export const GAMES: GameDefinition[] = [
       speed: 1,
       gridSize: 16,
       wrap: false,
+      sound: true,
       gridEye: 'left',
       snakeEye: 'right',
     },
@@ -254,6 +273,11 @@ export const GAMES: GameDefinition[] = [
       {
         key: 'wrap',
         label: 'Wrap edges',
+        type: 'toggle',
+      },
+      {
+        key: 'sound',
+        label: 'Game sounds',
         type: 'toggle',
       },
       {
@@ -291,6 +315,7 @@ export const GAMES: GameDefinition[] = [
     metricLabel: 'Lines cleared',
     defaultSettings: {
       difficulty: 'easy',
+      sound: true,
       pieceEye: 'left',
     },
     fields: [
@@ -303,6 +328,11 @@ export const GAMES: GameDefinition[] = [
           { label: 'Hard', value: 'hard' },
           { label: 'Extra hard', value: 'extraHard' },
         ],
+      },
+      {
+        key: 'sound',
+        label: 'Game sounds',
+        type: 'toggle',
       },
       {
         key: 'pieceEye',

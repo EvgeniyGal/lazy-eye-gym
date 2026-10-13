@@ -5,6 +5,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { withOpacity, type EyeSide } from '@/src/anaglyph/color';
 import { colorForEye, solidForEye } from '@/src/anaglyph/palette';
+import { useGameAudio } from '@/src/audio/useGameAudio';
 import type { GameSceneProps } from '../types';
 
 type MaxHp = 1 | 2 | 3 | 4;
@@ -377,6 +378,9 @@ export function BreakerGame({
   onScore,
   onGameOver,
 }: GameSceneProps) {
+  const { sfx } = useGameAudio(settings);
+  const sfxRef = useRef(sfx);
+  sfxRef.current = sfx;
   const level = LEVELS[resolveLevel(settings)];
   const basePaddleW = Math.min(130, width * 0.3) * level.paddleSize;
   const paddleH = 14;
@@ -510,6 +514,7 @@ export function BreakerGame({
           nextScore += 10 * brick.maxHp;
           nextCleared += 1;
           nextBricks = nextBricks.filter((_, i) => i !== hitIndex);
+          sfxRef.current('ghost');
           if (Math.random() < 0.28) {
             dropSeq += 1;
             nextDrops.push({
@@ -523,6 +528,7 @@ export function BreakerGame({
         } else {
           nextBricks = nextBricks.map((b, i) => (i === hitIndex ? { ...b, hp } : b));
           nextScore += 5;
+          sfxRef.current('hit');
         }
       };
 
@@ -632,6 +638,7 @@ export function BreakerGame({
           powersRef.current = nextP;
           setPowers(nextP);
           nextScore += 15;
+          sfxRef.current('power');
           return false;
         });
 
@@ -656,6 +663,7 @@ export function BreakerGame({
         nextScore += 150 * (nextStage);
         scoreRef.current = nextScore;
         setScore(nextScore);
+        sfxRef.current('level');
 
         if (nextStage >= TOTAL_STAGES) {
           finish();
@@ -679,6 +687,7 @@ export function BreakerGame({
         const left = livesRef.current - 1;
         livesRef.current = left;
         setLives(left);
+        sfxRef.current('death');
         if (left <= 0) {
           finish();
           return;
