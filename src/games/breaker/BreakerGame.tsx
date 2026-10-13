@@ -494,7 +494,7 @@ export function BreakerGame({
       if (isLaser) {
         laserCooldown.current -= dt;
         if (laserCooldown.current <= 0) {
-          laserCooldown.current = 0.22;
+          laserCooldown.current = 0.45;
           const inset = 6;
           dropSeq += 1;
           nextLasers.push({ id: `lz-${dropSeq}`, x: px + inset, y: py });
