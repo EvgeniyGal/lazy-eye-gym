@@ -1,4 +1,4 @@
-import { Canvas, Circle, Rect, RoundedRect } from '@shopify/react-native-skia';
+import { Canvas, Circle, Group, Path, Rect, RoundedRect, Skia } from '@shopify/react-native-skia';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -7,12 +7,15 @@ import { withOpacity, type EyeSide } from '@/src/anaglyph/color';
 import { colorForEye, solidForEye } from '@/src/anaglyph/palette';
 import type { GameSceneProps } from '../types';
 
+type MaxHp = 1 | 2 | 3 | 4;
+
 type Brick = {
   id: string;
   x: number;
   y: number;
   hp: number;
-  maxHp: number;
+  maxHp: MaxHp;
+  eye: EyeSide;
 };
 
 type Ball = { id: string; x: number; y: number; vx: number; vy: number };
@@ -22,6 +25,7 @@ type PowerKind = 'multi' | 'laser' | 'wide' | 'slow' | 'swap';
 type PowerDrop = {
   id: string;
   kind: PowerKind;
+  eye: EyeSide;
   x: number;
   y: number;
 };
@@ -30,35 +34,185 @@ type ActivePowers = {
   laserUntil: number;
   wideUntil: number;
   slowUntil: number;
-  swapUntil: number;
 };
 
 const COLS = 8;
 const BRICK_H = 18;
+const ORB_R = 15;
+const TOTAL_STAGES = 15;
 const POWER_KINDS: PowerKind[] = ['multi', 'laser', 'wide', 'slow', 'swap'];
 
-function hpForRow(row: number, wave: number) {
-  const base = Math.min(3, 1 + Math.floor((row + wave) / 2));
-  return Math.max(1, Math.min(3, base));
+const LEVELS = {
+  easy: { speed: 0.75, paddleSize: 1.35, lives: 5, hpCap: 2 as MaxHp },
+  hard: { speed: 1.1, paddleSize: 1.0, lives: 3, hpCap: 3 as MaxHp },
+  extraHard: { speed: 1.45, paddleSize: 0.78, lives: 2, hpCap: 4 as MaxHp },
+} as const;
+
+type LevelKey = keyof typeof LEVELS;
+
+function resolveLevel(settings: Record<string, string | number | boolean>): LevelKey {
+  const raw = String(settings.difficulty ?? 'easy');
+  if (raw === 'hard' || raw === 'extraHard') return raw;
+  return 'easy';
 }
 
-function opacityForHp(hp: number, maxHp: number) {
-  if (maxHp <= 1) return 1;
-  return 0.4 + (hp / maxHp) * 0.6;
+/**
+ * Stage layouts: grid of HP values (0 = empty). Rows vary by stage.
+ * Difficulty clamps each cell to hpCap.
+ */
+const STAGE_GRIDS: number[][][] = [
+  // 1 — sparse HP1
+  [
+    [1, 0, 1, 0, 1, 0, 1, 0],
+    [0, 1, 0, 1, 0, 1, 0, 1],
+    [1, 0, 1, 0, 1, 0, 1, 0],
+  ],
+  // 2
+  [
+    [1, 1, 1, 1, 1, 1, 1, 1],
+    [0, 1, 0, 1, 0, 1, 0, 1],
+    [1, 0, 1, 0, 1, 0, 1, 0],
+  ],
+  // 3
+  [
+    [1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+    [0, 1, 1, 1, 1, 1, 1, 0],
+  ],
+  // 4 — HP2 appears
+  [
+    [2, 1, 2, 1, 2, 1, 2, 1],
+    [1, 2, 1, 2, 1, 2, 1, 2],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+    [0, 1, 0, 1, 0, 1, 0, 1],
+  ],
+  // 5 pyramid
+  [
+    [0, 0, 0, 2, 2, 0, 0, 0],
+    [0, 0, 1, 2, 2, 1, 0, 0],
+    [0, 1, 1, 2, 2, 1, 1, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+  // 6
+  [
+    [2, 2, 1, 1, 1, 1, 2, 2],
+    [2, 1, 1, 1, 1, 1, 1, 2],
+    [1, 1, 0, 1, 1, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+  // 7
+  [
+    [2, 2, 2, 2, 2, 2, 2, 2],
+    [1, 0, 1, 0, 1, 0, 1, 0],
+    [2, 1, 2, 1, 2, 1, 2, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+  // 8 — HP3
+  [
+    [3, 2, 3, 2, 3, 2, 3, 2],
+    [2, 1, 2, 1, 2, 1, 2, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+    [0, 2, 0, 2, 0, 2, 0, 2],
+    [1, 0, 1, 0, 1, 0, 1, 0],
+  ],
+  // 9 pillars
+  [
+    [3, 0, 2, 0, 2, 0, 3, 0],
+    [3, 0, 2, 0, 2, 0, 3, 0],
+    [3, 1, 2, 1, 2, 1, 3, 1],
+    [2, 1, 1, 1, 1, 1, 2, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+  // 10
+  [
+    [3, 3, 2, 2, 2, 2, 3, 3],
+    [3, 2, 1, 1, 1, 1, 2, 3],
+    [2, 1, 0, 1, 1, 0, 1, 2],
+    [2, 1, 1, 1, 1, 1, 1, 2],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+  // 11
+  [
+    [3, 3, 3, 3, 3, 3, 3, 3],
+    [2, 0, 2, 0, 2, 0, 2, 0],
+    [3, 2, 3, 2, 3, 2, 3, 2],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+    [2, 1, 2, 1, 2, 1, 2, 1],
+  ],
+  // 12 — HP4 anchors
+  [
+    [4, 2, 3, 2, 2, 3, 2, 4],
+    [3, 2, 1, 1, 1, 1, 2, 3],
+    [2, 1, 0, 2, 2, 0, 1, 2],
+    [3, 2, 1, 1, 1, 1, 2, 3],
+    [2, 2, 2, 2, 2, 2, 2, 2],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+  // 13
+  [
+    [4, 3, 4, 3, 3, 4, 3, 4],
+    [3, 0, 2, 0, 0, 2, 0, 3],
+    [4, 2, 1, 2, 2, 1, 2, 4],
+    [2, 1, 1, 1, 1, 1, 1, 2],
+    [3, 2, 2, 2, 2, 2, 2, 3],
+    [1, 1, 0, 1, 1, 0, 1, 1],
+  ],
+  // 14
+  [
+    [4, 4, 3, 3, 3, 3, 4, 4],
+    [4, 3, 2, 2, 2, 2, 3, 4],
+    [3, 2, 0, 1, 1, 0, 2, 3],
+    [3, 2, 1, 4, 4, 1, 2, 3],
+    [2, 1, 1, 1, 1, 1, 1, 2],
+    [2, 2, 2, 2, 2, 2, 2, 2],
+  ],
+  // 15 finale
+  [
+    [4, 4, 4, 4, 4, 4, 4, 4],
+    [4, 3, 2, 3, 3, 2, 3, 4],
+    [3, 2, 0, 2, 2, 0, 2, 3],
+    [4, 2, 1, 4, 4, 1, 2, 4],
+    [3, 2, 1, 1, 1, 1, 2, 3],
+    [2, 1, 1, 1, 1, 1, 1, 2],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+];
+
+function clampHp(v: number, cap: MaxHp): MaxHp {
+  const n = Math.max(1, Math.min(cap, Math.min(4, v))) as MaxHp;
+  return n;
 }
 
-function buildBricks(width: number, rows: number, wave: number): Brick[] {
+function fillOpacity(hp: number, maxHp: MaxHp) {
+  // Remaining HP readable; maxHp 4 starts fully solid
+  if (maxHp === 4 && hp === maxHp) return 1;
+  const base = maxHp === 1 ? 0.55 : maxHp === 2 ? 0.65 : maxHp === 3 ? 0.8 : 1;
+  return Math.max(0.35, base * (hp / maxHp));
+}
+
+function borderWidth(maxHp: MaxHp) {
+  if (maxHp === 1) return 1;
+  if (maxHp === 2) return 1.5;
+  if (maxHp === 3) return 2.5;
+  return 3.5;
+}
+
+function buildStageBricks(width: number, stageIndex: number, hpCap: MaxHp): Brick[] {
+  const grid = STAGE_GRIDS[Math.min(STAGE_GRIDS.length - 1, stageIndex)]!;
   const brickW = (width - 32) / COLS - 6;
   const list: Brick[] = [];
-  for (let r = 0; r < rows; r += 1) {
+  for (let r = 0; r < grid.length; r += 1) {
     for (let c = 0; c < COLS; c += 1) {
-      const hp = hpForRow(r, wave);
+      const raw = grid[r]![c] ?? 0;
+      if (raw <= 0) continue;
+      const maxHp = clampHp(raw, hpCap);
       list.push({
-        id: `b-${wave}-${r}-${c}`,
+        id: `b-${stageIndex}-${r}-${c}`,
         x: 16 + c * (brickW + 6),
-        y: 48 + r * (BRICK_H + 8),
-        hp,
-        maxHp: hp,
+        y: 40 + r * (BRICK_H + 8),
+        hp: maxHp,
+        maxHp,
+        eye: (r + c) % 2 === 0 ? 'left' : 'right',
       });
     }
   }
@@ -75,6 +229,72 @@ function makeBall(width: number, height: number, speed: number, id = 'ball-0'): 
   };
 }
 
+/** Pong-style cutout icons on power orbs. */
+function PowerIcon({
+  kind,
+  cx,
+  cy,
+  cut,
+}: {
+  kind: PowerKind;
+  cx: number;
+  cy: number;
+  cut: string;
+}) {
+  if (kind === 'wide') {
+    return (
+      <Group>
+        <RoundedRect x={cx - 9} y={cy - 2.5} width={18} height={5} r={1.5} color={cut} />
+        <RoundedRect x={cx - 2.5} y={cy - 9} width={5} height={18} r={1.5} color={cut} />
+      </Group>
+    );
+  }
+  if (kind === 'slow') {
+    return <RoundedRect x={cx - 9} y={cy - 2.5} width={18} height={5} r={1.5} color={cut} />;
+  }
+  if (kind === 'multi') {
+    return (
+      <Group>
+        <Circle cx={cx - 6} cy={cy} r={3.2} color={cut} />
+        <Circle cx={cx} cy={cy} r={3.2} color={cut} />
+        <Circle cx={cx + 6} cy={cy} r={3.2} color={cut} />
+      </Group>
+    );
+  }
+  if (kind === 'laser') {
+    const bolt = Skia.PathBuilder.Make()
+      .moveTo(cx + 2, cy - 10)
+      .lineTo(cx - 3, cy - 1)
+      .lineTo(cx + 1, cy - 1)
+      .lineTo(cx - 2, cy + 10)
+      .lineTo(cx + 4, cy + 0.5)
+      .lineTo(cx + 0.5, cy + 0.5)
+      .lineTo(cx + 5, cy - 10)
+      .close()
+      .detach();
+    return <Path path={bolt} color={cut} />;
+  }
+  // swap ↔
+  const left = Skia.PathBuilder.Make()
+    .moveTo(cx - 10, cy)
+    .lineTo(cx - 1, cy - 8)
+    .lineTo(cx - 1, cy + 8)
+    .close()
+    .detach();
+  const right = Skia.PathBuilder.Make()
+    .moveTo(cx + 10, cy)
+    .lineTo(cx + 1, cy - 8)
+    .lineTo(cx + 1, cy + 8)
+    .close()
+    .detach();
+  return (
+    <Group>
+      <Path path={left} color={cut} />
+      <Path path={right} color={cut} />
+    </Group>
+  );
+}
+
 let dropSeq = 0;
 
 export function BreakerGame({
@@ -86,22 +306,23 @@ export function BreakerGame({
   onScore,
   onGameOver,
 }: GameSceneProps) {
-  const baseRows = Number(settings.rows ?? 4);
-  const basePaddleW = Math.min(130, width * 0.3) * Number(settings.paddleWidth ?? 1);
+  const level = LEVELS[resolveLevel(settings)];
+  const basePaddleW = Math.min(130, width * 0.3) * level.paddleSize;
   const paddleH = 14;
   const ballR = 8;
-  const baseSpeed = 260 * Number(settings.ballSpeed ?? 1);
-  const startLives = Number(settings.lives ?? 3);
-  const settingsPaddleEye = (settings.paddleEye as EyeSide) || 'left';
-  const settingsBrickEye = (settings.brickEye as EyeSide) || 'right';
+  const baseSpeed = 260 * level.speed;
+  const startLives = level.lives;
+  const startPaddleEye = (settings.paddleEye as EyeSide) || 'left';
 
   const brickW = (width - 32) / COLS - 6;
 
-  const [wave, setWave] = useState(1);
-  const [lives, setLives] = useState(startLives);
+  const [stage, setStage] = useState(0);
+  const [lives, setLives] = useState<number>(startLives);
   const [paddleX, setPaddleX] = useState(width / 2 - basePaddleW / 2);
   const [balls, setBalls] = useState<Ball[]>(() => [makeBall(width, height, baseSpeed)]);
-  const [bricks, setBricks] = useState<Brick[]>(() => buildBricks(width, baseRows, 1));
+  const [bricks, setBricks] = useState<Brick[]>(() =>
+    buildStageBricks(width, 0, level.hpCap),
+  );
   const [drops, setDrops] = useState<PowerDrop[]>([]);
   const [score, setScore] = useState(0);
   const [cleared, setCleared] = useState(0);
@@ -109,9 +330,10 @@ export function BreakerGame({
     laserUntil: 0,
     wideUntil: 0,
     slowUntil: 0,
-    swapUntil: 0,
   });
   const [lasers, setLasers] = useState<{ id: string; x: number; y: number }[]>([]);
+  const [paddleEye, setPaddleEye] = useState<EyeSide>(startPaddleEye);
+  const [ballEye, setBallEye] = useState<EyeSide>(startPaddleEye === 'left' ? 'right' : 'left');
 
   const pointerX = useRef(width / 2);
   const startMs = useRef(Date.now());
@@ -122,10 +344,12 @@ export function BreakerGame({
   const scoreRef = useRef(score);
   const clearedRef = useRef(cleared);
   const livesRef = useRef(lives);
-  const waveRef = useRef(wave);
+  const stageRef = useRef(stage);
   const powersRef = useRef(powers);
   const lasersRef = useRef(lasers);
   const paddleXRef = useRef(paddleX);
+  const paddleEyeRef = useRef(paddleEye);
+  const ballEyeRef = useRef(ballEye);
   const laserCooldown = useRef(0);
 
   ballsRef.current = balls;
@@ -134,19 +358,20 @@ export function BreakerGame({
   scoreRef.current = score;
   clearedRef.current = cleared;
   livesRef.current = lives;
-  waveRef.current = wave;
+  stageRef.current = stage;
   powersRef.current = powers;
   lasersRef.current = lasers;
   paddleXRef.current = paddleX;
+  paddleEyeRef.current = paddleEye;
+  ballEyeRef.current = ballEye;
 
   const nowMs = () => Date.now();
-  const swapActive = nowMs() < powers.swapUntil;
-  const paddleEye = swapActive ? settingsBrickEye : settingsPaddleEye;
-  const brickEye = swapActive ? settingsPaddleEye : settingsBrickEye;
   const paddleColor = colorForEye(palette, paddleEye);
-  const brickSolid = solidForEye(palette, brickEye);
-  const brickBaseAlpha = brickEye === 'left' ? palette.leftAlpha : palette.rightAlpha;
-  const brickColor = colorForEye(palette, brickEye);
+  const ballColor = colorForEye(palette, ballEye);
+  const leftSolid = solidForEye(palette, 'left');
+  const rightSolid = solidForEye(palette, 'right');
+  const leftAlpha = palette.leftAlpha;
+  const rightAlpha = palette.rightAlpha;
   const wideActive = nowMs() < powers.wideUntil;
   const paddleW = basePaddleW * (wideActive ? 1.55 : 1);
   const boardBg = palette.background;
@@ -191,7 +416,6 @@ export function BreakerGame({
       let nextDrops = [...dropsRef.current];
       let spawned: Ball[] = [];
 
-      // Laser shots from paddle
       let nextLasers = lasersRef.current
         .map((l) => ({ ...l, y: l.y - 420 * dt }))
         .filter((l) => l.y > -20);
@@ -231,6 +455,7 @@ export function BreakerGame({
             nextDrops.push({
               id: `d-${dropSeq}`,
               kind: POWER_KINDS[Math.floor(Math.random() * POWER_KINDS.length)]!,
+              eye: Math.random() > 0.5 ? 'left' : 'right',
               x: brick.x + brickW / 2,
               y: brick.y + BRICK_H / 2,
             });
@@ -242,12 +467,8 @@ export function BreakerGame({
         return true;
       };
 
-      nextLasers = nextLasers.filter((l) => {
-        const hit = hitBrickAt(l.x, l.y, true);
-        return !hit;
-      });
+      nextLasers = nextLasers.filter((l) => !hitBrickAt(l.x, l.y, true));
 
-      // Balls (slow power scales integration, not stored velocity)
       const moveScale = isSlow ? 0.55 : 1;
       const nextBalls: Ball[] = [];
       for (const ball of ballsRef.current) {
@@ -268,13 +489,10 @@ export function BreakerGame({
           vy *= -1;
         }
 
-        if (y > height + 40) {
-          continue; // ball lost
-        }
+        if (y > height + 40) continue;
         nextBalls.push({ ...ball, x, y, vx, vy });
       }
 
-      // Power drops
       nextDrops = nextDrops
         .map((d) => ({ ...d, y: d.y + 140 * dt }))
         .filter((d) => {
@@ -308,7 +526,14 @@ export function BreakerGame({
           } else if (d.kind === 'laser') nextP.laserUntil = until;
           else if (d.kind === 'wide') nextP.wideUntil = until;
           else if (d.kind === 'slow') nextP.slowUntil = until;
-          else if (d.kind === 'swap') nextP.swapUntil = now + 8000;
+          else if (d.kind === 'swap') {
+            const nextPad: EyeSide = paddleEyeRef.current === 'left' ? 'right' : 'left';
+            const nextBall: EyeSide = nextPad === 'left' ? 'right' : 'left';
+            paddleEyeRef.current = nextPad;
+            ballEyeRef.current = nextBall;
+            setPaddleEye(nextPad);
+            setBallEye(nextBall);
+          }
           powersRef.current = nextP;
           setPowers(nextP);
           nextScore += 15;
@@ -330,24 +555,31 @@ export function BreakerGame({
       setScore(nextScore);
       setCleared(nextCleared);
 
-      // Wave clear
+      // Stage clear
       if (nextBricks.length === 0) {
-        const nextWave = waveRef.current + 1;
-        waveRef.current = nextWave;
-        setWave(nextWave);
-        const rows = Math.min(7, baseRows + Math.floor((nextWave - 1) / 2));
-        const rebuilt = buildBricks(width, rows, nextWave);
-        bricksRef.current = rebuilt;
-        setBricks(rebuilt);
-        const fresh = [makeBall(width, height, baseSpeed * (1 + (nextWave - 1) * 0.06))];
-        ballsRef.current = fresh;
-        setBalls(fresh);
-        nextScore += 100 * nextWave;
+        const nextStage = stageRef.current + 1;
+        nextScore += 150 * (nextStage);
         scoreRef.current = nextScore;
         setScore(nextScore);
+
+        if (nextStage >= TOTAL_STAGES) {
+          finish();
+          return;
+        }
+
+        stageRef.current = nextStage;
+        setStage(nextStage);
+        const rebuilt = buildStageBricks(width, nextStage, level.hpCap);
+        bricksRef.current = rebuilt;
+        setBricks(rebuilt);
+        const speedBoost = baseSpeed * (1 + nextStage * 0.04);
+        const fresh = [makeBall(width, height, speedBoost)];
+        ballsRef.current = fresh;
+        setBalls(fresh);
+        dropsRef.current = [];
+        setDrops([]);
       }
 
-      // Lost all balls
       if (allBalls.length === 0) {
         const left = livesRef.current - 1;
         livesRef.current = left;
@@ -356,7 +588,7 @@ export function BreakerGame({
           finish();
           return;
         }
-        const fresh = [makeBall(width, height, baseSpeed)];
+        const fresh = [makeBall(width, height, baseSpeed * (1 + stageRef.current * 0.04))];
         ballsRef.current = fresh;
         setBalls(fresh);
       }
@@ -366,7 +598,7 @@ export function BreakerGame({
 
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [basePaddleW, baseRows, baseSpeed, brickW, height, onGameOver, paused, width]);
+  }, [basePaddleW, baseSpeed, brickW, height, level.hpCap, onGameOver, paused, width]);
 
   const pan = Gesture.Pan()
     .runOnJS(true)
@@ -384,32 +616,49 @@ export function BreakerGame({
           <Rect x={0} y={0} width={width} height={height} color={boardBg} />
           <Rect x={0} y={0} width={4} height={height} color={paddleColor} opacity={0.5} />
           <Rect x={width - 4} y={0} width={4} height={height} color={paddleColor} opacity={0.5} />
-          {bricks.map((b) => (
-            <RoundedRect
-              key={b.id}
-              x={b.x}
-              y={b.y}
-              width={brickW}
-              height={BRICK_H}
-              r={4}
-              color={withOpacity(brickSolid, brickBaseAlpha * opacityForHp(b.hp, b.maxHp))}
-            />
-          ))}
-          {drops.map((d) => (
-            <RoundedRect
-              key={d.id}
-              x={d.x - 10}
-              y={d.y - 10}
-              width={20}
-              height={20}
-              r={6}
-              color={brickColor}
-              opacity={0.85}
-            />
-          ))}
+
+          {bricks.map((b) => {
+            const solid = b.eye === 'left' ? leftSolid : rightSolid;
+            const alpha = b.eye === 'left' ? leftAlpha : rightAlpha;
+            const fill = withOpacity(solid, alpha * fillOpacity(b.hp, b.maxHp));
+            const border = withOpacity(solid, Math.min(1, alpha * 1.05));
+            const bw = borderWidth(b.maxHp);
+            return (
+              <Group key={b.id}>
+                <RoundedRect
+                  x={b.x}
+                  y={b.y}
+                  width={brickW}
+                  height={BRICK_H}
+                  r={4}
+                  color={border}
+                />
+                <RoundedRect
+                  x={b.x + bw}
+                  y={b.y + bw}
+                  width={brickW - bw * 2}
+                  height={BRICK_H - bw * 2}
+                  r={3}
+                  color={fill}
+                />
+              </Group>
+            );
+          })}
+
+          {drops.map((d) => {
+            const fill = colorForEye(palette, d.eye);
+            return (
+              <Group key={d.id}>
+                <Circle cx={d.x} cy={d.y} r={ORB_R} color={fill} />
+                <PowerIcon kind={d.kind} cx={d.x} cy={d.y} cut={boardBg} />
+              </Group>
+            );
+          })}
+
           {lasers.map((l) => (
-            <Rect key={l.id} x={l.x - 2} y={l.y - 16} width={4} height={18} color={brickColor} />
+            <Rect key={l.id} x={l.x - 2} y={l.y - 16} width={4} height={18} color={ballColor} />
           ))}
+
           <RoundedRect
             x={paddleX}
             y={height - 40 - paddleH}
@@ -419,16 +668,24 @@ export function BreakerGame({
             color={paddleColor}
           />
           {balls.map((b) => (
-            <Circle key={b.id} cx={b.x} cy={b.y} r={ballR} color={brickColor} />
+            <Circle key={b.id} cx={b.x} cy={b.y} r={ballR} color={ballColor} />
           ))}
-          {/* Lives + wave markers on paddle eye */}
+
+          {/* Lives */}
           {Array.from({ length: lives }).map((_, i) => (
-            <Circle
-              key={`life-${i}`}
-              cx={16 + i * 14}
-              cy={height - 14}
-              r={5}
+            <Circle key={`life-${i}`} cx={16 + i * 14} cy={height - 14} r={5} color={paddleColor} />
+          ))}
+
+          {/* Stage indicator — filled pips for current stage */}
+          {Array.from({ length: TOTAL_STAGES }).map((_, i) => (
+            <Rect
+              key={`st-${i}`}
+              x={width - 16 - (TOTAL_STAGES - 1 - i) * 7}
+              y={10}
+              width={5}
+              height={8}
               color={paddleColor}
+              opacity={i <= stage ? 1 : 0.25}
             />
           ))}
         </Canvas>
