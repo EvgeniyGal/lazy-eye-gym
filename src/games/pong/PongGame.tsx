@@ -106,54 +106,49 @@ function OrbIcon({
   cut: string;
 }) {
   if (kind === 'grow') {
+    // Bold plus — almost fills the disc
     return (
       <Group>
-        <Rect x={cx - 8} y={cy - 2.5} width={16} height={5} r={1.5} color={cut} />
-        <Rect x={cx - 2.5} y={cy - 8} width={5} height={16} r={1.5} color={cut} />
+        <Rect x={cx - 9} y={cy - 2.5} width={18} height={5} r={1.5} color={cut} />
+        <Rect x={cx - 2.5} y={cy - 9} width={5} height={18} r={1.5} color={cut} />
       </Group>
     );
   }
   if (kind === 'shrink') {
+    // Bold minus
     return <Rect x={cx - 9} y={cy - 2.5} width={18} height={5} r={1.5} color={cut} />;
   }
   if (kind === 'turbo') {
-    // Two chevrons » pointing right
-    const chevron = (ox: number) =>
-      Skia.PathBuilder.Make()
-        .moveTo(cx + ox - 4, cy - 8)
-        .lineTo(cx + ox + 4, cy)
-        .lineTo(cx + ox - 4, cy + 8)
-        .lineTo(cx + ox - 1, cy + 8)
-        .lineTo(cx + ox + 7, cy)
-        .lineTo(cx + ox - 1, cy - 8)
-        .close()
-        .detach();
-    return (
-      <Group>
-        <Path path={chevron(-5)} color={cut} />
-        <Path path={chevron(2)} color={cut} />
-      </Group>
-    );
+    // Lightning bolt (speed) — clearer than »
+    const bolt = Skia.PathBuilder.Make()
+      .moveTo(cx + 2, cy - 10)
+      .lineTo(cx - 3, cy - 1)
+      .lineTo(cx + 1, cy - 1)
+      .lineTo(cx - 2, cy + 10)
+      .lineTo(cx + 4, cy + 0.5)
+      .lineTo(cx + 0.5, cy + 0.5)
+      .lineTo(cx + 5, cy - 10)
+      .close()
+      .detach();
+    return <Path path={bolt} color={cut} />;
   }
-  // reverse — ring + two arrowheads (cutout)
-  const ring = Skia.PathBuilder.Make().addCircle(cx, cy, 7.5).detach();
-  const tipA = Skia.PathBuilder.Make()
-    .moveTo(cx + 6, cy - 6)
-    .lineTo(cx + 11, cy - 1)
-    .lineTo(cx + 4, cy + 1)
+  // Reverse: clear ↔ — fat opposing arrows (bounce / flip)
+  const left = Skia.PathBuilder.Make()
+    .moveTo(cx - 10, cy)
+    .lineTo(cx - 1, cy - 8)
+    .lineTo(cx - 1, cy + 8)
     .close()
     .detach();
-  const tipB = Skia.PathBuilder.Make()
-    .moveTo(cx - 6, cy + 6)
-    .lineTo(cx - 11, cy + 1)
-    .lineTo(cx - 4, cy - 1)
+  const right = Skia.PathBuilder.Make()
+    .moveTo(cx + 10, cy)
+    .lineTo(cx + 1, cy - 8)
+    .lineTo(cx + 1, cy + 8)
     .close()
     .detach();
   return (
     <Group>
-      <Path path={ring} color={cut} style="stroke" strokeWidth={3.5} />
-      <Path path={tipA} color={cut} />
-      <Path path={tipB} color={cut} />
+      <Path path={left} color={cut} />
+      <Path path={right} color={cut} />
     </Group>
   );
 }
@@ -171,7 +166,7 @@ export function PongGame({
   const basePaddleW = Math.min(140, width * 0.28) * level.paddleSize;
   const paddleH = 14;
   const ballR = 9;
-  const orbR = 20;
+  const orbR = 15;
   const baseSpeed = 220 * level.speed;
   const pointsToWin = level.pointsToWin;
   const aiLead = level.aiLead;
