@@ -229,7 +229,55 @@ function makeBall(width: number, height: number, speed: number, id = 'ball-0'): 
   };
 }
 
-/** Pong-style cutout icons on power orbs. */
+/**
+ * Circle vs AABB: true if ball disc overlaps the brick (not a zero-size point).
+ * Returns which axis to bounce and how far to push the center out.
+ */
+function resolveBallBrick(
+  cx: number,
+  cy: number,
+  r: number,
+  bx: number,
+  by: number,
+  bw: number,
+  bh: number,
+): { bounceX: boolean; bounceY: boolean; nx: number; ny: number } | null {
+  const nearestX = Math.max(bx, Math.min(cx, bx + bw));
+  const nearestY = Math.max(by, Math.min(cy, by + bh));
+  const dx = cx - nearestX;
+  const dy = cy - nearestY;
+  const distSq = dx * dx + dy * dy;
+  if (distSq > r * r) return null;
+
+  // Overlap depths on each side (how far the circle extends past the edge)
+  const overlapL = cx + r - bx;
+  const overlapR = bx + bw - (cx - r);
+  const overlapT = cy + r - by;
+  const overlapB = by + bh - (cy - r);
+  const minX = Math.min(overlapL, overlapR);
+  const minY = Math.min(overlapT, overlapB);
+
+  if (minX < minY) {
+    // Horizontal face — bounce X, push out of left/right
+    const fromLeft = overlapL < overlapR;
+    return {
+      bounceX: true,
+      bounceY: false,
+      nx: fromLeft ? bx - r : bx + bw + r,
+      ny: cy,
+    };
+  }
+  // Vertical face — bounce Y
+  const fromTop = overlapT < overlapB;
+  return {
+    bounceX: false,
+    bounceY: true,
+    nx: cx,
+    ny: fromTop ? by - r : by + bh + r,
+  };
+}
+
+/** Cutout icons — each sign matches the power’s effect. */
 function PowerIcon({
   kind,
   cx,
@@ -242,39 +290,62 @@ function PowerIcon({
   cut: string;
 }) {
   if (kind === 'wide') {
+    // Wider paddle: horizontal bar with end caps
     return (
       <Group>
-        <RoundedRect x={cx - 9} y={cy - 2.5} width={18} height={5} r={1.5} color={cut} />
-        <RoundedRect x={cx - 2.5} y={cy - 9} width={5} height={18} r={1.5} color={cut} />
+        <RoundedRect x={cx - 10} y={cy - 2} width={20} height={4} r={2} color={cut} />
+        <RoundedRect x={cx - 10} y={cy - 6} width={3.5} height={12} r={1.5} color={cut} />
+        <RoundedRect x={cx + 6.5} y={cy - 6} width={3.5} height={12} r={1.5} color={cut} />
       </Group>
     );
   }
   if (kind === 'slow') {
-    return <RoundedRect x={cx - 9} y={cy - 2.5} width={18} height={5} r={1.5} color={cut} />;
-  }
-  if (kind === 'multi') {
+    // Slow: downward chevrons (not a minus — that reads as shrink)
+    const top = Skia.PathBuilder.Make()
+      .moveTo(cx - 8, cy - 6)
+      .lineTo(cx, cy - 1)
+      .lineTo(cx + 8, cy - 6)
+      .lineTo(cx + 5, cy - 6)
+      .lineTo(cx, cy - 3)
+      .lineTo(cx - 5, cy - 6)
+      .close()
+      .detach();
+    const bot = Skia.PathBuilder.Make()
+      .moveTo(cx - 8, cy + 1)
+      .lineTo(cx, cy + 6)
+      .lineTo(cx + 8, cy + 1)
+      .lineTo(cx + 5, cy + 1)
+      .lineTo(cx, cy + 4)
+      .lineTo(cx - 5, cy + 1)
+      .close()
+      .detach();
     return (
       <Group>
-        <Circle cx={cx - 6} cy={cy} r={3.2} color={cut} />
-        <Circle cx={cx} cy={cy} r={3.2} color={cut} />
-        <Circle cx={cx + 6} cy={cy} r={3.2} color={cut} />
+        <Path path={top} color={cut} />
+        <Path path={bot} color={cut} />
+      </Group>
+    );
+  }
+  if (kind === 'multi') {
+    // Extra balls: three discs
+    return (
+      <Group>
+        <Circle cx={cx - 6} cy={cy + 1} r={3.4} color={cut} />
+        <Circle cx={cx + 6} cy={cy + 1} r={3.4} color={cut} />
+        <Circle cx={cx} cy={cy - 5} r={3.4} color={cut} />
       </Group>
     );
   }
   if (kind === 'laser') {
-    const bolt = Skia.PathBuilder.Make()
-      .moveTo(cx + 2, cy - 10)
-      .lineTo(cx - 3, cy - 1)
-      .lineTo(cx + 1, cy - 1)
-      .lineTo(cx - 2, cy + 10)
-      .lineTo(cx + 4, cy + 0.5)
-      .lineTo(cx + 0.5, cy + 0.5)
-      .lineTo(cx + 5, cy - 10)
-      .close()
-      .detach();
-    return <Path path={bolt} color={cut} />;
+    // Upward laser beams (not a bolt — bolt reads as speed)
+    return (
+      <Group>
+        <RoundedRect x={cx - 5.5} y={cy - 9} width={3.5} height={18} r={1.5} color={cut} />
+        <RoundedRect x={cx + 2} y={cy - 9} width={3.5} height={18} r={1.5} color={cut} />
+      </Group>
+    );
   }
-  // swap ↔
+  // swap ↔ — opposing arrows (colour flip)
   const left = Skia.PathBuilder.Make()
     .moveTo(cx - 10, cy)
     .lineTo(cx - 1, cy - 8)
@@ -424,26 +495,15 @@ export function BreakerGame({
         laserCooldown.current -= dt;
         if (laserCooldown.current <= 0) {
           laserCooldown.current = 0.22;
+          const inset = 6;
           dropSeq += 1;
-          nextLasers.push({ id: `lz-${dropSeq}`, x: px + curPaddleW / 2, y: py });
+          nextLasers.push({ id: `lz-${dropSeq}`, x: px + inset, y: py });
+          dropSeq += 1;
+          nextLasers.push({ id: `lz-${dropSeq}`, x: px + curPaddleW - inset, y: py });
         }
       }
 
-      const hitBrickAt = (bx: number, by: number, destroy: boolean) => {
-        let hitIndex = -1;
-        for (let i = 0; i < nextBricks.length; i += 1) {
-          const brick = nextBricks[i]!;
-          if (
-            bx >= brick.x &&
-            bx <= brick.x + brickW &&
-            by >= brick.y &&
-            by <= brick.y + BRICK_H
-          ) {
-            hitIndex = i;
-            break;
-          }
-        }
-        if (hitIndex < 0) return false;
+      const damageBrick = (hitIndex: number, destroy: boolean) => {
         const brick = nextBricks[hitIndex]!;
         const hp = destroy ? 0 : brick.hp - 1;
         if (hp <= 0) {
@@ -464,10 +524,27 @@ export function BreakerGame({
           nextBricks = nextBricks.map((b, i) => (i === hitIndex ? { ...b, hp } : b));
           nextScore += 5;
         }
-        return true;
       };
 
-      nextLasers = nextLasers.filter((l) => !hitBrickAt(l.x, l.y, true));
+      // Lasers: thin beam — point test is fine
+      nextLasers = nextLasers.filter((l) => {
+        let hitIndex = -1;
+        for (let i = 0; i < nextBricks.length; i += 1) {
+          const brick = nextBricks[i]!;
+          if (
+            l.x >= brick.x &&
+            l.x <= brick.x + brickW &&
+            l.y >= brick.y &&
+            l.y <= brick.y + BRICK_H
+          ) {
+            hitIndex = i;
+            break;
+          }
+        }
+        if (hitIndex < 0) return true;
+        damageBrick(hitIndex, true);
+        return false;
+      });
 
       const moveScale = isSlow ? 0.55 : 1;
       const nextBalls: Ball[] = [];
@@ -485,8 +562,27 @@ export function BreakerGame({
           vx += (x - (px + curPaddleW / 2)) * 4;
         }
 
-        if (hitBrickAt(x, y, false)) {
-          vy *= -1;
+        // Full disc vs brick AABB — pick deepest overlap so gaps cannot swallow the ball
+        let hitIndex = -1;
+        let hit: ReturnType<typeof resolveBallBrick> = null;
+        let bestPen = -1;
+        for (let i = 0; i < nextBricks.length; i += 1) {
+          const brick = nextBricks[i]!;
+          const resolved = resolveBallBrick(x, y, ballR, brick.x, brick.y, brickW, BRICK_H);
+          if (!resolved) continue;
+          const pen = Math.hypot(resolved.nx - x, resolved.ny - y);
+          if (pen > bestPen) {
+            bestPen = pen;
+            hitIndex = i;
+            hit = resolved;
+          }
+        }
+        if (hit && hitIndex >= 0) {
+          damageBrick(hitIndex, false);
+          if (hit.bounceX) vx = -vx;
+          if (hit.bounceY) vy = -vy;
+          x = hit.nx;
+          y = hit.ny;
         }
 
         if (y > height + 40) continue;
@@ -503,7 +599,6 @@ export function BreakerGame({
             d.x >= px &&
             d.x <= px + curPaddleW;
           if (!caught) return true;
-          const until = now + 10000;
           const nextP = { ...powersRef.current };
           if (d.kind === 'multi') {
             const src = nextBalls[0] ?? makeBall(width, height, baseSpeed);
@@ -523,9 +618,9 @@ export function BreakerGame({
               vx: src.vx * 0.85,
               vy: src.vy * 0.95,
             });
-          } else if (d.kind === 'laser') nextP.laserUntil = until;
-          else if (d.kind === 'wide') nextP.wideUntil = until;
-          else if (d.kind === 'slow') nextP.slowUntil = until;
+          } else if (d.kind === 'laser') nextP.laserUntil = now + 5000;
+          else if (d.kind === 'wide') nextP.wideUntil = now + 10000;
+          else if (d.kind === 'slow') nextP.slowUntil = now + 10000;
           else if (d.kind === 'swap') {
             const nextPad: EyeSide = paddleEyeRef.current === 'left' ? 'right' : 'left';
             const nextBall: EyeSide = nextPad === 'left' ? 'right' : 'left';
