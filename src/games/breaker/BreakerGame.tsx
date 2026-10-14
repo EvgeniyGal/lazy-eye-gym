@@ -37,11 +37,39 @@ type ActivePowers = {
   slowUntil: number;
 };
 
+/** Flying shard from a destroyed brick. */
+type BurstShard = {
+  id: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  rot: number;
+  rotV: number;
+  w: number;
+  h: number;
+  life: number;
+  maxLife: number;
+  eye: EyeSide;
+};
+
+/** Brief flash when a brick is chipped but not destroyed. */
+type HitFlash = {
+  id: string;
+  x: number;
+  y: number;
+  life: number;
+  maxLife: number;
+  eye: EyeSide;
+};
+
 const COLS = 8;
 const BRICK_H = 18;
 const ORB_R = 15;
 const TOTAL_STAGES = 15;
 const POWER_KINDS: PowerKind[] = ['multi', 'laser', 'wide', 'slow', 'swap'];
+const BURST_LIFE = 0.45;
+const FLASH_LIFE = 0.12;
 
 const LEVELS = {
   easy: { speed: 0.75, paddleSize: 1.35, lives: 5, hpCap: 2 as MaxHp },
@@ -184,18 +212,58 @@ function clampHp(v: number, cap: MaxHp): MaxHp {
   return n;
 }
 
-function fillOpacity(hp: number, maxHp: MaxHp) {
-  // Remaining HP readable; maxHp 4 starts fully solid
-  if (maxHp === 4 && hp === maxHp) return 1;
-  const base = maxHp === 1 ? 0.55 : maxHp === 2 ? 0.65 : maxHp === 3 ? 0.8 : 1;
-  return Math.max(0.35, base * (hp / maxHp));
+/**
+ * Brick look by type (maxHp) + remaining hp:
+ * 1 — almost empty, thin border
+ * 2 — light fill, medium border
+ * 3 — dense fill, thick border
+ * 4 — solid body, heavy border
+ */
+function brickStyle(hp: number, maxHp: MaxHp) {
+  const damage = Math.max(0.35, hp / maxHp);
+  if (maxHp === 1) {
+    return { fill: 0.1 * damage, border: 1, borderAlpha: 0.95, solid: false };
+  }
+  if (maxHp === 2) {
+    return { fill: 0.38 * damage, border: 2.25, borderAlpha: 1, solid: false };
+  }
+  if (maxHp === 3) {
+    return { fill: 0.7 * damage, border: 3.5, borderAlpha: 1, solid: false };
+  }
+  // HP4 — solid when full; chips down slightly so hits stay readable
+  return {
+    fill: 0.55 + 0.45 * damage,
+    border: 5,
+    borderAlpha: 1,
+    solid: hp >= maxHp,
+  };
 }
 
-function borderWidth(maxHp: MaxHp) {
-  if (maxHp === 1) return 1;
-  if (maxHp === 2) return 1.5;
-  if (maxHp === 3) return 2.5;
-  return 3.5;
+function spawnBurst(brick: Brick, brickW: number): BurstShard[] {
+  const cx = brick.x + brickW / 2;
+  const cy = brick.y + BRICK_H / 2;
+  const count = 6 + Math.floor(Math.random() * 3);
+  const shards: BurstShard[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const ang = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+    const speed = 120 + Math.random() * 180;
+    dropSeq += 1;
+    shards.push({
+      id: `sh-${dropSeq}`,
+      x: cx + (Math.random() - 0.5) * 6,
+      y: cy + (Math.random() - 0.5) * 4,
+      vx: Math.cos(ang) * speed,
+      vy: Math.sin(ang) * speed - 40,
+      rot: Math.random() * Math.PI,
+      rotV: (Math.random() - 0.5) * 12,
+      w: 4 + Math.random() * 7,
+      h: 3 + Math.random() * 5,
+      life: BURST_LIFE,
+      maxLife: BURST_LIFE,
+      eye: brick.eye,
+    });
+  }
+  return shards;
 }
 
 function buildStageBricks(width: number, stageIndex: number, hpCap: MaxHp): Brick[] {
@@ -407,6 +475,8 @@ export function BreakerGame({
     slowUntil: 0,
   });
   const [lasers, setLasers] = useState<{ id: string; x: number; y: number }[]>([]);
+  const [bursts, setBursts] = useState<BurstShard[]>([]);
+  const [flashes, setFlashes] = useState<HitFlash[]>([]);
   const [paddleEye, setPaddleEye] = useState<EyeSide>(startPaddleEye);
   const [ballEye, setBallEye] = useState<EyeSide>(startPaddleEye === 'left' ? 'right' : 'left');
 
@@ -422,6 +492,8 @@ export function BreakerGame({
   const stageRef = useRef(stage);
   const powersRef = useRef(powers);
   const lasersRef = useRef(lasers);
+  const burstsRef = useRef(bursts);
+  const flashesRef = useRef(flashes);
   const paddleXRef = useRef(paddleX);
   const paddleEyeRef = useRef(paddleEye);
   const ballEyeRef = useRef(ballEye);
@@ -436,6 +508,8 @@ export function BreakerGame({
   stageRef.current = stage;
   powersRef.current = powers;
   lasersRef.current = lasers;
+  burstsRef.current = bursts;
+  flashesRef.current = flashes;
   paddleXRef.current = paddleX;
   paddleEyeRef.current = paddleEye;
   ballEyeRef.current = ballEye;
@@ -489,11 +563,28 @@ export function BreakerGame({
       let nextCleared = clearedRef.current;
       let nextBricks = bricksRef.current;
       let nextDrops = [...dropsRef.current];
+      let nextBursts = [...burstsRef.current];
+      let nextFlashes = [...flashesRef.current];
       let spawned: Ball[] = [];
 
       let nextLasers = lasersRef.current
         .map((l) => ({ ...l, y: l.y - 420 * dt }))
         .filter((l) => l.y > -20);
+
+      nextBursts = nextBursts
+        .map((s) => ({
+          ...s,
+          x: s.x + s.vx * dt,
+          y: s.y + s.vy * dt,
+          vy: s.vy + 520 * dt,
+          rot: s.rot + s.rotV * dt,
+          life: s.life - dt,
+        }))
+        .filter((s) => s.life > 0);
+
+      nextFlashes = nextFlashes
+        .map((f) => ({ ...f, life: f.life - dt }))
+        .filter((f) => f.life > 0);
 
       if (isLaser) {
         laserCooldown.current -= dt;
@@ -514,6 +605,7 @@ export function BreakerGame({
           nextScore += 10 * brick.maxHp;
           nextCleared += 1;
           nextBricks = nextBricks.filter((_, i) => i !== hitIndex);
+          nextBursts.push(...spawnBurst(brick, brickW));
           sfxRef.current('brk_break');
           if (Math.random() < 0.28) {
             dropSeq += 1;
@@ -528,6 +620,15 @@ export function BreakerGame({
         } else {
           nextBricks = nextBricks.map((b, i) => (i === hitIndex ? { ...b, hp } : b));
           nextScore += 5;
+          dropSeq += 1;
+          nextFlashes.push({
+            id: `fl-${dropSeq}`,
+            x: brick.x,
+            y: brick.y,
+            life: FLASH_LIFE,
+            maxLife: FLASH_LIFE,
+            eye: brick.eye,
+          });
           sfxRef.current('brk_hit');
         }
       };
@@ -647,6 +748,8 @@ export function BreakerGame({
       bricksRef.current = nextBricks;
       dropsRef.current = nextDrops;
       lasersRef.current = nextLasers;
+      burstsRef.current = nextBursts;
+      flashesRef.current = nextFlashes;
       scoreRef.current = nextScore;
       clearedRef.current = nextCleared;
 
@@ -654,6 +757,8 @@ export function BreakerGame({
       setBricks(nextBricks);
       setDrops(nextDrops);
       setLasers(nextLasers);
+      setBursts(nextBursts);
+      setFlashes(nextFlashes);
       setScore(nextScore);
       setCleared(nextCleared);
 
@@ -724,9 +829,24 @@ export function BreakerGame({
           {bricks.map((b) => {
             const solid = b.eye === 'left' ? leftSolid : rightSolid;
             const alpha = b.eye === 'left' ? leftAlpha : rightAlpha;
-            const fill = withOpacity(solid, alpha * fillOpacity(b.hp, b.maxHp));
-            const border = withOpacity(solid, Math.min(1, alpha * 1.05));
-            const bw = borderWidth(b.maxHp);
+            const style = brickStyle(b.hp, b.maxHp);
+            const border = withOpacity(solid, Math.min(1, alpha * style.borderAlpha));
+            const fill = withOpacity(solid, alpha * style.fill);
+            const bw = style.border;
+            // HP4 solid: border and fill same strength so it reads as one block
+            if (style.solid) {
+              return (
+                <RoundedRect
+                  key={b.id}
+                  x={b.x}
+                  y={b.y}
+                  width={brickW}
+                  height={BRICK_H}
+                  r={4}
+                  color={withOpacity(solid, Math.min(1, alpha))}
+                />
+              );
+            }
             return (
               <Group key={b.id}>
                 <RoundedRect
@@ -740,10 +860,56 @@ export function BreakerGame({
                 <RoundedRect
                   x={b.x + bw}
                   y={b.y + bw}
-                  width={brickW - bw * 2}
-                  height={BRICK_H - bw * 2}
-                  r={3}
+                  width={Math.max(2, brickW - bw * 2)}
+                  height={Math.max(2, BRICK_H - bw * 2)}
+                  r={Math.max(1, 4 - bw * 0.35)}
                   color={fill}
+                />
+              </Group>
+            );
+          })}
+
+          {/* Hit flash — brief bright pulse on chip */}
+          {flashes.map((f) => {
+            const solid = f.eye === 'left' ? leftSolid : rightSolid;
+            const alpha = f.eye === 'left' ? leftAlpha : rightAlpha;
+            const t = f.life / f.maxLife;
+            return (
+              <RoundedRect
+                key={f.id}
+                x={f.x - 1}
+                y={f.y - 1}
+                width={brickW + 2}
+                height={BRICK_H + 2}
+                r={4}
+                color={withOpacity(solid, alpha * 0.55 * t)}
+              />
+            );
+          })}
+
+          {/* Destroy burst — shards for tracking */}
+          {bursts.map((s) => {
+            const solid = s.eye === 'left' ? leftSolid : rightSolid;
+            const alpha = s.eye === 'left' ? leftAlpha : rightAlpha;
+            const t = s.life / s.maxLife;
+            return (
+              <Group
+                key={s.id}
+                transform={[
+                  { translateX: s.x },
+                  { translateY: s.y },
+                  { rotate: s.rot },
+                  { translateX: -s.w / 2 },
+                  { translateY: -s.h / 2 },
+                ]}
+              >
+                <RoundedRect
+                  x={0}
+                  y={0}
+                  width={s.w}
+                  height={s.h}
+                  r={1.5}
+                  color={withOpacity(solid, alpha * t)}
                 />
               </Group>
             );
