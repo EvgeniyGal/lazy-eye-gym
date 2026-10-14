@@ -1,4 +1,4 @@
-import { Canvas, Circle, Group, Path, Rect, Skia } from '@shopify/react-native-skia';
+import { Canvas, Circle, Group, Path, Rect, RoundedRect, Skia } from '@shopify/react-native-skia';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -110,14 +110,14 @@ function OrbIcon({
     // Bold plus — almost fills the disc
     return (
       <Group>
-        <Rect x={cx - 9} y={cy - 2.5} width={18} height={5} r={1.5} color={cut} />
-        <Rect x={cx - 2.5} y={cy - 9} width={5} height={18} r={1.5} color={cut} />
+        <RoundedRect x={cx - 9} y={cy - 2.5} width={18} height={5} r={1.5} color={cut} />
+        <RoundedRect x={cx - 2.5} y={cy - 9} width={5} height={18} r={1.5} color={cut} />
       </Group>
     );
   }
   if (kind === 'shrink') {
     // Bold minus
-    return <Rect x={cx - 9} y={cy - 2.5} width={18} height={5} r={1.5} color={cut} />;
+    return <RoundedRect x={cx - 9} y={cy - 2.5} width={18} height={5} r={1.5} color={cut} />;
   }
   if (kind === 'turbo') {
     // Lightning bolt (speed) — clearer than »

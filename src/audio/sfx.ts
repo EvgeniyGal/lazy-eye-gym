@@ -42,7 +42,19 @@ export type SfxName =
   // 2048
   | 't48_move'
   | 't48_merge'
-  | 't48_over';
+  | 't48_over'
+  // Invaders
+  | 'inv_shoot'
+  | 'inv_hit'
+  | 'inv_die'
+  | 'inv_wave'
+  | 'inv_bomb'
+  // Asteroids
+  | 'ast_thrust'
+  | 'ast_shoot'
+  | 'ast_bang'
+  | 'ast_split'
+  | 'ast_die';
 
 type AssetKey =
   | 'chomp'
@@ -72,7 +84,17 @@ type AssetKey =
   | 'tet_over'
   | 't48_move'
   | 't48_merge'
-  | 't48_over';
+  | 't48_over'
+  | 'inv_shoot'
+  | 'inv_hit'
+  | 'inv_die'
+  | 'inv_wave'
+  | 'inv_bomb'
+  | 'ast_thrust'
+  | 'ast_shoot'
+  | 'ast_bang'
+  | 'ast_split'
+  | 'ast_die';
 
 export type SfxOptions = {
   soundEnabled: boolean;
@@ -108,6 +130,16 @@ const sources: Record<AssetKey, number> = {
   t48_move: require('../../assets/sfx/t48_move.wav'),
   t48_merge: require('../../assets/sfx/t48_merge.wav'),
   t48_over: require('../../assets/sfx/t48_over.wav'),
+  inv_shoot: require('../../assets/sfx/inv_shoot.wav'),
+  inv_hit: require('../../assets/sfx/inv_hit.wav'),
+  inv_die: require('../../assets/sfx/inv_die.wav'),
+  inv_wave: require('../../assets/sfx/inv_wave.wav'),
+  inv_bomb: require('../../assets/sfx/inv_bomb.wav'),
+  ast_thrust: require('../../assets/sfx/ast_thrust.wav'),
+  ast_shoot: require('../../assets/sfx/ast_shoot.wav'),
+  ast_bang: require('../../assets/sfx/ast_bang.wav'),
+  ast_split: require('../../assets/sfx/ast_split.wav'),
+  ast_die: require('../../assets/sfx/ast_die.wav'),
 };
 
 const chompAlt = require('../../assets/sfx/chomp2.wav');
@@ -146,6 +178,16 @@ const RESOLVE: Record<SfxName, AssetKey> = {
   t48_move: 't48_move',
   t48_merge: 't48_merge',
   t48_over: 't48_over',
+  inv_shoot: 'inv_shoot',
+  inv_hit: 'inv_hit',
+  inv_die: 'inv_die',
+  inv_wave: 'inv_wave',
+  inv_bomb: 'inv_bomb',
+  ast_thrust: 'ast_thrust',
+  ast_shoot: 'ast_shoot',
+  ast_bang: 'ast_bang',
+  ast_split: 'ast_split',
+  ast_die: 'ast_die',
 };
 
 let ready = false;

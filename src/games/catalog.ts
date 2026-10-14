@@ -1,6 +1,14 @@
 import type { EyeSide } from '@/src/anaglyph/color';
 
-export type GameId = '2048' | 'pong' | 'maze' | 'breaker' | 'snake' | 'tetris';
+export type GameId =
+  | '2048'
+  | 'pong'
+  | 'maze'
+  | 'breaker'
+  | 'snake'
+  | 'tetris'
+  | 'invaders'
+  | 'asteroids';
 
 export type GameCategory = 'all' | 'reflex' | 'spatial';
 
@@ -337,6 +345,96 @@ export const GAMES: GameDefinition[] = [
       {
         key: 'pieceEye',
         label: 'Falling piece eye',
+        type: 'eye',
+        options: [
+          { label: 'Left', value: 'left' },
+          { label: 'Right', value: 'right' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'invaders',
+    title: 'Space Invaders',
+    shortTitle: 'Invaders',
+    tag: 'TRACKING & AIM',
+    category: 'reflex',
+    blurb: 'Shoot a mixed-eye alien wave; focus targets pulse on the opposite eye for priority kills.',
+    dichopticSplit: {
+      leftLabel: 'Ship & shots (chosen eye)',
+      rightLabel: 'Mixed aliens + focus outline',
+    },
+    recordLabel: 'Best score',
+    metricLabel: 'Aliens destroyed',
+    defaultSettings: {
+      difficulty: 'easy',
+      sound: true,
+      shipEye: 'left',
+    },
+    fields: [
+      {
+        key: 'difficulty',
+        label: 'Level',
+        type: 'segment',
+        options: [
+          { label: 'Easy', value: 'easy' },
+          { label: 'Hard', value: 'hard' },
+          { label: 'Extra hard', value: 'extraHard' },
+        ],
+      },
+      {
+        key: 'sound',
+        label: 'Game sounds',
+        type: 'toggle',
+      },
+      {
+        key: 'shipEye',
+        label: 'Ship eye',
+        type: 'eye',
+        options: [
+          { label: 'Left', value: 'left' },
+          { label: 'Right', value: 'right' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'asteroids',
+    title: 'Asteroids',
+    shortTitle: 'Asteroids',
+    tag: 'PHYSICS & FUSION',
+    category: 'spatial',
+    blurb: 'Rotate, thrust, and blast mixed-eye rocks — size and border weight differ; opacity follows glass settings.',
+    dichopticSplit: {
+      leftLabel: 'Ship & shots (chosen eye)',
+      rightLabel: 'Mixed asteroids',
+    },
+    recordLabel: 'Best score',
+    metricLabel: 'Rocks destroyed',
+    defaultSettings: {
+      difficulty: 'easy',
+      sound: true,
+      shipEye: 'left',
+    },
+    fields: [
+      {
+        key: 'difficulty',
+        label: 'Level',
+        type: 'segment',
+        options: [
+          { label: 'Easy', value: 'easy' },
+          { label: 'Hard', value: 'hard' },
+          { label: 'Extra hard', value: 'extraHard' },
+        ],
+      },
+      {
+        key: 'sound',
+        label: 'Game sounds',
+        type: 'toggle',
+      },
+      {
+        key: 'shipEye',
+        label: 'Ship eye',
         type: 'eye',
         options: [
           { label: 'Left', value: 'left' },

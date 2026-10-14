@@ -1,10 +1,10 @@
-import { Canvas, Rect, RoundedRect } from '@shopify/react-native-skia';
+import { Canvas, Group, Rect, RoundedRect } from '@shopify/react-native-skia';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-import { withOpacity, type EyeSide } from '@/src/anaglyph/color';
-import { colorForEye, solidForEye } from '@/src/anaglyph/palette';
+import type { EyeSide } from '@/src/anaglyph/color';
+import { colorForEye } from '@/src/anaglyph/palette';
 import type { DichopticPalette } from '@/src/anaglyph/types';
 import { useGameAudio } from '@/src/audio/useGameAudio';
 import type { GameSceneProps } from '../types';
@@ -71,15 +71,15 @@ const BASE: Record<PieceKind, Point[]> = {
   ],
 };
 
-/** Distinct dichoptic looks per figure (eye channel + fill strength). */
-const PIECE_LOOK: Record<PieceKind, { onPrimary: boolean; alpha: number }> = {
-  I: { onPrimary: true, alpha: 1 },
-  O: { onPrimary: false, alpha: 1 },
-  T: { onPrimary: true, alpha: 0.72 },
-  S: { onPrimary: false, alpha: 0.72 },
-  Z: { onPrimary: true, alpha: 0.5 },
-  J: { onPrimary: false, alpha: 0.88 },
-  L: { onPrimary: true, alpha: 0.88 },
+/** Eye channel per figure (opacity always from glass settings). */
+const PIECE_EYE: Record<PieceKind, 'primary' | 'secondary'> = {
+  I: 'primary',
+  O: 'secondary',
+  T: 'primary',
+  S: 'secondary',
+  Z: 'primary',
+  J: 'secondary',
+  L: 'primary',
 };
 
 function rotateCW(p: Point): Point {
@@ -95,18 +95,10 @@ function shapeAt(kind: PieceKind, rot: number): Point[] {
   return cells;
 }
 
-function colorForKind(
-  palette: DichopticPalette,
-  kind: PieceKind,
-  primaryEye: EyeSide,
-  ghost = false,
-) {
-  const look = PIECE_LOOK[kind];
+function colorForKind(palette: DichopticPalette, kind: PieceKind, primaryEye: EyeSide) {
   const secondary: EyeSide = primaryEye === 'left' ? 'right' : 'left';
-  const eye = look.onPrimary ? primaryEye : secondary;
-  const solid = solidForEye(palette, eye);
-  const baseAlpha = eye === 'left' ? palette.leftAlpha : palette.rightAlpha;
-  return withOpacity(solid, baseAlpha * look.alpha * (ghost ? 0.32 : 1));
+  const eye = PIECE_EYE[kind] === 'primary' ? primaryEye : secondary;
+  return colorForEye(palette, eye);
 }
 
 const BAG_ORDER: PieceKind[] = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
@@ -227,8 +219,7 @@ export function TetrisGame({
   const pieceEye = (settings.pieceEye as EyeSide) || 'left';
   const frameColor = colorForEye(palette, pieceEye);
   const boardBg = palette.background;
-  const kindColor = (kind: PieceKind, ghost = false) =>
-    colorForKind(palette, kind, pieceEye, ghost);
+  const kindColor = (kind: PieceKind) => colorForKind(palette, kind, pieceEye);
 
   const bagRef = useRef<PieceKind[]>(shuffleBag());
   const takeNext = (): PieceKind => {
@@ -468,7 +459,7 @@ export function TetrisGame({
   const ghostCells = cellsOf(ghost);
   const nextCells = shapeAt(nextKind, 0).map((p) => ({ x: p.x + 1, y: p.y + 1 }));
   const activeColor = kindColor(active.kind);
-  const ghostColor = kindColor(active.kind, true);
+  const ghostColor = kindColor(active.kind);
   const nextColor = kindColor(nextKind);
 
   return (
@@ -530,18 +521,27 @@ export function TetrisGame({
             ),
           )}
 
-          {/* Ghost */}
+          {/* Ghost — outline only, full glass alpha */}
           {ghostCells.map((c, i) =>
             c.y >= 0 ? (
-              <RoundedRect
-                key={`g-${i}`}
-                x={ox + c.x * cell + 2}
-                y={oy + c.y * cell + 2}
-                width={cell - 4}
-                height={cell - 4}
-                r={3}
-                color={ghostColor}
-              />
+              <Group key={`g-${i}`}>
+                <RoundedRect
+                  x={ox + c.x * cell + 1}
+                  y={oy + c.y * cell + 1}
+                  width={cell - 2}
+                  height={cell - 2}
+                  r={3}
+                  color={ghostColor}
+                />
+                <RoundedRect
+                  x={ox + c.x * cell + 3}
+                  y={oy + c.y * cell + 3}
+                  width={cell - 6}
+                  height={cell - 6}
+                  r={2}
+                  color={boardBg}
+                />
+              </Group>
             ) : null,
           )}
 
@@ -561,15 +561,24 @@ export function TetrisGame({
           )}
 
           {/* Next preview */}
-          <RoundedRect
-            x={previewX}
-            y={previewY}
-            width={previewW}
-            height={previewW}
-            r={8}
-            color={nextColor}
-            opacity={0.2}
-          />
+          <Group>
+            <RoundedRect
+              x={previewX}
+              y={previewY}
+              width={previewW}
+              height={previewW}
+              r={8}
+              color={frameColor}
+            />
+            <RoundedRect
+              x={previewX + 2}
+              y={previewY + 2}
+              width={previewW - 4}
+              height={previewW - 4}
+              r={6}
+              color={boardBg}
+            />
+          </Group>
           {nextCells.map((c, i) => {
             const pc = previewW / 4;
             return (
@@ -594,7 +603,6 @@ export function TetrisGame({
               width={5}
               height={6}
               color={frameColor}
-              opacity={0.9}
             />
           ))}
         </Canvas>

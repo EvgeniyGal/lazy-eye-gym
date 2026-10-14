@@ -9,7 +9,9 @@ import { getGame, type GameId } from '@/src/games/catalog';
 import { useAppStore } from '@/src/state/AppStore';
 import { colors, spacing } from '@/src/theme/tokens';
 import type { GameResult } from '../types';
+import { AsteroidsGame } from '../asteroids/AsteroidsGame';
 import { BreakerGame } from '../breaker/BreakerGame';
+import { InvadersGame } from '../invaders/InvadersGame';
 import { MazeGame } from '../maze/MazeGame';
 import { PongGame } from '../pong/PongGame';
 import { SnakeGame } from '../snake/SnakeGame';
@@ -105,6 +107,10 @@ export function GameShell({ gameId }: { gameId: GameId }) {
         return SnakeGame;
       case 'tetris':
         return TetrisGame;
+      case 'invaders':
+        return InvadersGame;
+      case 'asteroids':
+        return AsteroidsGame;
       default:
         return TwentyFortyEightGame;
     }
@@ -226,7 +232,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xl,

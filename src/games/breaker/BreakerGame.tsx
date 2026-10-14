@@ -213,15 +213,15 @@ function clampHp(v: number, cap: MaxHp): MaxHp {
 }
 
 /**
- * Brick type = maxHp (hardness). Hollow frames with growing border; only HP4 is solid.
- * Remaining hp slightly thins the border so chips stay readable.
+ * Brick type = maxHp. Hollow single-colour border (glass alpha).
+ * Each hit thins the border (hp/maxHp). HP4 starts solid; after first chip → thick hollow that keeps thinning.
  */
 function brickStyle(hp: number, maxHp: MaxHp) {
-  const chip = Math.max(0.55, hp / maxHp);
-  if (maxHp === 1) return { border: 1.5 * chip, solid: false as const };
-  if (maxHp === 2) return { border: 3.25 * chip, solid: false as const };
-  if (maxHp === 3) return { border: 5.5 * chip, solid: false as const };
-  return { border: 0, solid: true as const };
+  const ratio = Math.max(0.25, hp / maxHp);
+  const base =
+    maxHp === 1 ? 1.5 : maxHp === 2 ? 3.25 : maxHp === 3 ? 5.5 : 7.5;
+  if (maxHp === 4 && hp === maxHp) return { border: 0, solid: true as const };
+  return { border: Math.max(1, base * ratio), solid: false as const };
 }
 
 function spawnBurst(brick: Brick, brickW: number): BurstShard[] {
@@ -812,15 +812,13 @@ export function BreakerGame({
           <Rect x={width - 4} y={0} width={4} height={height} color={paddleColor} opacity={0.5} />
 
           {bricks.map((b) => {
-            const primary = b.eye === 'left' ? leftSolid : rightSolid;
-            const secondary = b.eye === 'left' ? rightSolid : leftSolid;
-            const pAlpha = b.eye === 'left' ? leftAlpha : rightAlpha;
-            const sAlpha = b.eye === 'left' ? rightAlpha : leftAlpha;
+            const solid = b.eye === 'left' ? leftSolid : rightSolid;
+            const alpha = b.eye === 'left' ? leftAlpha : rightAlpha;
             const style = brickStyle(b.hp, b.maxHp);
+            const color = withOpacity(solid, Math.min(1, alpha));
 
-            // Hardest — fully solid dichoptic fill
+            // Hardest at full HP — solid, full glass alpha
             if (style.solid) {
-              const chip = Math.max(0.55, b.hp / b.maxHp);
               return (
                 <RoundedRect
                   key={b.id}
@@ -829,17 +827,13 @@ export function BreakerGame({
                   width={brickW}
                   height={BRICK_H}
                   r={4}
-                  color={withOpacity(primary, Math.min(1, pAlpha * chip))}
+                  color={color}
                 />
               );
             }
 
-            // Hollow brick: colored frame + transparent center (punched with board bg)
-            // Outer ring = brick eye; thin inner accent = opposite eye (two-colour border)
+            // Hollow: single-colour border (glass left/right) + transparent center
             const bw = Math.max(1, style.border);
-            const accent = Math.max(1, Math.min(2, bw * 0.35));
-            const inner = bw;
-            const hole = bw + accent;
             return (
               <Group key={b.id}>
                 <RoundedRect
@@ -848,22 +842,14 @@ export function BreakerGame({
                   width={brickW}
                   height={BRICK_H}
                   r={4}
-                  color={withOpacity(primary, Math.min(1, pAlpha))}
+                  color={color}
                 />
                 <RoundedRect
-                  x={b.x + inner}
-                  y={b.y + inner}
-                  width={Math.max(2, brickW - inner * 2)}
-                  height={Math.max(2, BRICK_H - inner * 2)}
-                  r={Math.max(1, 3 - inner * 0.2)}
-                  color={withOpacity(secondary, Math.min(1, sAlpha * 0.9))}
-                />
-                <RoundedRect
-                  x={b.x + hole}
-                  y={b.y + hole}
-                  width={Math.max(1, brickW - hole * 2)}
-                  height={Math.max(1, BRICK_H - hole * 2)}
-                  r={Math.max(0.5, 2.5 - hole * 0.15)}
+                  x={b.x + bw}
+                  y={b.y + bw}
+                  width={Math.max(1, brickW - bw * 2)}
+                  height={Math.max(1, BRICK_H - bw * 2)}
+                  r={Math.max(0.5, 3 - bw * 0.25)}
                   color={boardBg}
                 />
               </Group>

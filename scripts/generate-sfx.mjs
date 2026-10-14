@@ -196,6 +196,30 @@ const sounds = {
     [0, tone({ dur: 0.12, freq: 300, type: 'triangle', vol: 0.28 })],
     [0.12, tone({ dur: 0.2, freq: 180, freqEnd: 90, type: 'triangle', vol: 0.28 })],
   ]),
+
+  // --- Invaders ---
+  inv_shoot: tone({ dur: 0.05, freq: 880, freqEnd: 420, type: 'square', vol: 0.22, r: 0.03 }),
+  inv_hit: tone({ dur: 0.07, freq: 520, freqEnd: 780, type: 'triangle', vol: 0.28, r: 0.04 }),
+  inv_die: tone({ dur: 0.25, freq: 280, freqEnd: 70, type: 'saw', vol: 0.3, s: 0.35, r: 0.1 }),
+  inv_wave: seq([
+    [0, tone({ dur: 0.08, freq: 392, type: 'square', vol: 0.26 })],
+    [0.08, tone({ dur: 0.08, freq: 523, type: 'square', vol: 0.26 })],
+    [0.16, tone({ dur: 0.12, freq: 659, type: 'square', vol: 0.3 })],
+  ]),
+  inv_bomb: tone({ dur: 0.09, freq: 200, freqEnd: 120, type: 'saw', vol: 0.24, noise: 0.2, r: 0.04 }),
+
+  // --- Asteroids ---
+  ast_thrust: tone({ dur: 0.08, freq: 90, type: 'saw', vol: 0.12, noise: 0.55, r: 0.04 }),
+  ast_shoot: tone({ dur: 0.05, freq: 1000, freqEnd: 500, type: 'square', vol: 0.22, r: 0.03 }),
+  ast_bang: mix(
+    noiseBurst({ dur: 0.12, vol: 0.38, hipass: 0.7 }),
+    tone({ dur: 0.1, freq: 160, freqEnd: 60, type: 'saw', vol: 0.22 }),
+  ),
+  ast_split: mix(
+    noiseBurst({ dur: 0.08, vol: 0.28, hipass: 0.8 }),
+    tone({ dur: 0.07, freq: 300, freqEnd: 180, type: 'triangle', vol: 0.2 }),
+  ),
+  ast_die: tone({ dur: 0.35, freq: 220, freqEnd: 55, type: 'saw', vol: 0.3, s: 0.4, r: 0.14 }),
 };
 
 fs.mkdirSync(outDir, { recursive: true });

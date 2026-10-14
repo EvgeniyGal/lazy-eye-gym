@@ -8,7 +8,16 @@ import { getGame } from '@/src/games/catalog';
 import { useAppStore } from '@/src/state/AppStore';
 import { colors, spacing } from '@/src/theme/tokens';
 
-const VALID: GameId[] = ['2048', 'pong', 'maze', 'breaker', 'snake', 'tetris'];
+const VALID: GameId[] = [
+  '2048',
+  'pong',
+  'maze',
+  'breaker',
+  'snake',
+  'tetris',
+  'invaders',
+  'asteroids',
+];
 
 export default function GameSessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

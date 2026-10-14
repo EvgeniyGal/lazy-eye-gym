@@ -251,37 +251,43 @@ export function SnakeGame({
             </React.Fragment>
           ))}
           {obstacles.map((o, i) => (
-            <RoundedRect
-              key={`o-${o.x}-${o.y}-${i}`}
-              x={ox + o.x * cell + 2}
-              y={oy + o.y * cell + 2}
-              width={cell - 4}
-              height={cell - 4}
-              r={3}
-              color={snakeColor}
-              opacity={0.35}
-            />
+            <React.Fragment key={`o-${o.x}-${o.y}-${i}`}>
+              <RoundedRect
+                x={ox + o.x * cell + 2}
+                y={oy + o.y * cell + 2}
+                width={cell - 4}
+                height={cell - 4}
+                r={3}
+                color={snakeColor}
+              />
+              <RoundedRect
+                x={ox + o.x * cell + 5}
+                y={oy + o.y * cell + 5}
+                width={cell - 10}
+                height={cell - 10}
+                r={2}
+                color={boardBg}
+              />
+            </React.Fragment>
           ))}
           {snake.map((s, i) => (
             <RoundedRect
               key={`${s.x}-${s.y}-${i}`}
-              x={ox + s.x * cell + 1}
-              y={oy + s.y * cell + 1}
-              width={cell - 2}
-              height={cell - 2}
-              r={4}
+              x={ox + s.x * cell + (i === 0 ? 1 : 2)}
+              y={oy + s.y * cell + (i === 0 ? 1 : 2)}
+              width={cell - (i === 0 ? 2 : 4)}
+              height={cell - (i === 0 ? 2 : 4)}
+              r={i === 0 ? 4 : 3}
               color={snakeColor}
-              opacity={i === 0 ? 1 : 0.85}
             />
           ))}
           <RoundedRect
-            x={ox + food.x * cell + (food.kind === 'golden' ? 1 : 2)}
-            y={oy + food.y * cell + (food.kind === 'golden' ? 1 : 2)}
-            width={cell - (food.kind === 'golden' ? 2 : 4)}
-            height={cell - (food.kind === 'golden' ? 2 : 4)}
-            r={food.kind === 'shrink' ? 10 : 6}
+            x={ox + food.x * cell + (food.kind === 'golden' ? 1 : food.kind === 'shrink' ? 4 : 2)}
+            y={oy + food.y * cell + (food.kind === 'golden' ? 1 : food.kind === 'shrink' ? 4 : 2)}
+            width={cell - (food.kind === 'golden' ? 2 : food.kind === 'shrink' ? 8 : 4)}
+            height={cell - (food.kind === 'golden' ? 2 : food.kind === 'shrink' ? 8 : 4)}
+            r={food.kind === 'shrink' ? 10 : food.kind === 'golden' ? 4 : 6}
             color={snakeColor}
-            opacity={food.kind === 'shrink' ? 0.55 : food.kind === 'golden' ? 1 : 0.9}
           />
           {/* Combo pips */}
           {Array.from({ length: combo }).map((_, i) => (

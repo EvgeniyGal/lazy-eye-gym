@@ -601,16 +601,32 @@ export function MazeGame({
                 color={actorColor}
               />
             ) : null}
-            {ghosts.map((g, i) => (
-              <Circle
-                key={`g-${i}`}
-                cx={g.x * cell + cell / 2}
-                cy={g.y * cell + cell / 2}
-                r={cell * (g.mode === 'frightened' ? 0.3 : g.mode === 'eaten' ? 0.2 : 0.38)}
-                color={actorColor}
-                opacity={g.mode === 'frightened' ? 0.45 : g.mode === 'eaten' ? 0.3 : 0.9}
-              />
-            ))}
+            {ghosts.map((g, i) => {
+              const cx = g.x * cell + cell / 2;
+              const cy = g.y * cell + cell / 2;
+              if (g.mode === 'eaten') {
+                // Eyes only — small filled dots, full glass alpha
+                return (
+                  <Group key={`g-${i}`}>
+                    <Circle cx={cx - cell * 0.12} cy={cy} r={cell * 0.1} color={actorColor} />
+                    <Circle cx={cx + cell * 0.12} cy={cy} r={cell * 0.1} color={actorColor} />
+                  </Group>
+                );
+              }
+              if (g.mode === 'frightened') {
+                // Hollow ring — full glass alpha
+                const r = cell * 0.34;
+                return (
+                  <Group key={`g-${i}`}>
+                    <Circle cx={cx} cy={cy} r={r} color={actorColor} />
+                    <Circle cx={cx} cy={cy} r={r - 3} color={boardBg} />
+                  </Group>
+                );
+              }
+              return (
+                <Circle key={`g-${i}`} cx={cx} cy={cy} r={cell * 0.38} color={actorColor} />
+              );
+            })}
             <Path path={pacPath} color={actorColor} />
           </Group>
 
