@@ -214,15 +214,13 @@ export const zhCN = {
       shortTitle: 'Pong',
       tag: '动态追踪',
       blurb:
-        '提供多种难度预设，场地中央会出现能量球（+ 变大、− 缩小对手、闪电加速、↔ 反转方向），双方都可以拾取。',
-      leftLabel: '玩家球拍',
-      rightLabel: '球、AI 与能量球',
+        '提供多种难度预设，场地中央会出现能量球（+ 变大、− 缩小对手、闪电加速、⇅ 反转方向、↔ 交换颜色），双方都可以拾取。',
+      leftLabel: '玩家球拍（对局中可交换）',
+      rightLabel: '球、AI 与能量球（对局中可交换）',
       recordLabel: '最高得分',
       metricLabel: '最长回合',
       field_difficulty: '难度',
       field_sound: '游戏音效',
-      field_paddleEye: '球拍眼睛',
-      field_ballEye: '球 / AI 眼睛',
     },
     maze: {
       title: '迷宫追逐',

@@ -226,15 +226,13 @@ export const en = {
       shortTitle: 'Pong',
       tag: 'DYNAMIC TRACKING',
       blurb:
-        'Level presets plus mid-court power orbs (+ grow, − shrink rival, bolt turbo, ↔ reverse) either side can grab.',
-      leftLabel: 'Player paddle',
-      rightLabel: 'Ball, AI & power orbs',
+        'Level presets plus mid-court power orbs (+ grow, − shrink rival, bolt turbo, ⇅ reverse, ↔ swap colours) either side can grab.',
+      leftLabel: 'Player paddle (swaps in play)',
+      rightLabel: 'Ball, AI & orbs (swaps in play)',
       recordLabel: 'Best score',
       metricLabel: 'Longest rally',
       field_difficulty: 'Level',
       field_sound: 'Game sounds',
-      field_paddleEye: 'Paddle eye',
-      field_ballEye: 'Ball / AI eye',
     },
     maze: {
       title: 'Maze Chase',

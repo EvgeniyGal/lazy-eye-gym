@@ -84,18 +84,17 @@ export const GAMES: GameDefinition[] = [
     shortTitle: 'Pong',
     tag: 'DYNAMIC TRACKING',
     category: 'reflex',
-    blurb: 'Level presets plus mid-court power orbs (+ grow, − shrink rival, bolt turbo, ↔ reverse) either side can grab.',
+    blurb:
+      'Level presets plus mid-court power orbs (+ grow, − shrink rival, bolt turbo, ⇅ reverse, ↔ swap colours) either side can grab.',
     dichopticSplit: {
-      leftLabel: 'Player paddle',
-      rightLabel: 'Ball, AI & power orbs',
+      leftLabel: 'Player paddle (swaps in play)',
+      rightLabel: 'Ball, AI & orbs (swaps in play)',
     },
     recordLabel: 'Best score',
     metricLabel: 'Longest rally',
     defaultSettings: {
       difficulty: 'easy',
       sound: true,
-      paddleEye: 'left',
-      ballEye: 'right',
     },
     fields: [
       {
@@ -112,24 +111,6 @@ export const GAMES: GameDefinition[] = [
         key: 'sound',
         label: 'Game sounds',
         type: 'toggle',
-      },
-      {
-        key: 'paddleEye',
-        label: 'Paddle eye',
-        type: 'eye',
-        options: [
-          { label: 'Left', value: 'left' },
-          { label: 'Right', value: 'right' },
-        ],
-      },
-      {
-        key: 'ballEye',
-        label: 'Ball / AI eye',
-        type: 'eye',
-        options: [
-          { label: 'Left', value: 'left' },
-          { label: 'Right', value: 'right' },
-        ],
       },
     ],
   },

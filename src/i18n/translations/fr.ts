@@ -233,15 +233,13 @@ export const fr = {
       shortTitle: 'Pong',
       tag: 'SUIVI DYNAMIQUE',
       blurb:
-        'Niveaux prédéfinis et orbes de puissance au milieu du terrain (+ agrandir, − réduire l’adversaire, éclair turbo, ↔ inverser) que chaque camp peut attraper.',
-      leftLabel: 'Raquette du joueur',
-      rightLabel: 'Balle, IA et orbes de puissance',
+        'Niveaux prédéfinis et orbes de puissance au milieu du terrain (+ agrandir, − réduire l’adversaire, éclair turbo, ⇅ inverser, ↔ échanger les couleurs) que chaque camp peut attraper.',
+      leftLabel: 'Raquette du joueur (échange en jeu)',
+      rightLabel: 'Balle, IA et orbes (échange en jeu)',
       recordLabel: 'Meilleur score',
       metricLabel: 'Plus long échange',
       field_difficulty: 'Niveau',
       field_sound: 'Sons du jeu',
-      field_paddleEye: 'Œil de la raquette',
-      field_ballEye: 'Œil de la balle / IA',
     },
     maze: {
       title: 'Poursuite dans le labyrinthe',

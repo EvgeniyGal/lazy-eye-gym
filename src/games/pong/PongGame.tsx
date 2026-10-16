@@ -9,7 +9,7 @@ import { useGameAudio } from '@/src/audio/useGameAudio';
 import type { GameSceneProps } from '../types';
 
 /** Power-ups both paddles can grab to trick each other. */
-type OrbKind = 'grow' | 'shrink' | 'turbo' | 'reverse';
+type OrbKind = 'grow' | 'shrink' | 'turbo' | 'reverse' | 'swap';
 
 type Side = 'player' | 'ai';
 
@@ -45,9 +45,26 @@ type State = {
   serveToPlayer: boolean;
 };
 
-const ORB_KINDS: OrbKind[] = ['grow', 'shrink', 'turbo', 'reverse'];
+const ORB_KINDS: OrbKind[] = ['grow', 'shrink', 'turbo', 'reverse', 'swap'];
 
 let orbSeq = 0;
+
+/** Prefer swap often so the colour feature shows up in short sessions. */
+function pickOrbKind(): OrbKind {
+  if (Math.random() < 0.35) return 'swap';
+  const rest: OrbKind[] = ['grow', 'shrink', 'turbo', 'reverse'];
+  return rest[Math.floor(Math.random() * rest.length)]!;
+}
+
+function halfDiskPath(cx: number, cy: number, r: number, side: 'left' | 'right') {
+  const path = Skia.Path.Make();
+  const oval = Skia.XYWHRect(cx - r, cy - r, r * 2, r * 2);
+  path.moveTo(cx, cy - r);
+  // 0° = east; -90 = north. Left half sweeps CCW, right half CW.
+  path.arcToOval(oval, -90, side === 'left' ? -180 : 180, false);
+  path.close();
+  return path;
+}
 
 const LEVELS = {
   easy: {
@@ -120,7 +137,7 @@ function OrbIcon({
     return <RoundedRect x={cx - 9} y={cy - 2.5} width={18} height={5} r={1.5} color={cut} />;
   }
   if (kind === 'turbo') {
-    // Lightning bolt (speed) — clearer than »
+    // Lightning bolt (speed)
     const bolt = Skia.PathBuilder.Make()
       .moveTo(cx + 2, cy - 10)
       .lineTo(cx - 3, cy - 1)
@@ -133,23 +150,45 @@ function OrbIcon({
       .detach();
     return <Path path={bolt} color={cut} />;
   }
-  // Reverse: clear ↔ — fat opposing arrows (bounce / flip)
-  const left = Skia.PathBuilder.Make()
-    .moveTo(cx - 10, cy)
-    .lineTo(cx - 1, cy - 8)
-    .lineTo(cx - 1, cy + 8)
+  // ⇅ — bounce / reverse ball direction
+  const up = Skia.PathBuilder.Make()
+    .moveTo(cx, cy - 10)
+    .lineTo(cx - 7, cy - 1)
+    .lineTo(cx + 7, cy - 1)
     .close()
     .detach();
-  const right = Skia.PathBuilder.Make()
-    .moveTo(cx + 10, cy)
-    .lineTo(cx + 1, cy - 8)
-    .lineTo(cx + 1, cy + 8)
+  const down = Skia.PathBuilder.Make()
+    .moveTo(cx, cy + 10)
+    .lineTo(cx - 7, cy + 1)
+    .lineTo(cx + 7, cy + 1)
     .close()
     .detach();
   return (
     <Group>
-      <Path path={left} color={cut} />
-      <Path path={right} color={cut} />
+      <Path path={up} color={cut} />
+      <Path path={down} color={cut} />
+    </Group>
+  );
+}
+
+/** Half red / half cyan disc — colour-swap power-up. */
+function SwapOrbDisc({
+  cx,
+  cy,
+  r,
+  leftColor,
+  rightColor,
+}: {
+  cx: number;
+  cy: number;
+  r: number;
+  leftColor: string;
+  rightColor: string;
+}) {
+  return (
+    <Group>
+      <Path path={halfDiskPath(cx, cy, r, 'left')} color={leftColor} />
+      <Path path={halfDiskPath(cx, cy, r, 'right')} color={rightColor} />
     </Group>
   );
 }
@@ -177,9 +216,6 @@ export function PongGame({
   const aiError = level.aiError;
   const aiSpeed = level.aiSpeed;
 
-  const paddleEye = (settings.paddleEye as EyeSide) || 'left';
-  const ballEyeSetting = (settings.ballEye as EyeSide) || 'right';
-  const paddleColor = colorForEye(palette, paddleEye);
   const leftColor = colorForEye(palette, 'left');
   const rightColor = colorForEye(palette, 'right');
   const boardBg = palette.background;
@@ -200,7 +236,9 @@ export function PongGame({
   }));
   const [orbs, setOrbs] = useState<Orb[]>([]);
   const [buffs, setBuffs] = useState<Buffs>(() => emptyBuffs());
-  const [ballEye, setBallEye] = useState<EyeSide>(ballEyeSetting);
+  /** Player paddle eye; ball + AI use the other — swapped by the ↔ orb. */
+  const [paddleEye, setPaddleEye] = useState<EyeSide>('left');
+  const [ballEye, setBallEye] = useState<EyeSide>('right');
 
   const startMs = useRef(Date.now());
   const ended = useRef(false);
@@ -208,15 +246,18 @@ export function PongGame({
   const stateRef = useRef(state);
   const orbsRef = useRef(orbs);
   const buffsRef = useRef(buffs);
+  const paddleEyeRef = useRef(paddleEye);
   const ballEyeRef = useRef(ballEye);
   const orbTimer = useRef(0);
   stateRef.current = state;
   orbsRef.current = orbs;
   buffsRef.current = buffs;
+  paddleEyeRef.current = paddleEye;
   ballEyeRef.current = ballEye;
 
+  const paddleColor = colorForEye(palette, paddleEye);
   const ballColor = colorForEye(palette, ballEye);
-  const aiPaddleColor = colorForEye(palette, ballEyeSetting);
+  const aiPaddleColor = colorForEye(palette, ballEye);
 
   useEffect(() => {
     onScore(state.playerScore, state.bestRally);
@@ -240,10 +281,13 @@ export function PongGame({
       };
     };
 
-    const flipBallColor = () => {
-      const next: EyeSide = ballEyeRef.current === 'left' ? 'right' : 'left';
-      ballEyeRef.current = next;
-      setBallEye(next);
+    const swapEyes = () => {
+      const nextPad: EyeSide = paddleEyeRef.current === 'left' ? 'right' : 'left';
+      const nextBall: EyeSide = nextPad === 'left' ? 'right' : 'left';
+      paddleEyeRef.current = nextPad;
+      ballEyeRef.current = nextBall;
+      setPaddleEye(nextPad);
+      setBallEye(nextBall);
     };
 
     const applyOrb = (kind: OrbKind, collector: Side, s: State, now: number) => {
@@ -263,10 +307,11 @@ export function PongGame({
       } else if (kind === 'reverse') {
         s.vx *= -1;
         s.vy *= -1;
+      } else if (kind === 'swap') {
+        swapEyes();
       }
       buffsRef.current = buff;
       setBuffs(buff);
-      flipBallColor();
       sfxRef.current('pong_orb');
     };
 
@@ -387,18 +432,23 @@ export function PongGame({
         return o;
       });
 
-      if (orbTimer.current > 5.5 && nextOrbs.length < 3) {
+      // First orb ~2.2s, then every ~4s — swap kind is weighted higher
+      const spawnAfter = orbSeq === 0 ? 2.2 : 4.0;
+      if (orbTimer.current > spawnAfter && nextOrbs.length < 3) {
         orbTimer.current = 0;
         orbSeq += 1;
+        const kind = orbSeq === 1 ? 'swap' : pickOrbKind();
         const towardPlayer = Math.random() > 0.5;
+        // Swap orbs drift slower so they're easier to grab
+        const slow = kind === 'swap';
         nextOrbs.push({
           id: `orb-${orbSeq}`,
-          kind: ORB_KINDS[Math.floor(Math.random() * ORB_KINDS.length)]!,
+          kind,
           eye: Math.random() > 0.5 ? 'left' : 'right',
           x: 48 + Math.random() * (width - 96),
-          y: height * 0.5 + (towardPlayer ? -20 : 20),
-          vx: (Math.random() - 0.5) * 60,
-          vy: (towardPlayer ? 1 : -1) * (55 + Math.random() * 45),
+          y: height * 0.5 + (towardPlayer ? -16 : 16),
+          vx: (Math.random() - 0.5) * (slow ? 36 : 60),
+          vy: (towardPlayer ? 1 : -1) * (slow ? 38 + Math.random() * 28 : 55 + Math.random() * 45),
         });
       }
 
@@ -482,12 +532,22 @@ export function PongGame({
           {pip(state.playerScore, height - 16, paddleColor)}
 
           {orbs.map((o) => {
+            if (o.kind === 'swap') {
+              return (
+                <SwapOrbDisc
+                  key={o.id}
+                  cx={o.x}
+                  cy={o.y}
+                  r={orbR}
+                  leftColor={leftColor}
+                  rightColor={rightColor}
+                />
+              );
+            }
             const fill = o.eye === 'left' ? leftColor : rightColor;
             return (
               <Group key={o.id}>
-                {/* Solid dichoptic disc */}
                 <Circle cx={o.x} cy={o.y} r={orbR} color={fill} />
-                {/* Transparent cutout sign (optical background) */}
                 <OrbIcon kind={o.kind} cx={o.x} cy={o.y} cut={boardBg} />
               </Group>
             );

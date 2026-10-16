@@ -232,15 +232,13 @@ export const de = {
       shortTitle: 'Pong',
       tag: 'DYNAMISCHES TRACKING',
       blurb:
-        'Level-Voreinstellungen plus Power-Orbs in der Spielfeldmitte (+ wachsen, − Gegner schrumpfen, Blitz Turbo, ↔ umkehren), die beide Seiten einsammeln können.',
-      leftLabel: 'Schläger des Spielers',
-      rightLabel: 'Ball, KI & Power-Orbs',
+        'Level-Voreinstellungen plus Power-Orbs in der Spielfeldmitte (+ wachsen, − Gegner schrumpfen, Blitz Turbo, ⇅ umkehren, ↔ Farben tauschen), die beide Seiten einsammeln können.',
+      leftLabel: 'Schläger des Spielers (wechselt im Spiel)',
+      rightLabel: 'Ball, KI & Orbs (wechseln im Spiel)',
       recordLabel: 'Beste Punktzahl',
       metricLabel: 'Längster Ballwechsel',
       field_difficulty: 'Level',
       field_sound: 'Spielsounds',
-      field_paddleEye: 'Auge für den Schläger',
-      field_ballEye: 'Auge für Ball / KI',
     },
     maze: {
       title: 'Labyrinth-Jagd',

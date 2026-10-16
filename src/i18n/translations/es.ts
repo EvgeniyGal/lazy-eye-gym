@@ -232,15 +232,13 @@ export const es = {
       shortTitle: 'Pong',
       tag: 'SEGUIMIENTO DINÁMICO',
       blurb:
-        'Niveles predefinidos y orbes de poder a mitad de pista (+ crecer, − encoger al rival, rayo turbo, ↔ invertir) que cualquiera de los dos lados puede atrapar.',
-      leftLabel: 'Pala del jugador',
-      rightLabel: 'Bola, IA y orbes de poder',
+        'Niveles predefinidos y orbes de poder a mitad de pista (+ crecer, − encoger al rival, rayo turbo, ⇅ invertir, ↔ cambiar colores) que cualquiera de los dos lados puede atrapar.',
+      leftLabel: 'Pala del jugador (cambia en partida)',
+      rightLabel: 'Bola, IA y orbes (cambian en partida)',
       recordLabel: 'Mejor puntuación',
       metricLabel: 'Intercambio más largo',
       field_difficulty: 'Nivel',
       field_sound: 'Sonidos del juego',
-      field_paddleEye: 'Ojo de la pala',
-      field_ballEye: 'Ojo de la bola / IA',
     },
     maze: {
       title: 'Persecución en el laberinto',
