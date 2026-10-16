@@ -187,25 +187,32 @@ function makeGhosts(): Ghost[] {
 }
 
 function facingAngle(dir: Dir) {
-  if (dir.x === 1) return 0;
-  if (dir.x === -1) return Math.PI;
-  if (dir.y === 1) return Math.PI / 2;
-  return -Math.PI / 2;
+  // Screen space: +x right, +y down — matches Math.atan2(y, x)
+  return Math.atan2(dir.y, dir.x);
 }
 
-/** Classic Pac-Man disc with a chomping mouth wedge. */
-function pacManPath(cx: number, cy: number, radius: number, dir: Dir, mouthOpen: number) {
+/**
+ * Classic Pac-Man “beak”: pie wedge from centre with straight jaw lines
+ * (mouthPhase 0 ≈ closed, 1 ≈ fully open ~90°).
+ *
+ * Skia oval arcs use degrees with 0° = east and positive sweep = clockwise,
+ * so the body arc from the upper jaw must use a negative (CCW) sweep.
+ */
+function pacManPath(cx: number, cy: number, radius: number, dir: Dir, mouthPhase: number) {
   const facing = facingAngle(dir);
-  const gap = Math.max(0.08, Math.min(0.85, mouthOpen));
-  const startDeg = ((facing + gap) * 180) / Math.PI;
-  const sweep = 360 - (gap * 2 * 180) / Math.PI;
+  const phase = Math.max(0, Math.min(1, mouthPhase));
+  const half = 0.12 + phase * 0.72;
+  const upper = facing - half;
+  const startDeg = (upper * 180) / Math.PI;
+  const bodySweepDeg = -(360 - (half * 2 * 180) / Math.PI);
+  const oval = Skia.XYWHRect(cx - radius, cy - radius, radius * 2, radius * 2);
+  const jx = cx + Math.cos(upper) * radius;
+  const jy = cy + Math.sin(upper) * radius;
   return Skia.PathBuilder.Make()
     .moveTo(cx, cy)
-    .addArc(
-      { x: cx - radius, y: cy - radius, width: radius * 2, height: radius * 2 },
-      startDeg,
-      sweep,
-    )
+    .lineTo(jx, jy)
+    .arcToOval(oval, startDeg, bodySweepDeg, false)
+    .lineTo(cx, cy)
     .close()
     .detach();
 }
@@ -301,10 +308,12 @@ export function MazeGame({
     let frame = 0;
     const tick = () => {
       if (movingRef.current) {
-        const t = Date.now() / 85;
-        setMouthOpen(0.12 + 0.55 * (0.5 + 0.5 * Math.sin(t)));
+        // Classic chomp cycle 0 → open → closed
+        const t = Date.now() / 95;
+        setMouthOpen(0.5 + 0.5 * Math.sin(t));
       } else {
-        setMouthOpen(0.08);
+        // Resting beak — slightly open, not chewing the wall
+        setMouthOpen(0.22);
       }
       setFrameTick((n) => n + 1);
       frame = requestAnimationFrame(tick);
@@ -354,32 +363,78 @@ export function MazeGame({
 
         let p = { ...playerRef.current };
         const tryDir = nextDir.current;
-        const tr = Math.round(p.y);
-        const tc = Math.round(p.x);
-        const canTurn =
-          walkable(tr + tryDir.y, wrapC(tr + tryDir.y, tc + tryDir.x)) &&
-          Math.abs(p.x - tc) < 0.2 &&
-          Math.abs(p.y - tr) < 0.2;
-        if (canTurn) dir.current = tryDir;
+        // Authoritative tile = last walkable cell (avoid rounding into a wall)
+        let tr = p.r;
+        let tc = p.c;
+        const rr = Math.round(p.y);
+        const rc = wrapC(rr, Math.round(p.x));
+        if (walkable(rr, rc)) {
+          tr = rr;
+          tc = rc;
+        }
+        const nearCenter = Math.abs(p.x - tc) < 0.28 && Math.abs(p.y - tr) < 0.28;
+        const cur = dir.current;
+        const isReverse = tryDir.x === -cur.x && tryDir.y === -cur.y && (tryDir.x !== 0 || tryDir.y !== 0);
+        const canEnter =
+          walkable(tr + tryDir.y, wrapC(tr + tryDir.y, tc + tryDir.x));
+
+        // Arcade turns: reverse anytime; corner turns only near tile centre.
+        // Always snap onto the corridor centreline when the facing changes.
+        if (canEnter && (isReverse || nearCenter)) {
+          if (cur.x !== tryDir.x || cur.y !== tryDir.y) {
+            dir.current = tryDir;
+            if (tryDir.x !== 0) {
+              p.y = tr;
+              p.r = tr;
+            } else {
+              p.x = tc;
+              p.c = tc;
+            }
+          }
+        }
+
         const d = dir.current;
-        let nx = p.x + d.x * 0.2;
-        let ny = p.y + d.y * 0.2;
+        const aheadR = tr + d.y;
+        const aheadC = wrapC(aheadR, tc + d.x);
+        const aheadBlocked = !walkable(aheadR, aheadC);
+        const moveStep = 0.2;
+
+        let nx = p.x;
+        let ny = p.y;
+
+        if (aheadBlocked) {
+          // Settle on the centre of the current path tile — never bounce into the wall
+          const dx = tc - p.x;
+          const dy = tr - p.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist > 0.02) {
+            const pull = Math.min(moveStep, dist);
+            nx = p.x + (dx / dist) * pull;
+            ny = p.y + (dy / dist) * pull;
+            movingRef.current = true;
+          } else {
+            nx = tc;
+            ny = tr;
+            movingRef.current = false;
+          }
+        } else {
+          nx = p.x + d.x * moveStep;
+          ny = p.y + d.y * moveStep;
+          // Stay glued to the tunnel centreline (prevents drift after turns)
+          if (d.x !== 0) ny = tr;
+          if (d.y !== 0) nx = tc;
+          if (tr === TUNNEL_ROW || Math.round(ny) === TUNNEL_ROW) {
+            if (nx < -0.5) nx = COLS - 0.5;
+            if (nx > COLS - 0.5) nx = -0.5;
+          }
+          movingRef.current = true;
+        }
+
         let nr = Math.round(ny);
         let nc = wrapC(nr, Math.round(nx));
-        if (nr === TUNNEL_ROW) {
-          if (nx < -0.5) nx = COLS - 0.5;
-          if (nx > COLS - 0.5) nx = -0.5;
-          nc = wrapC(nr, Math.round(nx));
-        }
         if (!walkable(nr, nc)) {
-          nx = tc;
-          ny = tr;
           nr = tr;
           nc = tc;
-          movingRef.current = false;
-        } else {
-          nc = wrapC(nr, nc);
-          movingRef.current = Math.hypot(nx - p.x, ny - p.y) > 0.001;
         }
         p = { r: nr, c: nc, x: nx, y: ny };
         playerRef.current = p;
