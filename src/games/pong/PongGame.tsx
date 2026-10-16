@@ -57,13 +57,13 @@ function pickOrbKind(): OrbKind {
 }
 
 function halfDiskPath(cx: number, cy: number, r: number, side: 'left' | 'right') {
-  const path = Skia.Path.Make();
   const oval = Skia.XYWHRect(cx - r, cy - r, r * 2, r * 2);
-  path.moveTo(cx, cy - r);
   // 0° = east; -90 = north. Left half sweeps CCW, right half CW.
-  path.arcToOval(oval, -90, side === 'left' ? -180 : 180, false);
-  path.close();
-  return path;
+  return Skia.PathBuilder.Make()
+    .moveTo(cx, cy - r)
+    .arcToOval(oval, -90, side === 'left' ? -180 : 180, false)
+    .close()
+    .detach();
 }
 
 const LEVELS = {
