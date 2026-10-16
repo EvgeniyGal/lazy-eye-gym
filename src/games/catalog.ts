@@ -120,7 +120,8 @@ export const GAMES: GameDefinition[] = [
     shortTitle: 'Maze',
     tag: 'SPATIAL PURSUIT',
     category: 'spatial',
-    blurb: 'Larger tiles, camera follows Pac-Man, chomping mouth, and optional game sounds.',
+    blurb:
+      'Camera follows Pac-Man; ghosts have classic shapes and some flicker between glass colours.',
     dichopticSplit: {
       leftLabel: 'Maze walls',
       rightLabel: 'Pellets, fruit, Pac-Man & ghosts',

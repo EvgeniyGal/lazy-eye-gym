@@ -217,6 +217,54 @@ function pacManPath(cx: number, cy: number, radius: number, dir: Dir, mouthPhase
     .detach();
 }
 
+/** Classic ghost silhouette: dome head + wavy skirt. */
+function ghostBodyPath(cx: number, cy: number, radius: number) {
+  const left = cx - radius;
+  const right = cx + radius;
+  const dome = Skia.XYWHRect(left, cy - radius * 0.95, radius * 2, radius * 2);
+  const midY = cy + radius * 0.2;
+  const valley = cy + radius * 0.55;
+  const tip = cy + radius * 0.98;
+  const third = (radius * 2) / 3;
+  let b = Skia.PathBuilder.Make()
+    .moveTo(left, midY)
+    .lineTo(left, cy)
+    .arcToOval(dome, 180, -180, false)
+    .lineTo(right, midY);
+  // Three skirt scallops, right → left
+  for (let i = 0; i < 3; i += 1) {
+    const x0 = right - i * third;
+    const x1 = right - (i + 0.5) * third;
+    const x2 = right - (i + 1) * third;
+    b = b.lineTo(x0, valley).lineTo(x1, tip).lineTo(x2, valley);
+  }
+  return b.lineTo(left, midY).close().detach();
+}
+
+/** Ambush + wander ghosts flicker between glass channels for dichoptic training. */
+function ghostFlickers(kind: GhostKind) {
+  return kind === 'ambush' || kind === 'wander';
+}
+
+function ghostFillColor(
+  kind: GhostKind,
+  mode: GhostMode,
+  leftColor: string,
+  rightColor: string,
+  actorColor: string,
+  now: number,
+) {
+  if (mode === 'frightened') {
+    // Fast flash between channels while vulnerable
+    return Math.floor(now / 140) % 2 === 0 ? leftColor : rightColor;
+  }
+  if (ghostFlickers(kind)) {
+    return Math.floor(now / 260) % 2 === 0 ? leftColor : rightColor;
+  }
+  // Steady ghosts: chase on actor channel, patrol on the opposite
+  return kind === 'patrol' ? leftColor : actorColor;
+}
+
 export function MazeGame({
   width,
   height,
@@ -234,6 +282,8 @@ export function MazeGame({
   const actorEye = (settings.actorEye as EyeSide) || 'right';
   const wallColor = colorForEye(palette, wallEye);
   const actorColor = colorForEye(palette, actorEye);
+  const leftColor = colorForEye(palette, 'left');
+  const rightColor = colorForEye(palette, 'right');
   const boardBg = palette.background;
   const startLives = Number(settings.lives ?? 3);
   const soundOn = Boolean(settings.sound ?? true) && prefs.soundEffects;
@@ -659,27 +709,62 @@ export function MazeGame({
             {ghosts.map((g, i) => {
               const cx = g.x * cell + cell / 2;
               const cy = g.y * cell + cell / 2;
+              const gr = cell * 0.4;
+              const fill = ghostFillColor(
+                g.kind,
+                g.mode,
+                leftColor,
+                rightColor,
+                actorColor,
+                Date.now(),
+              );
+              // Pupils glance toward movement
+              const lookX = g.dir.x * cell * 0.06;
+              const lookY = g.dir.y * cell * 0.06;
+              const eyeY = cy - gr * 0.15;
+              const eyeR = Math.max(3, cell * 0.09);
+              const pupilR = Math.max(1.8, cell * 0.045);
+
               if (g.mode === 'eaten') {
-                // Eyes only — small filled dots, full glass alpha
                 return (
                   <Group key={`g-${i}`}>
-                    <Circle cx={cx - cell * 0.12} cy={cy} r={cell * 0.1} color={actorColor} />
-                    <Circle cx={cx + cell * 0.12} cy={cy} r={cell * 0.1} color={actorColor} />
+                    <Circle cx={cx - gr * 0.32} cy={eyeY} r={eyeR} color={boardBg} />
+                    <Circle cx={cx + gr * 0.32} cy={eyeY} r={eyeR} color={boardBg} />
+                    <Circle
+                      cx={cx - gr * 0.32 + lookX}
+                      cy={eyeY + lookY}
+                      r={pupilR}
+                      color={actorColor}
+                    />
+                    <Circle
+                      cx={cx + gr * 0.32 + lookX}
+                      cy={eyeY + lookY}
+                      r={pupilR}
+                      color={actorColor}
+                    />
                   </Group>
                 );
               }
-              if (g.mode === 'frightened') {
-                // Hollow ring — full glass alpha
-                const r = cell * 0.34;
-                return (
-                  <Group key={`g-${i}`}>
-                    <Circle cx={cx} cy={cy} r={r} color={actorColor} />
-                    <Circle cx={cx} cy={cy} r={r - 3} color={boardBg} />
-                  </Group>
-                );
-              }
+
               return (
-                <Circle key={`g-${i}`} cx={cx} cy={cy} r={cell * 0.38} color={actorColor} />
+                <Group key={`g-${i}`}>
+                  <Path path={ghostBodyPath(cx, cy, gr)} color={fill} />
+                  {/* Eye whites punched through with optical background */}
+                  <Circle cx={cx - gr * 0.32} cy={eyeY} r={eyeR} color={boardBg} />
+                  <Circle cx={cx + gr * 0.32} cy={eyeY} r={eyeR} color={boardBg} />
+                  <Circle
+                    cx={cx - gr * 0.32 + lookX}
+                    cy={eyeY + lookY}
+                    r={pupilR}
+                    color={g.mode === 'frightened' ? fill : actorColor}
+                  />
+                  <Circle
+                    cx={cx + gr * 0.32 + lookX}
+                    cy={eyeY + lookY}
+                    r={pupilR}
+                    color={g.mode === 'frightened' ? fill : actorColor}
+                  />
+                </Group>
               );
             })}
             <Path path={pacPath} color={actorColor} />

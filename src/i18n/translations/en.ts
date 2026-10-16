@@ -238,7 +238,8 @@ export const en = {
       title: 'Maze Chase',
       shortTitle: 'Maze',
       tag: 'SPATIAL PURSUIT',
-      blurb: 'Larger tiles, camera follows Pac-Man, chomping mouth, and optional game sounds.',
+      blurb:
+        'Camera follows Pac-Man; ghosts have classic shapes and some flicker between glass colours.',
       leftLabel: 'Maze walls',
       rightLabel: 'Pellets, fruit, Pac-Man & ghosts',
       recordLabel: 'Best score',
