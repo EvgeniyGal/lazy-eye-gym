@@ -5,7 +5,13 @@ import type { TranslateOptions } from './i18n';
 
 type TFn = (key: string, options?: TranslateOptions) => string;
 
-function optionLabel(t: TFn, value: string, englishFallback: string): string {
+function optionLabel(
+  t: TFn,
+  gameId: GameId,
+  fieldKey: string,
+  value: string,
+  englishFallback: string,
+): string {
   switch (value) {
     case 'easy':
       return t('common.easy');
@@ -20,6 +26,9 @@ function optionLabel(t: TFn, value: string, englishFallback: string): string {
     case 'right':
       return englishFallback.includes('/') ? t('common.rightCyan') : t('common.right');
     default:
+      if (fieldKey === 'maze') {
+        return t(`catalog.${gameId}.option_maze_${value}`);
+      }
       return englishFallback;
   }
 }
@@ -32,7 +41,7 @@ function localizeField(gameId: GameId, field: GameSettingField, t: TFn): GameSet
       label,
       options: field.options.map((opt) => ({
         value: opt.value,
-        label: optionLabel(t, opt.value, opt.label),
+        label: optionLabel(t, gameId, field.key, opt.value, opt.label),
       })),
     };
   }
@@ -42,7 +51,7 @@ function localizeField(gameId: GameId, field: GameSettingField, t: TFn): GameSet
       label,
       options: field.options.map((opt) => ({
         value: opt.value,
-        label: optionLabel(t, opt.value, opt.label),
+        label: optionLabel(t, gameId, field.key, opt.value, opt.label),
       })),
     };
   }

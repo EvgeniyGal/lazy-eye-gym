@@ -247,6 +247,7 @@ export function Segmented({
   onChange: (value: string) => void;
 }) {
   const styles = useUiStyles();
+  const compact = options.length >= 5;
   return (
     <View style={styles.segmentRow}>
       {options.map((opt) => (
@@ -255,7 +256,16 @@ export function Segmented({
           onPress={() => onChange(opt.value)}
           style={[styles.segment, value === opt.value && styles.segmentActive]}
         >
-          <Text style={[styles.segmentText, value === opt.value && styles.segmentTextActive]}>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+            style={[
+              styles.segmentText,
+              compact && { fontSize: 11 },
+              value === opt.value && styles.segmentTextActive,
+            ]}
+          >
             {opt.label}
           </Text>
         </Pressable>

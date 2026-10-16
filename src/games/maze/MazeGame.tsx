@@ -9,40 +9,18 @@ import { disposeMazeSfx, initMazeSfx, playMazeSfx } from '@/src/audio/mazeSfx';
 import { useT } from '@/src/i18n/I18nProvider';
 import { useAppStore } from '@/src/state/AppStore';
 import type { GameSceneProps } from '../types';
+import {
+  getMaze,
+  mazeCols,
+  mazeRows,
+  pelletCells,
+  scatterCorners,
+  walkable,
+  wrapC,
+  type Dir,
+  type MazeDef,
+} from './mazes';
 
-/**
- * Classic-style maze: 1 = wall, 0 = path, 2 = nest door (walkable for ghosts leaving).
- * Left/right tunnels at mid row wrap.
- */
-const MAZE: number[][] = [
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1],
-  [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-  [1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1],
-  [1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1],
-  [1, 1, 1, 1, 0, 1, 0, 1, 1, 2, 1, 1, 0, 1, 0, 1, 1, 1, 1],
-  [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-  [1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1],
-  [1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1],
-  [1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1],
-  [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
-  [1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1],
-  [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-  [1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-];
-
-const ROWS = MAZE.length;
-const COLS = MAZE[0]!.length;
-const TUNNEL_ROW = 9;
-
-type Dir = { x: number; y: number };
 type GhostKind = 'chase' | 'ambush' | 'patrol' | 'wander';
 type GhostMode = 'scatter' | 'chase' | 'frightened' | 'eaten';
 
@@ -60,54 +38,20 @@ const DIRS: Dir[] = [
   { x: 0, y: -1 },
 ];
 
-const SCATTER_CORNERS: Record<GhostKind, { r: number; c: number }> = {
-  chase: { r: 1, c: COLS - 2 },
-  ambush: { r: 1, c: 1 },
-  patrol: { r: ROWS - 2, c: COLS - 2 },
-  wander: { r: ROWS - 2, c: 1 },
-};
+const GHOST_KINDS: GhostKind[] = ['chase', 'ambush', 'patrol', 'wander'];
 
-function walkable(r: number, c: number, forGhost = false) {
-  if (r < 0 || r >= ROWS) return false;
-  let cc = c;
-  if (r === TUNNEL_ROW) {
-    if (c < 0) cc = COLS - 1;
-    if (c >= COLS) cc = 0;
-  } else if (c < 0 || c >= COLS) return false;
-  const cell = MAZE[r]![cc]!;
-  if (cell === 0) return true;
-  if (forGhost && cell === 2) return true;
-  return false;
-}
+const DIFFICULTY = {
+  easy: { speedMul: 0.85, lives: 5, frightMs: 7500, ghostMul: 0.85 },
+  hard: { speedMul: 1.15, lives: 3, frightMs: 5000, ghostMul: 1.05 },
+  extraHard: { speedMul: 1.45, lives: 2, frightMs: 3200, ghostMul: 1.25 },
+} as const;
 
-function wrapC(r: number, c: number) {
-  if (r === TUNNEL_ROW) {
-    if (c < 0) return COLS - 1;
-    if (c >= COLS) return 0;
-  }
-  return c;
-}
+type DifficultyKey = keyof typeof DIFFICULTY;
 
-function pelletCells() {
-  const pellets: { r: number; c: number }[] = [];
-  const powers: { r: number; c: number }[] = [];
-  for (let r = 0; r < ROWS; r += 1) {
-    for (let c = 0; c < COLS; c += 1) {
-      if (MAZE[r]![c] !== 0) continue;
-      if (r >= 8 && r <= 11 && c >= 7 && c <= 11) continue;
-      if (
-        (r === 3 && c === 1) ||
-        (r === 3 && c === COLS - 2) ||
-        (r === 15 && c === 1) ||
-        (r === 15 && c === COLS - 2)
-      ) {
-        powers.push({ r, c });
-      } else {
-        pellets.push({ r, c });
-      }
-    }
-  }
-  return { pellets, powers };
+function resolveDifficulty(settings: Record<string, string | number | boolean>): DifficultyKey {
+  const raw = String(settings.difficulty ?? 'easy');
+  if (raw === 'hard' || raw === 'extraHard') return raw;
+  return 'easy';
 }
 
 function dist(a: { r: number; c: number }, b: { r: number; c: number }) {
@@ -115,19 +59,20 @@ function dist(a: { r: number; c: number }, b: { r: number; c: number }) {
 }
 
 function ghostTarget(
+  maze: MazeDef,
   g: Ghost,
   player: Actor,
   playerDir: Dir,
   mode: GhostMode,
 ): { r: number; c: number } {
-  if (mode === 'eaten') return { r: 9, c: 9 };
+  if (mode === 'eaten') return { ...maze.nest };
   if (mode === 'frightened') {
     return {
-      r: Math.floor(Math.random() * ROWS),
-      c: Math.floor(Math.random() * COLS),
+      r: Math.floor(Math.random() * mazeRows(maze)),
+      c: Math.floor(Math.random() * mazeCols(maze)),
     };
   }
-  if (mode === 'scatter') return SCATTER_CORNERS[g.kind];
+  if (mode === 'scatter') return scatterCorners(maze)[g.kind];
   if (g.kind === 'chase') return { r: player.r, c: player.c };
   if (g.kind === 'ambush') {
     return {
@@ -151,16 +96,21 @@ function ghostTarget(
   };
 }
 
-function chooseGhostDir(g: Ghost, target: { r: number; c: number }, frightened: boolean): Dir {
+function chooseGhostDir(
+  maze: MazeDef,
+  g: Ghost,
+  target: { r: number; c: number },
+  frightened: boolean,
+): Dir {
   const gr = Math.round(g.y);
   const gc = Math.round(g.x);
   const reverse = { x: -g.dir.x, y: -g.dir.y };
   let options = DIRS.filter((d) => {
     if (d.x === reverse.x && d.y === reverse.y && !frightened) return false;
-    return walkable(gr + d.y, gc + d.x, true);
+    return walkable(maze, gr + d.y, gc + d.x, true);
   });
   if (!options.length) {
-    options = DIRS.filter((d) => walkable(gr + d.y, gc + d.x, true));
+    options = DIRS.filter((d) => walkable(maze, gr + d.y, gc + d.x, true));
   }
   if (!options.length) return g.dir;
   if (frightened) return options[Math.floor(Math.random() * options.length)]!;
@@ -168,7 +118,7 @@ function chooseGhostDir(g: Ghost, target: { r: number; c: number }, frightened: 
   let bestD = Infinity;
   for (const d of options) {
     const nr = gr + d.y;
-    const nc = wrapC(nr, gc + d.x);
+    const nc = wrapC(maze, nr, gc + d.x);
     const d2 = dist({ r: nr, c: nc }, target);
     if (d2 < bestD) {
       bestD = d2;
@@ -178,13 +128,20 @@ function chooseGhostDir(g: Ghost, target: { r: number; c: number }, frightened: 
   return best;
 }
 
-function makeGhosts(): Ghost[] {
-  return [
-    { kind: 'chase', mode: 'scatter', x: 9, y: 9, r: 9, c: 9, dir: { x: -1, y: 0 } },
-    { kind: 'ambush', mode: 'scatter', x: 8, y: 9, r: 9, c: 8, dir: { x: 1, y: 0 } },
-    { kind: 'patrol', mode: 'scatter', x: 10, y: 9, r: 9, c: 10, dir: { x: -1, y: 0 } },
-    { kind: 'wander', mode: 'scatter', x: 9, y: 10, r: 10, c: 9, dir: { x: 0, y: -1 } },
-  ];
+function makeGhosts(maze: MazeDef): Ghost[] {
+  return maze.ghostStarts.map((start, i) => ({
+    kind: GHOST_KINDS[i] ?? 'wander',
+    mode: 'scatter' as GhostMode,
+    x: start.c,
+    y: start.r,
+    r: start.r,
+    c: start.c,
+    dir: { ...start.dir },
+  }));
+}
+
+function actorAt(cell: { r: number; c: number }): Actor {
+  return { r: cell.r, c: cell.c, x: cell.c, y: cell.r };
 }
 
 function facingAngle(dir: Dir) {
@@ -277,9 +234,13 @@ export function MazeGame({
 }: GameSceneProps) {
   const { t } = useT();
   const { prefs } = useAppStore();
+  const maze = useMemo(() => getMaze(String(settings.maze ?? 'classic')), [settings.maze]);
+  const difficulty = DIFFICULTY[resolveDifficulty(settings)];
+  const rows = mazeRows(maze);
+  const cols = mazeCols(maze);
   // ~2× previous on-screen scale: fit ~7 tiles across the short side
   const cell = Math.max(44, Math.min(width, height) / 7);
-  const speed = 5.2 * Number(settings.speed ?? 1);
+  const speed = 5.2 * difficulty.speedMul;
   const wallEye = (settings.wallEye as EyeSide) || 'left';
   const actorEye = (settings.actorEye as EyeSide) || 'right';
   const wallColor = colorForEye(palette, wallEye);
@@ -287,19 +248,19 @@ export function MazeGame({
   const leftColor = colorForEye(palette, 'left');
   const rightColor = colorForEye(palette, 'right');
   const boardBg = palette.background;
-  const startLives = Number(settings.lives ?? 3);
+  const startLives = difficulty.lives;
   const soundOn = Boolean(settings.sound ?? true) && prefs.soundEffects;
 
-  const initialPellets = useMemo(() => pelletCells(), []);
+  const initialPellets = useMemo(() => pelletCells(maze), [maze]);
 
-  const [player, setPlayer] = useState<Actor>({ r: 15, c: 9, x: 9, y: 15 });
-  const [ghosts, setGhosts] = useState<Ghost[]>(() => makeGhosts());
+  const [player, setPlayer] = useState<Actor>(() => actorAt(maze.playerStart));
+  const [ghosts, setGhosts] = useState<Ghost[]>(() => makeGhosts(maze));
   const [pellets, setPellets] = useState(initialPellets.pellets);
   const [powers, setPowers] = useState(initialPellets.powers);
   const [fruit, setFruit] = useState<{ r: number; c: number } | null>(null);
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
-  const [lives, setLives] = useState(startLives);
+  const [lives, setLives] = useState<number>(startLives);
   const [frightenedUntil, setFrightenedUntil] = useState(0);
   const [mouthOpen, setMouthOpen] = useState(0.22);
   const [awaitingInput, setAwaitingInput] = useState(true);
@@ -317,6 +278,8 @@ export function MazeGame({
   const eatenCombo = useRef(0);
   const movingRef = useRef(false);
   const awaitingInputRef = useRef(true);
+  const mazeRef = useRef(maze);
+  const difficultyRef = useRef(difficulty);
 
   const playerRef = useRef(player);
   const ghostsRef = useRef(ghosts);
@@ -341,6 +304,8 @@ export function MazeGame({
   frightRef.current = frightenedUntil;
   soundRef.current = soundOn;
   hapticRef.current = prefs.hapticFeedback;
+  mazeRef.current = maze;
+  difficultyRef.current = difficulty;
 
   const sfx = (name: Parameters<typeof playMazeSfx>[0]) =>
     playMazeSfx(name, {
@@ -384,8 +349,9 @@ export function MazeGame({
     let last = Date.now();
 
     const resetPositions = () => {
-      const p = { r: 15, c: 9, x: 9, y: 15 };
-      const g = makeGhosts();
+      const m = mazeRef.current;
+      const p = actorAt(m.playerStart);
+      const g = makeGhosts(m);
       playerRef.current = p;
       ghostsRef.current = g;
       setPlayer(p);
@@ -408,6 +374,9 @@ export function MazeGame({
         frame = requestAnimationFrame(tick);
         return;
       }
+      const m = mazeRef.current;
+      const diff = difficultyRef.current;
+      const mCols = mazeCols(m);
       acc += (now - last) / 1000;
       last = now;
       const levelSpeed = speed * (1 + (levelRef.current - 1) * 0.08);
@@ -431,16 +400,15 @@ export function MazeGame({
         let tr = p.r;
         let tc = p.c;
         const rr = Math.round(p.y);
-        const rc = wrapC(rr, Math.round(p.x));
-        if (walkable(rr, rc)) {
+        const rc = wrapC(m, rr, Math.round(p.x));
+        if (walkable(m, rr, rc)) {
           tr = rr;
           tc = rc;
         }
         const nearCenter = Math.abs(p.x - tc) < 0.28 && Math.abs(p.y - tr) < 0.28;
         const cur = dir.current;
         const isReverse = tryDir.x === -cur.x && tryDir.y === -cur.y && (tryDir.x !== 0 || tryDir.y !== 0);
-        const canEnter =
-          walkable(tr + tryDir.y, wrapC(tr + tryDir.y, tc + tryDir.x));
+        const canEnter = walkable(m, tr + tryDir.y, wrapC(m, tr + tryDir.y, tc + tryDir.x));
 
         // Arcade turns: reverse anytime; corner turns only near tile centre.
         // Always snap onto the corridor centreline when the facing changes.
@@ -459,8 +427,8 @@ export function MazeGame({
 
         const d = dir.current;
         const aheadR = tr + d.y;
-        const aheadC = wrapC(aheadR, tc + d.x);
-        const aheadBlocked = !walkable(aheadR, aheadC);
+        const aheadC = wrapC(m, aheadR, tc + d.x);
+        const aheadBlocked = !walkable(m, aheadR, aheadC);
         const moveStep = 0.2;
 
         let nx = p.x;
@@ -470,11 +438,11 @@ export function MazeGame({
           // Settle on the centre of the current path tile — never bounce into the wall
           const dx = tc - p.x;
           const dy = tr - p.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist > 0.02) {
-            const pull = Math.min(moveStep, dist);
-            nx = p.x + (dx / dist) * pull;
-            ny = p.y + (dy / dist) * pull;
+          const pullDist = Math.hypot(dx, dy);
+          if (pullDist > 0.02) {
+            const pull = Math.min(moveStep, pullDist);
+            nx = p.x + (dx / pullDist) * pull;
+            ny = p.y + (dy / pullDist) * pull;
             movingRef.current = true;
           } else {
             nx = tc;
@@ -487,16 +455,16 @@ export function MazeGame({
           // Stay glued to the tunnel centreline (prevents drift after turns)
           if (d.x !== 0) ny = tr;
           if (d.y !== 0) nx = tc;
-          if (tr === TUNNEL_ROW || Math.round(ny) === TUNNEL_ROW) {
-            if (nx < -0.5) nx = COLS - 0.5;
-            if (nx > COLS - 0.5) nx = -0.5;
+          if (tr === m.tunnelRow || Math.round(ny) === m.tunnelRow) {
+            if (nx < -0.5) nx = mCols - 0.5;
+            if (nx > mCols - 0.5) nx = -0.5;
           }
           movingRef.current = true;
         }
 
         let nr = Math.round(ny);
-        let nc = wrapC(nr, Math.round(nx));
-        if (!walkable(nr, nc)) {
+        let nc = wrapC(m, nr, Math.round(nx));
+        if (!walkable(m, nr, nc)) {
           nr = tr;
           nc = tc;
         }
@@ -521,7 +489,7 @@ export function MazeGame({
           setPowers(nextPowers);
           scoreRef.current += 50;
           setScore(scoreRef.current);
-          const until = now + 6000;
+          const until = now + diff.frightMs;
           frightRef.current = until;
           setFrightenedUntil(until);
           eatenCombo.current = 0;
@@ -538,16 +506,16 @@ export function MazeGame({
         const remaining = nextPellets.length + nextPowers.length;
         if (!fruitSpawned.current && remaining <= pelletsLeftAtStart.current * 0.5) {
           fruitSpawned.current = true;
-          const f = { r: 11, c: 9 };
+          const f = { ...m.fruitCell };
           fruitRef.current = f;
           setFruit(f);
         }
 
-        const stepGhost = 0.16 + levelRef.current * 0.01;
+        const stepGhost = (0.16 + levelRef.current * 0.01) * diff.ghostMul;
         const nextGhosts = ghostsRef.current.map((g) => {
           let mode: GhostMode = g.mode;
           if (g.mode === 'eaten') {
-            if (Math.round(g.y) === 9 && Math.round(g.x) === 9) mode = globalMode;
+            if (Math.round(g.y) === m.nest.r && Math.round(g.x) === m.nest.c) mode = globalMode;
             else mode = 'eaten';
           } else if (frightened) mode = 'frightened';
           else mode = globalMode;
@@ -556,21 +524,21 @@ export function MazeGame({
             Math.abs(g.x - Math.round(g.x)) < 0.15 && Math.abs(g.y - Math.round(g.y)) < 0.15;
           let gdir = g.dir;
           if (aligned) {
-            const target = ghostTarget(g, p, dir.current, mode);
-            gdir = chooseGhostDir({ ...g, mode }, target, mode === 'frightened');
+            const target = ghostTarget(m, g, p, dir.current, mode);
+            gdir = chooseGhostDir(m, { ...g, mode }, target, mode === 'frightened');
           }
           const spd =
             mode === 'frightened' ? stepGhost * 0.65 : mode === 'eaten' ? stepGhost * 1.6 : stepGhost;
           let gx = g.x + gdir.x * spd;
           let gy = g.y + gdir.y * spd;
           let gr = Math.round(gy);
-          let gc = wrapC(gr, Math.round(gx));
-          if (gr === TUNNEL_ROW) {
-            if (gx < -0.5) gx = COLS - 0.5;
-            if (gx > COLS - 0.5) gx = -0.5;
-            gc = wrapC(gr, Math.round(gx));
+          let gc = wrapC(m, gr, Math.round(gx));
+          if (gr === m.tunnelRow) {
+            if (gx < -0.5) gx = mCols - 0.5;
+            if (gx > mCols - 0.5) gx = -0.5;
+            gc = wrapC(m, gr, Math.round(gx));
           }
-          if (!walkable(gr, gc, true)) {
+          if (!walkable(m, gr, gc, true)) {
             gx = Math.round(g.x);
             gy = Math.round(g.y);
             gr = Math.round(gy);
@@ -628,7 +596,7 @@ export function MazeGame({
           scoreRef.current += 500;
           setScore(scoreRef.current);
           sfx('level');
-          const fresh = pelletCells();
+          const fresh = pelletCells(m);
           pelletsRef.current = fresh.pellets;
           powersRef.current = fresh.powers;
           setPellets(fresh.pellets);
@@ -661,7 +629,8 @@ export function MazeGame({
       }
       dir.current = { x: nx, y: ny };
       const p = playerRef.current;
-      movingRef.current = walkable(p.r + ny, wrapC(p.r + ny, p.c + nx));
+      const m = mazeRef.current;
+      movingRef.current = walkable(m, p.r + ny, wrapC(m, p.r + ny, p.c + nx));
     }
     nextDir.current = { x: nx, y: ny };
   };
@@ -704,9 +673,9 @@ export function MazeGame({
   // Cull tiles roughly in view for weaker devices
   const pad = 2;
   const minC = Math.max(0, Math.floor((-camX) / cell) - pad);
-  const maxC = Math.min(COLS - 1, Math.ceil((width - camX) / cell) + pad);
+  const maxC = Math.min(cols - 1, Math.ceil((width - camX) / cell) + pad);
   const minR = Math.max(0, Math.floor((-camY) / cell) - pad);
-  const maxR = Math.min(ROWS - 1, Math.ceil((height - camY) / cell) + pad);
+  const maxR = Math.min(rows - 1, Math.ceil((height - camY) / cell) + pad);
 
   return (
     <GestureDetector gesture={gesture}>
@@ -716,7 +685,7 @@ export function MazeGame({
           <Group transform={[{ translateX: camX }, { translateY: camY }]}>
             {Array.from({ length: maxR - minR + 1 }, (_, i) => minR + i).map((r) =>
               Array.from({ length: maxC - minC + 1 }, (_, j) => minC + j).map((c) =>
-                MAZE[r]![c] === 1 ? (
+                maze.grid[r]![c] === 1 ? (
                   <Rect
                     key={`w-${r}-${c}`}
                     x={c * cell}
