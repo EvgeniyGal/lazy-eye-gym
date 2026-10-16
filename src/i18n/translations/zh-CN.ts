@@ -136,6 +136,7 @@ export const zhCN = {
   gamesHub: {
     header: '游戏',
     title: '训练场',
+    listHint: '点选游戏进入设置，然后再开始。',
     activeSetup: '当前设置 · 左 (%{left}°) / 右 (%{right}°)',
     calibrated: '已校准',
     allGames: '全部游戏（%{count}）',

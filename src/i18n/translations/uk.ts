@@ -145,6 +145,7 @@ export const uk = {
   gamesHub: {
     header: 'Ігри',
     title: 'Тренувальна арена',
+    listHint: 'Торкніться гри, щоб відкрити налаштування, а потім почати.',
     activeSetup: 'Активне налаштування · Л (%{left}°) / П (%{right}°)',
     calibrated: 'Відкалібровано',
     allGames: 'Усі ігри (%{count})',

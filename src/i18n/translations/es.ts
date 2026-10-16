@@ -150,6 +150,7 @@ export const es = {
   gamesHub: {
     header: 'Juegos',
     title: 'Arena de entrenamiento',
+    listHint: 'Toca un juego para abrir su configuración y luego empezar.',
     activeSetup: 'Configuración activa · I (%{left}°) / D (%{right}°)',
     calibrated: 'Calibrado',
     allGames: 'Todos los juegos (%{count})',

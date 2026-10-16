@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import React, { useMemo, useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Card, Chip, HeaderBar, Screen, Subtitle, Title } from '@/src/components/ui';
-import { getBestMetric, getBestScore } from '@/src/db/sessions';
+import { Chip, HeaderBar, Screen, Subtitle, Title } from '@/src/components/ui';
 import { GAMES, type GameCategory, type GameId } from '@/src/games/catalog';
+import { GAME_PREVIEWS } from '@/src/games/previews';
 import { useT } from '@/src/i18n/I18nProvider';
 import { getLocalizedGamesByCategory } from '@/src/i18n/localizeCatalog';
 import { useAppStore } from '@/src/state/AppStore';
@@ -15,12 +15,18 @@ import { radii, spacing } from '@/src/theme/tokens';
 
 export default function GamesHubScreen() {
   const colors = useColors();
+  const { width } = useWindowDimensions();
+  const gap = spacing.md;
+  const pad = spacing.lg;
+  const tileW = (width - pad * 2 - gap) / 2;
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
         content: {
-          padding: spacing.lg,
+          padding: pad,
           gap: spacing.md,
+          paddingBottom: spacing.xxl,
         },
         setupBar: {
           flexDirection: 'row',
@@ -48,89 +54,55 @@ export default function GamesHubScreen() {
           fontSize: 12,
           fontWeight: '700',
         },
-        gameCard: {
-          gap: spacing.sm,
-        },
-        tag: {
-          color: colors.primary,
-          fontSize: 11,
-          fontWeight: '800',
-          letterSpacing: 0.5,
-        },
-        gameTitle: {
-          color: colors.onSurface,
-          fontSize: 20,
-          fontWeight: '700',
-        },
-        split: {
-          gap: 4,
-          marginTop: spacing.sm,
-        },
-        splitItem: {
-          fontSize: 12,
-          fontWeight: '600',
-        },
-        stats: {
+        grid: {
           flexDirection: 'row',
-          gap: spacing.md,
+          flexWrap: 'wrap',
+          gap,
           marginTop: spacing.sm,
         },
-        stat: {
-          flex: 1,
+        tile: {
+          width: tileW,
+          backgroundColor: colors.surface,
+          borderRadius: radii.lg,
+          borderWidth: 1,
+          borderColor: colors.outlineVariant,
+          overflow: 'hidden',
+        },
+        previewWrap: {
+          width: tileW,
+          height: tileW,
           backgroundColor: colors.surfaceHigh,
-          borderRadius: radii.md,
-          padding: spacing.md,
+          overflow: 'hidden',
         },
-        statVal: {
+        preview: {
+          width: tileW,
+          height: tileW,
+        },
+        tileBody: {
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+          gap: 2,
+        },
+        tileTitle: {
           color: colors.onSurface,
-          fontWeight: '800',
-          fontSize: 18,
+          fontWeight: '700',
+          fontSize: 15,
         },
-        statLbl: {
-          color: colors.onSurfaceVariant,
-          fontSize: 11,
-          marginTop: 2,
-          textTransform: 'uppercase',
-        },
-        playBtn: {
-          marginTop: spacing.sm,
-          backgroundColor: colors.primary,
-          borderRadius: radii.pill,
-          minHeight: 48,
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'row',
-          gap: 8,
-        },
-        playText: {
-          color: colors.onPrimary,
-          fontWeight: '800',
+        tileTag: {
+          color: colors.primary,
+          fontSize: 10,
+          fontWeight: '700',
+          letterSpacing: 0.3,
         },
       }),
-    [colors],
+    [colors, gap, pad, tileW],
   );
+
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useT();
   const { activeProfile } = useAppStore();
   const [category, setCategory] = useState<GameCategory>('all');
-  const [records, setRecords] = useState<Record<string, { score: number; metric: number }>>({});
-
-  useFocusEffect(
-    useCallback(() => {
-      void (async () => {
-        const next: Record<string, { score: number; metric: number }> = {};
-        for (const game of GAMES) {
-          next[game.id] = {
-            score: await getBestScore(game.id),
-            metric: await getBestMetric(game.id),
-          };
-        }
-        setRecords(next);
-      })();
-    }, []),
-  );
-
   const list = getLocalizedGamesByCategory(category, t);
 
   return (
@@ -140,6 +112,8 @@ export default function GamesHubScreen() {
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Title>{t('gamesHub.title')}</Title>
+        <Subtitle>{t('gamesHub.listHint')}</Subtitle>
+
         <View style={styles.setupBar}>
           <Text style={styles.setupText}>
             {t('gamesHub.activeSetup', {
@@ -153,7 +127,7 @@ export default function GamesHubScreen() {
           </View>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: spacing.md }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <Chip
             label={t('gamesHub.allGames', { count: GAMES.length })}
             active={category === 'all'}
@@ -171,39 +145,33 @@ export default function GamesHubScreen() {
           />
         </ScrollView>
 
-        {list.map((game) => (
-          <Card key={game.id} style={styles.gameCard}>
-            <Text style={styles.tag}>{game.tag}</Text>
-            <Text style={styles.gameTitle}>{game.title}</Text>
-            <Subtitle>{game.blurb}</Subtitle>
-            <View style={styles.split}>
-              <Text style={[styles.splitItem, { color: colors.secondary }]}>
-                {t('gamesHub.redL', { label: game.dichopticSplit.leftLabel })}
-              </Text>
-              <Text style={[styles.splitItem, { color: colors.primary }]}>
-                {t('gamesHub.cyanR', { label: game.dichopticSplit.rightLabel })}
-              </Text>
-            </View>
-            <View style={styles.stats}>
-              <View style={styles.stat}>
-                <Text style={styles.statVal}>{records[game.id]?.score ?? 0}</Text>
-                <Text style={styles.statLbl}>{t('common.score')}</Text>
-              </View>
-              <View style={styles.stat}>
-                <Text style={styles.statVal}>{records[game.id]?.metric ?? 0}</Text>
-                <Text style={styles.statLbl}>{game.metricLabel}</Text>
-              </View>
-            </View>
+        <View style={styles.grid}>
+          {list.map((game) => (
             <Pressable
-              style={styles.playBtn}
+              key={game.id}
+              accessibilityRole="button"
+              accessibilityLabel={game.title}
               onPress={() => router.push(`/(tabs)/games/${game.id as GameId}`)}
+              style={({ pressed }) => [styles.tile, pressed && { opacity: 0.88 }]}
             >
-              <Ionicons name="play" size={16} color={colors.onPrimary} />
-              <Text style={styles.playText}>{t('gamesHub.openGame', { name: game.shortTitle })}</Text>
+              <View style={styles.previewWrap}>
+                <Image
+                  source={GAME_PREVIEWS[game.id]}
+                  style={styles.preview}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={styles.tileBody}>
+                <Text style={styles.tileTag} numberOfLines={1}>
+                  {game.tag}
+                </Text>
+                <Text style={styles.tileTitle} numberOfLines={2}>
+                  {game.title}
+                </Text>
+              </View>
             </Pressable>
-          </Card>
-        ))}
-        <View style={{ height: spacing.xxl }} />
+          ))}
+        </View>
       </ScrollView>
     </Screen>
   );
