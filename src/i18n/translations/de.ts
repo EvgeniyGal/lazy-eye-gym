@@ -255,6 +255,7 @@ export const de = {
       field_sound: 'Spielsounds',
       field_wallEye: 'Auge für Wände',
       field_actorEye: 'Auge für Figuren',
+      swipeToStart: 'Wischen oder tippen zum Start',
     },
     breaker: {
       title: 'Steine-Zertrümmerer',

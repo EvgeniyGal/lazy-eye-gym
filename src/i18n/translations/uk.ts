@@ -248,6 +248,7 @@ export const uk = {
       field_sound: 'Звуки гри',
       field_wallEye: 'Око стін',
       field_actorEye: 'Око персонажів',
+      swipeToStart: 'Проведіть або торкніться, щоб почати',
     },
     breaker: {
       title: 'Розбивач цеглин',

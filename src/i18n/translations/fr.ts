@@ -256,6 +256,7 @@ export const fr = {
       field_sound: 'Sons du jeu',
       field_wallEye: 'Œil des murs',
       field_actorEye: 'Œil des personnages',
+      swipeToStart: 'Glissez ou touchez pour commencer',
     },
     breaker: {
       title: 'Casse-briques',

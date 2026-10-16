@@ -249,6 +249,7 @@ export const en = {
       field_sound: 'Game sounds',
       field_wallEye: 'Walls eye',
       field_actorEye: 'Actors eye',
+      swipeToStart: 'Swipe or tap to start',
     },
     breaker: {
       title: 'Brick Breaker',

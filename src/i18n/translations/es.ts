@@ -255,6 +255,7 @@ export const es = {
       field_sound: 'Sonidos del juego',
       field_wallEye: 'Ojo de las paredes',
       field_actorEye: 'Ojo de los personajes',
+      swipeToStart: 'Desliza o toca para empezar',
     },
     breaker: {
       title: 'Rompeladrillos',

@@ -236,6 +236,7 @@ export const zhCN = {
       field_sound: '游戏音效',
       field_wallEye: '墙壁眼睛',
       field_actorEye: '角色眼睛',
+      swipeToStart: '滑动或轻触开始',
     },
     breaker: {
       title: '打砖块',

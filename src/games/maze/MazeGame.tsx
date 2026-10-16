@@ -1,11 +1,12 @@
 import { Canvas, Circle, Group, Path, Rect, Skia } from '@shopify/react-native-skia';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
 import { disposeMazeSfx, initMazeSfx, playMazeSfx } from '@/src/audio/mazeSfx';
+import { useT } from '@/src/i18n/I18nProvider';
 import { useAppStore } from '@/src/state/AppStore';
 import type { GameSceneProps } from '../types';
 
@@ -274,6 +275,7 @@ export function MazeGame({
   onScore,
   onGameOver,
 }: GameSceneProps) {
+  const { t } = useT();
   const { prefs } = useAppStore();
   // ~2× previous on-screen scale: fit ~7 tiles across the short side
   const cell = Math.max(44, Math.min(width, height) / 7);
@@ -299,19 +301,22 @@ export function MazeGame({
   const [level, setLevel] = useState(1);
   const [lives, setLives] = useState(startLives);
   const [frightenedUntil, setFrightenedUntil] = useState(0);
-  const [mouthOpen, setMouthOpen] = useState(0.45);
+  const [mouthOpen, setMouthOpen] = useState(0.22);
+  const [awaitingInput, setAwaitingInput] = useState(true);
   const [, setFrameTick] = useState(0);
 
   const dir = useRef<Dir>({ x: -1, y: 0 });
   const nextDir = useRef<Dir>({ x: -1, y: 0 });
   const startMs = useRef(Date.now());
+  const sessionStarted = useRef(false);
   const ended = useRef(false);
   const modeClock = useRef(0);
   const scatterPhase = useRef(true);
   const pelletsLeftAtStart = useRef(initialPellets.pellets.length + initialPellets.powers.length);
   const fruitSpawned = useRef(false);
   const eatenCombo = useRef(0);
-  const movingRef = useRef(true);
+  const movingRef = useRef(false);
+  const awaitingInputRef = useRef(true);
 
   const playerRef = useRef(player);
   const ghostsRef = useRef(ghosts);
@@ -387,6 +392,9 @@ export function MazeGame({
       setGhosts(g);
       dir.current = { x: -1, y: 0 };
       nextDir.current = { x: -1, y: 0 };
+      movingRef.current = false;
+      awaitingInputRef.current = true;
+      setAwaitingInput(true);
       setFrightenedUntil(0);
       frightRef.current = 0;
       eatenCombo.current = 0;
@@ -395,6 +403,11 @@ export function MazeGame({
     const tick = () => {
       if (ended.current) return;
       const now = Date.now();
+      if (awaitingInputRef.current) {
+        last = now;
+        frame = requestAnimationFrame(tick);
+        return;
+      }
       acc += (now - last) / 1000;
       last = now;
       const levelSpeed = speed * (1 + (levelRef.current - 1) * 0.08);
@@ -403,6 +416,7 @@ export function MazeGame({
       while (acc >= step) {
         acc -= step;
         modeClock.current += step;
+        let justRespawned = false;
 
         if (modeClock.current > (scatterPhase.current ? 7 : 20)) {
           modeClock.current = 0;
@@ -591,12 +605,17 @@ export function MazeGame({
               setPlayer(p);
               return;
             }
+            // Break the step loop (do not return — that stopped requestAnimationFrame)
             resetPositions();
             setPlayer(playerRef.current);
             setGhosts(ghostsRef.current);
-            return;
+            acc = 0;
+            justRespawned = true;
+            break;
           }
         }
+
+        if (justRespawned) break;
 
         ghostsRef.current = nextGhosts;
         setGhosts(nextGhosts);
@@ -631,15 +650,45 @@ export function MazeGame({
     return () => cancelAnimationFrame(frame);
   }, [onGameOver, paused, speed]);
 
+  const applyDir = (nx: number, ny: number) => {
+    if (ended.current) return;
+    if (awaitingInputRef.current) {
+      awaitingInputRef.current = false;
+      setAwaitingInput(false);
+      if (!sessionStarted.current) {
+        sessionStarted.current = true;
+        startMs.current = Date.now();
+      }
+      dir.current = { x: nx, y: ny };
+      const p = playerRef.current;
+      movingRef.current = walkable(p.r + ny, wrapC(p.r + ny, p.c + nx));
+    }
+    nextDir.current = { x: nx, y: ny };
+  };
+
   const pan = Gesture.Pan()
     .runOnJS(true)
     .onEnd((e) => {
-      if (Math.abs(e.translationX) > Math.abs(e.translationY)) {
-        nextDir.current = { x: e.translationX > 0 ? 1 : -1, y: 0 };
+      const ax = Math.abs(e.translationX);
+      const ay = Math.abs(e.translationY);
+      if (ax < 10 && ay < 10) {
+        if (awaitingInputRef.current) applyDir(dir.current.x || -1, dir.current.y);
+        return;
+      }
+      if (ax > ay) {
+        applyDir(e.translationX > 0 ? 1 : -1, 0);
       } else {
-        nextDir.current = { x: 0, y: e.translationY > 0 ? 1 : -1 };
+        applyDir(0, e.translationY > 0 ? 1 : -1);
       }
     });
+
+  const tap = Gesture.Tap()
+    .runOnJS(true)
+    .onEnd(() => {
+      applyDir(dir.current.x || -1, dir.current.y);
+    });
+
+  const gesture = Gesture.Exclusive(pan, tap);
 
   const frightened = Date.now() < frightenedUntil;
 
@@ -660,7 +709,7 @@ export function MazeGame({
   const maxR = Math.min(ROWS - 1, Math.ceil((height - camY) / cell) + pad);
 
   return (
-    <GestureDetector gesture={pan}>
+    <GestureDetector gesture={gesture}>
       <View style={[styles.fill, { backgroundColor: boardBg }]}>
         <Canvas style={{ width, height, backgroundColor: boardBg }}>
           <Rect x={0} y={0} width={width} height={height} color={boardBg} />
@@ -709,7 +758,7 @@ export function MazeGame({
             {ghosts.map((g, i) => {
               const cx = g.x * cell + cell / 2;
               const cy = g.y * cell + cell / 2;
-              const gr = cell * 0.4;
+              const gr = cell * 0.5;
               const fill = ghostFillColor(
                 g.kind,
                 g.mode,
@@ -719,11 +768,11 @@ export function MazeGame({
                 Date.now(),
               );
               // Pupils glance toward movement
-              const lookX = g.dir.x * cell * 0.06;
-              const lookY = g.dir.y * cell * 0.06;
+              const lookX = g.dir.x * cell * 0.07;
+              const lookY = g.dir.y * cell * 0.07;
               const eyeY = cy - gr * 0.15;
-              const eyeR = Math.max(3, cell * 0.09);
-              const pupilR = Math.max(1.8, cell * 0.045);
+              const eyeR = Math.max(3.5, cell * 0.11);
+              const pupilR = Math.max(2.2, cell * 0.055);
 
               if (g.mode === 'eaten') {
                 return (
@@ -784,6 +833,11 @@ export function MazeGame({
             <Rect x={0} y={0} width={width} height={4} color={actorColor} opacity={0.55} />
           ) : null}
         </Canvas>
+        {awaitingInput && !paused ? (
+          <View style={styles.hint} pointerEvents="none">
+            <Text style={[styles.hintText, { color: actorColor }]}>{t('catalog.maze.swipeToStart')}</Text>
+          </View>
+        ) : null}
       </View>
     </GestureDetector>
   );
@@ -791,4 +845,17 @@ export function MazeGame({
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  hint: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hintText: {
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textAlign: 'center',
+    paddingHorizontal: 24,
+    opacity: 0.92,
+  },
 });
