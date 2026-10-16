@@ -166,6 +166,10 @@ export const zhCN = {
     overlayMeta: '得分 %{score} · %{metricLabel} %{metric} · %{duration} 秒',
     startAgain: '重新开始',
     backToSetup: '返回游戏设置',
+    leaveTitle: '离开游戏？',
+    leaveMessage: '当前得分和进度将会丢失。',
+    stay: '继续游戏',
+    leave: '离开',
   },
   twenty48: {
     chooseTitle: '选择网格颜色',

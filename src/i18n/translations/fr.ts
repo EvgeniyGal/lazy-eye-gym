@@ -181,6 +181,10 @@ export const fr = {
     overlayMeta: 'Score %{score} · %{metricLabel} %{metric} · %{duration} s',
     startAgain: 'Recommencer',
     backToSetup: 'Retour à la configuration du jeu',
+    leaveTitle: 'Quitter la partie ?',
+    leaveMessage: 'Votre score et votre progression actuels seront perdus.',
+    stay: 'Continuer',
+    leave: 'Quitter',
   },
   twenty48: {
     chooseTitle: 'Choisissez la couleur de la grille',

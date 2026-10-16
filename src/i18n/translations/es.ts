@@ -180,6 +180,10 @@ export const es = {
     overlayMeta: 'Puntuación %{score} · %{metricLabel} %{metric} · %{duration} s',
     startAgain: 'Empezar de nuevo',
     backToSetup: 'Volver a la configuración del juego',
+    leaveTitle: '¿Salir del juego?',
+    leaveMessage: 'Se perderán la puntuación y el progreso actuales.',
+    stay: 'Seguir jugando',
+    leave: 'Salir',
   },
   twenty48: {
     chooseTitle: 'Elige el color de la cuadrícula',

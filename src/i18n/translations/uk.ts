@@ -175,6 +175,10 @@ export const uk = {
     overlayMeta: 'Рахунок %{score} · %{metricLabel} %{metric} · %{duration} с',
     startAgain: 'Почати знову',
     backToSetup: 'Назад до налаштувань гри',
+    leaveTitle: 'Вийти з гри?',
+    leaveMessage: 'Поточний рахунок і прогрес буде втрачено.',
+    stay: 'Продовжити гру',
+    leave: 'Вийти',
   },
   twenty48: {
     chooseTitle: 'Оберіть колір сітки',

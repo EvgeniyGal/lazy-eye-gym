@@ -175,6 +175,10 @@ export const en = {
     overlayMeta: 'Score %{score} · %{metricLabel} %{metric} · %{duration}s',
     startAgain: 'Start again',
     backToSetup: 'Back to game setup',
+    leaveTitle: 'Leave game?',
+    leaveMessage: 'Your current score and progress will be lost.',
+    stay: 'Keep playing',
+    leave: 'Leave',
   },
   twenty48: {
     chooseTitle: 'Choose grid colour',

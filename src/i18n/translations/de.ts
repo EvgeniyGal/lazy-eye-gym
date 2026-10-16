@@ -180,6 +180,10 @@ export const de = {
     overlayMeta: 'Punktzahl %{score} · %{metricLabel} %{metric} · %{duration} Sek.',
     startAgain: 'Erneut starten',
     backToSetup: 'Zurück zu den Spieleinstellungen',
+    leaveTitle: 'Spiel verlassen?',
+    leaveMessage: 'Dein aktueller Punktestand und Fortschritt gehen verloren.',
+    stay: 'Weiterspielen',
+    leave: 'Verlassen',
   },
   twenty48: {
     chooseTitle: 'Rasterfarbe wählen',

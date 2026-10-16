@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
+import { usePreventRemove } from 'expo-router/build/react-navigation/core';
+import type { NavigationAction } from 'expo-router/build/react-navigation/routers';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -100,6 +102,7 @@ export function GameShell({ gameId }: { gameId: GameId }) {
     [colors],
   );
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const { palette, activeProfile, getGameSettings, setGameSettings, prefs } = useAppStore();
@@ -113,15 +116,20 @@ export function GameShell({ gameId }: { gameId: GameId }) {
   const [metric, setMetric] = useState(0);
   const [ended, setEnded] = useState<GameResult | null>(null);
   const [runId, setRunId] = useState(0);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [allowLeave, setAllowLeave] = useState(false);
   const startedAt = useRef(new Date().toISOString());
   const startMs = useRef(Date.now());
   const savedRef = useRef(false);
+  const pendingLeaveAction = useRef<NavigationAction | null>(null);
+  const pausedBeforeLeave = useRef(false);
 
   const boardBg = palette.background;
   const onLight = activeProfile.background === 'white';
   const hudFg = onLight ? '#111111' : colors.onSurface;
   const hudMuted = onLight ? '#444444' : colors.onSurfaceVariant;
   const hudBtnBg = onLight ? 'rgba(0,0,0,0.08)' : colors.surfaceHigh;
+  const overlayBg = onLight ? 'rgba(244,244,244,0.92)' : 'rgba(6,14,32,0.9)';
 
   const canvasH = Math.max(280, height - insets.top - insets.bottom - 120);
 
@@ -134,6 +142,8 @@ export function GameShell({ gameId }: { gameId: GameId }) {
     async (result: GameResult) => {
       setEnded(result);
       setPaused(true);
+      setLeaveOpen(false);
+      pendingLeaveAction.current = null;
       if (savedRef.current) return;
       savedRef.current = true;
       await insertSession({
@@ -160,6 +170,9 @@ export function GameShell({ gameId }: { gameId: GameId }) {
     setPaused(false);
     setScore(0);
     setMetric(0);
+    setLeaveOpen(false);
+    setAllowLeave(false);
+    pendingLeaveAction.current = null;
     setRunId((id) => id + 1);
   }, []);
 
@@ -171,8 +184,50 @@ export function GameShell({ gameId }: { gameId: GameId }) {
     setPaused(false);
     setScore(0);
     setMetric(0);
+    setLeaveOpen(false);
+    setAllowLeave(false);
+    pendingLeaveAction.current = null;
     setRunId((id) => id + 1);
   }, [gameId]);
+
+  const openLeavePrompt = useCallback(() => {
+    if (ended || leaveOpen) return;
+    pausedBeforeLeave.current = paused;
+    setPaused(true);
+    setLeaveOpen(true);
+  }, [ended, leaveOpen, paused]);
+
+  usePreventRemove(ended === null && !allowLeave, ({ data }) => {
+    pendingLeaveAction.current = data.action;
+    openLeavePrompt();
+  });
+
+  useEffect(() => {
+    if (!allowLeave) return;
+    const action = pendingLeaveAction.current;
+    pendingLeaveAction.current = null;
+    if (action) {
+      navigation.dispatch(action);
+    } else {
+      router.back();
+    }
+  }, [allowLeave, navigation, router]);
+
+  const stayInGame = useCallback(() => {
+    setLeaveOpen(false);
+    pendingLeaveAction.current = null;
+    setPaused(pausedBeforeLeave.current);
+  }, []);
+
+  const leaveGame = useCallback(() => {
+    setLeaveOpen(false);
+    setAllowLeave(true);
+  }, []);
+
+  const restartFromLeave = useCallback(() => {
+    pendingLeaveAction.current = null;
+    startFreshRun();
+  }, [startFreshRun]);
 
   const Scene = useMemo(() => {
     switch (gameId) {
@@ -210,7 +265,13 @@ export function GameShell({ gameId }: { gameId: GameId }) {
     >
       <View style={styles.hud}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => {
+            if (ended) {
+              router.back();
+              return;
+            }
+            openLeavePrompt();
+          }}
           style={[styles.iconBtn, { backgroundColor: hudBtnBg }]}
         >
           <Ionicons name="close" size={22} color={hudFg} />
@@ -238,10 +299,13 @@ export function GameShell({ gameId }: { gameId: GameId }) {
           />
         </Pressable>
         <Pressable
-          onPress={() => setPaused((p) => !p)}
+          onPress={() => {
+            if (leaveOpen || ended) return;
+            setPaused((p) => !p);
+          }}
           style={[styles.iconBtn, { backgroundColor: hudBtnBg }]}
         >
-          <Ionicons name={paused && !ended ? 'play' : 'pause'} size={20} color={hudFg} />
+          <Ionicons name={paused && !ended && !leaveOpen ? 'play' : 'pause'} size={20} color={hudFg} />
         </Pressable>
       </View>
 
@@ -253,14 +317,36 @@ export function GameShell({ gameId }: { gameId: GameId }) {
           height={canvasH}
           palette={palette}
           settings={settings}
-          paused={paused || !!ended}
+          paused={paused || !!ended || leaveOpen}
           onScore={onScore}
           onGameOver={onGameOver}
         />
       </View>
 
+      {leaveOpen && !ended ? (
+        <View style={[styles.overlay, { backgroundColor: overlayBg }]}>
+          <Text style={[styles.overlayTitle, { color: hudFg }]}>{t('gameShell.leaveTitle')}</Text>
+          <Text style={[styles.overlayMeta, { color: hudMuted }]}>{t('gameShell.leaveMessage')}</Text>
+          <Pressable style={styles.primaryBtn} onPress={stayInGame}>
+            <Text style={styles.primaryBtnText}>{t('gameShell.stay')}</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.secondaryBtn, { borderColor: onLight ? '#333' : colors.outline }]}
+            onPress={restartFromLeave}
+          >
+            <Text style={[styles.secondaryBtnText, { color: hudFg }]}>{t('gameShell.startAgain')}</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.secondaryBtn, { borderColor: onLight ? '#333' : colors.outline }]}
+            onPress={leaveGame}
+          >
+            <Text style={[styles.secondaryBtnText, { color: hudFg }]}>{t('gameShell.leave')}</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       {ended ? (
-        <View style={[styles.overlay, { backgroundColor: onLight ? 'rgba(244,244,244,0.92)' : 'rgba(6,14,32,0.9)' }]}>
+        <View style={[styles.overlay, { backgroundColor: overlayBg }]}>
           <Text style={[styles.overlayTitle, { color: hudFg }]}>{t('gameShell.sessionComplete')}</Text>
           <Text style={[styles.overlayMeta, { color: hudMuted }]}>
             {t('gameShell.overlayMeta', {
