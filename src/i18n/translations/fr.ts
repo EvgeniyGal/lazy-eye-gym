@@ -96,6 +96,12 @@ export const fr = {
     language: 'Langue',
     languageHint:
       'Choisissez la langue de l’app, ou suivez la langue de votre appareil lorsqu’elle est prise en charge.',
+    appearance: 'Apparence',
+    appearanceHint:
+      'Mode clair ou sombre de l’interface. Ne modifie pas les couleurs des lunettes ni l’intensité dichoptique.',
+    appearanceSystem: 'Système',
+    appearanceLight: 'Clair',
+    appearanceDark: 'Sombre',
     saved: 'Les réglages sont enregistrés automatiquement sur cet appareil.',
     freqDaily: 'tous les jours',
     freqWeekdays: 'en semaine',

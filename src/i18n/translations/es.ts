@@ -96,6 +96,12 @@ export const es = {
     language: 'Idioma',
     languageHint:
       'Elige el idioma de la app o usa el idioma del dispositivo cuando sea compatible.',
+    appearance: 'Apariencia',
+    appearanceHint:
+      'Modo claro u oscuro de la interfaz. No cambia los colores de las gafas ni la intensidad dicóptica.',
+    appearanceSystem: 'Sistema',
+    appearanceLight: 'Claro',
+    appearanceDark: 'Oscuro',
     saved: 'Los ajustes se guardan automáticamente en este dispositivo.',
     freqDaily: 'a diario',
     freqWeekdays: 'en días laborables',

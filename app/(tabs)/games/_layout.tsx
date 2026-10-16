@@ -1,15 +1,20 @@
 import { Stack } from 'expo-router';
+import { useMemo } from 'react';
 
-import { colors } from '@/src/theme/tokens';
+import { useColors } from '@/src/theme/ThemeProvider';
 
 export default function GamesLayout() {
+  const colors = useColors();
+  const screenOptions = useMemo(
+    () => ({
+      headerShown: false as const,
+      contentStyle: { backgroundColor: colors.background },
+    }),
+    [colors],
+  );
+
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.background },
-      }}
-    >
+    <Stack screenOptions={screenOptions}>
       <Stack.Screen name="index" />
       <Stack.Screen name="[id]" />
     </Stack>

@@ -1,8 +1,9 @@
 import { Stack } from 'expo-router';
 
-import { colors } from '@/src/theme/tokens';
+import { useColors } from '@/src/theme/ThemeProvider';
 
 export default function SettingsLayout() {
+  const colors = useColors();
   return (
     <Stack
       screenOptions={{
@@ -15,6 +16,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="intensity" />
       <Stack.Screen name="reminders" />
       <Stack.Screen name="engine" />
+      <Stack.Screen name="appearance" />
       <Stack.Screen name="language" />
     </Stack>
   );

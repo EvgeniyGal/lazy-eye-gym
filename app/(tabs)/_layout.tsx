@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
 import { useT } from '@/src/i18n/I18nProvider';
-import { colors } from '@/src/theme/tokens';
+import { useColors } from '@/src/theme/ThemeProvider';
 
 export default function TabLayout() {
   const { t } = useT();
+  const colors = useColors();
 
   return (
     <Tabs

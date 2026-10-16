@@ -9,14 +9,17 @@ import { useT } from '@/src/i18n/I18nProvider';
 import { LANGUAGE_PICKER_OPTIONS } from '@/src/i18n/locales';
 import { syncReminders } from '@/src/notifications/reminders';
 import { useAppStore } from '@/src/state/AppStore';
-import { colors, spacing } from '@/src/theme/tokens';
+import { useColors } from '@/src/theme/ThemeProvider';
+import { spacing } from '@/src/theme/tokens';
 
 import { SettingsBack } from './SettingsBack';
-import { settingsStyles as styles } from './styles';
+import { useSettingsStyles } from './styles';
 
 export default function LanguageSettingsScreen() {
   const insets = useSafeAreaInsets();
   const { t, languagePreference } = useT();
+  const colors = useColors();
+  const styles = useSettingsStyles();
   const { prefs, updatePrefs } = useAppStore();
 
   const changeLanguage = (language: AppLanguagePreference) => {

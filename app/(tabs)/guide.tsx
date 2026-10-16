@@ -1,13 +1,111 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, HeaderBar, PrimaryButton, Screen, Subtitle, Title } from '@/src/components/ui';
 import { useT } from '@/src/i18n/I18nProvider';
-import { colors, radii, spacing } from '@/src/theme/tokens';
+import { useColors } from '@/src/theme/ThemeProvider';
+import { radii, spacing } from '@/src/theme/tokens';
 
 export default function GuideScreen() {
+  const colors = useColors();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        content: {
+          padding: spacing.lg,
+          gap: spacing.lg,
+        },
+        section: {
+          color: colors.onSurface,
+          fontWeight: '700',
+          fontSize: 16,
+          marginBottom: spacing.md,
+        },
+        simRow: {
+          flexDirection: 'row',
+          gap: spacing.md,
+        },
+        simBox: {
+          flex: 1,
+          borderWidth: 1.5,
+          borderRadius: radii.lg,
+          padding: spacing.md,
+          gap: 4,
+          backgroundColor: colors.surfaceHigh,
+        },
+        simEye: {
+          fontWeight: '800',
+        },
+        simMeta: {
+          color: colors.onSurfaceVariant,
+          fontSize: 12,
+        },
+        fusion: {
+          marginTop: spacing.md,
+          backgroundColor: colors.surfaceHighest,
+          borderRadius: radii.md,
+          padding: spacing.md,
+          alignItems: 'center',
+          gap: 6,
+        },
+        fusionTitle: {
+          color: colors.onSurface,
+          fontWeight: '700',
+        },
+        fusionTag: {
+          color: colors.primary,
+          fontWeight: '800',
+          fontSize: 12,
+        },
+        step: {
+          flexDirection: 'row',
+          gap: spacing.md,
+          marginBottom: spacing.md,
+        },
+        stepNum: {
+          width: 28,
+          height: 28,
+          borderRadius: 14,
+          backgroundColor: colors.primary,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        stepNumText: {
+          color: colors.onPrimary,
+          fontWeight: '800',
+        },
+        stepTitle: {
+          color: colors.onSurface,
+          fontWeight: '700',
+        },
+        stepDesc: {
+          color: colors.onSurfaceVariant,
+          fontSize: 13,
+          marginTop: 4,
+          lineHeight: 18,
+        },
+        safety: {
+          borderColor: colors.tertiary,
+        },
+        faq: {
+          paddingVertical: spacing.md,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: colors.outlineVariant,
+        },
+        faqQ: {
+          color: colors.onSurface,
+          fontWeight: '600',
+        },
+        faqA: {
+          color: colors.onSurfaceVariant,
+          marginTop: spacing.sm,
+          lineHeight: 20,
+        },
+      }),
+    [colors],
+  );
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useT();
@@ -93,96 +191,3 @@ export default function GuideScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  content: {
-    padding: spacing.lg,
-    gap: spacing.lg,
-  },
-  section: {
-    color: colors.onSurface,
-    fontWeight: '700',
-    fontSize: 16,
-    marginBottom: spacing.md,
-  },
-  simRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  simBox: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    gap: 4,
-    backgroundColor: colors.surfaceHigh,
-  },
-  simEye: {
-    fontWeight: '800',
-  },
-  simMeta: {
-    color: colors.onSurfaceVariant,
-    fontSize: 12,
-  },
-  fusion: {
-    marginTop: spacing.md,
-    backgroundColor: colors.surfaceHighest,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    alignItems: 'center',
-    gap: 6,
-  },
-  fusionTitle: {
-    color: colors.onSurface,
-    fontWeight: '700',
-  },
-  fusionTag: {
-    color: colors.primary,
-    fontWeight: '800',
-    fontSize: 12,
-  },
-  step: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  stepNum: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepNumText: {
-    color: colors.onPrimary,
-    fontWeight: '800',
-  },
-  stepTitle: {
-    color: colors.onSurface,
-    fontWeight: '700',
-  },
-  stepDesc: {
-    color: colors.onSurfaceVariant,
-    fontSize: 13,
-    marginTop: 4,
-    lineHeight: 18,
-  },
-  safety: {
-    borderColor: colors.tertiary,
-  },
-  faq: {
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.outlineVariant,
-  },
-  faqQ: {
-    color: colors.onSurface,
-    fontWeight: '600',
-  },
-  faqA: {
-    color: colors.onSurfaceVariant,
-    marginTop: spacing.sm,
-    lineHeight: 20,
-  },
-});

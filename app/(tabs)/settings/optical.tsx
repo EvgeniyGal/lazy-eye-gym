@@ -10,11 +10,12 @@ import { useAppStore } from '@/src/state/AppStore';
 import { spacing } from '@/src/theme/tokens';
 
 import { SettingsBack } from './SettingsBack';
-import { settingsStyles as styles } from './styles';
+import { useSettingsStyles } from './styles';
 
 export default function OpticalSettingsScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useT();
+  const styles = useSettingsStyles();
   const { activeProfile, saveProfile, swapEyes } = useAppStore();
 
   const previewBg = backgroundCss(activeProfile.background);

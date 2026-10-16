@@ -4,7 +4,8 @@ import { LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { clampHue, hslToHex } from '@/src/anaglyph/color';
-import { colors, radii, spacing } from '@/src/theme/tokens';
+import { useColors } from '@/src/theme/ThemeProvider';
+import { radii, spacing } from '@/src/theme/tokens';
 
 type Props = {
   label: string;
@@ -29,6 +30,83 @@ export function ColorDragSlider({
   kind,
   onChange,
 }: Props) {
+  const colors = useColors();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        wrap: {
+          marginBottom: spacing.md,
+          gap: spacing.sm,
+        },
+        header: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        },
+        label: {
+          color: colors.onSurface,
+          fontWeight: '600',
+          fontSize: 14,
+        },
+        value: {
+          color: colors.onSurfaceVariant,
+          fontWeight: '700',
+          fontSize: 13,
+        },
+        hint: {
+          color: colors.onSurfaceVariant,
+          fontSize: 11,
+        },
+        trackHitHue: {
+          height: 44,
+          justifyContent: 'center',
+        },
+        trackHitLight: {
+          height: 22,
+          justifyContent: 'center',
+        },
+        trackHue: {
+          height: 36,
+          borderRadius: radii.sm,
+          overflow: 'hidden',
+        },
+        trackLight: {
+          height: 10,
+          borderRadius: 5,
+          overflow: 'hidden',
+        },
+        centerLine: {
+          position: 'absolute',
+          alignSelf: 'center',
+          left: '50%',
+          marginLeft: -1,
+          width: 2,
+          height: 44,
+          backgroundColor: '#ffffff',
+          opacity: 0.95,
+        },
+        centerSwatch: {
+          position: 'absolute',
+          alignSelf: 'center',
+          left: '50%',
+          marginLeft: -14,
+          width: 28,
+          height: 28,
+          borderRadius: 4,
+          top: 8,
+        },
+        thumbLight: {
+          position: 'absolute',
+          width: 14,
+          height: 14,
+          borderRadius: 7,
+          top: 4,
+          borderWidth: 1.5,
+          borderColor: '#ffffff',
+        },
+      }),
+    [colors],
+  );
   const [width, setWidth] = useState(0);
   const range = Math.max(1, max - min);
   const ratio = Math.min(1, Math.max(0, (value - min) / range));
@@ -132,76 +210,3 @@ export function ColorDragSlider({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    marginBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  label: {
-    color: colors.onSurface,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  value: {
-    color: colors.onSurfaceVariant,
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  hint: {
-    color: colors.onSurfaceVariant,
-    fontSize: 11,
-  },
-  trackHitHue: {
-    height: 44,
-    justifyContent: 'center',
-  },
-  trackHitLight: {
-    height: 22,
-    justifyContent: 'center',
-  },
-  trackHue: {
-    height: 36,
-    borderRadius: radii.sm,
-    overflow: 'hidden',
-  },
-  trackLight: {
-    height: 10,
-    borderRadius: 5,
-    overflow: 'hidden',
-  },
-  centerLine: {
-    position: 'absolute',
-    alignSelf: 'center',
-    left: '50%',
-    marginLeft: -1,
-    width: 2,
-    height: 44,
-    backgroundColor: '#ffffff',
-    opacity: 0.95,
-  },
-  centerSwatch: {
-    position: 'absolute',
-    alignSelf: 'center',
-    left: '50%',
-    marginLeft: -14,
-    width: 28,
-    height: 28,
-    borderRadius: 4,
-    top: 8,
-  },
-  thumbLight: {
-    position: 'absolute',
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    top: 4,
-    borderWidth: 1.5,
-    borderColor: '#ffffff',
-  },
-});

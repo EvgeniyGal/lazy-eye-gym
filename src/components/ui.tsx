@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -11,25 +11,193 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { colors, radii, spacing } from '@/src/theme/tokens';
+import { useColors } from '@/src/theme/ThemeProvider';
+import { radii, spacing, type ThemeColors } from '@/src/theme/tokens';
+
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.outlineVariant,
+    },
+    title: {
+      color: colors.onSurface,
+      fontSize: 26,
+      fontWeight: '700',
+      letterSpacing: -0.4,
+    },
+    subtitle: {
+      color: colors.onSurfaceVariant,
+      fontSize: 14,
+      lineHeight: 20,
+      marginTop: spacing.sm,
+    },
+    body: {
+      color: colors.onSurface,
+      fontSize: 14,
+      lineHeight: 20,
+    },
+    primaryBtn: {
+      backgroundColor: colors.primary,
+      borderRadius: radii.pill,
+      minHeight: 52,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.xl,
+    },
+    primaryBtnText: {
+      color: colors.onPrimary,
+      fontWeight: '800',
+      fontSize: 14,
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
+    },
+    chip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radii.pill,
+      backgroundColor: colors.surfaceHigh,
+      borderWidth: 1,
+      borderColor: colors.outlineVariant,
+      marginRight: spacing.sm,
+    },
+    chipActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    chipText: {
+      color: colors.onSurfaceVariant,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    chipTextActive: {
+      color: colors.onPrimary,
+    },
+    segmentRow: {
+      flexDirection: 'row',
+      backgroundColor: colors.surfaceHigh,
+      borderRadius: radii.md,
+      padding: 4,
+      gap: 4,
+    },
+    segment: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: radii.sm,
+      alignItems: 'center',
+    },
+    segmentActive: {
+      backgroundColor: colors.primary,
+    },
+    segmentText: {
+      color: colors.onSurfaceVariant,
+      fontWeight: '600',
+      fontSize: 13,
+    },
+    segmentTextActive: {
+      color: colors.onPrimary,
+    },
+    toggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+    },
+    toggleLabel: {
+      color: colors.onSurface,
+      fontWeight: '600',
+      fontSize: 15,
+    },
+    toggleDesc: {
+      color: colors.onSurfaceVariant,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    statBox: {
+      flex: 1,
+      backgroundColor: colors.surfaceHigh,
+      borderRadius: radii.md,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.outlineVariant,
+    },
+    statValue: {
+      color: colors.onSurface,
+      fontSize: 18,
+      fontWeight: '700',
+    },
+    statLabel: {
+      color: colors.onSurfaceVariant,
+      fontSize: 11,
+      marginTop: 4,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.md,
+    },
+    brandRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      width: 110,
+    },
+    brand: {
+      color: colors.onSurface,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    headerTitle: {
+      color: colors.onSurface,
+      fontWeight: '700',
+      fontSize: 16,
+    },
+    headerSpacer: {
+      width: 110,
+    },
+  });
+}
+
+function useUiStyles() {
+  const colors = useColors();
+  return useMemo(() => makeStyles(colors), [colors]);
+}
 
 export function Screen({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  const styles = useUiStyles();
   return <View style={[styles.screen, style]}>{children}</View>;
 }
 
 export function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  const styles = useUiStyles();
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
 export function Title({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
+  const styles = useUiStyles();
   return <Text style={[styles.title, style]}>{children}</Text>;
 }
 
 export function Subtitle({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
+  const styles = useUiStyles();
   return <Text style={[styles.subtitle, style]}>{children}</Text>;
 }
 
 export function Body({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
+  const styles = useUiStyles();
   return <Text style={[styles.body, style]}>{children}</Text>;
 }
 
@@ -42,6 +210,8 @@ export function PrimaryButton({
   onPress: () => void;
   icon?: keyof typeof Ionicons.glyphMap;
 }) {
+  const colors = useColors();
+  const styles = useUiStyles();
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.85 }]}>
       {icon ? <Ionicons name={icon} size={18} color={colors.onPrimary} /> : null}
@@ -59,11 +229,9 @@ export function Chip({
   active?: boolean;
   onPress?: () => void;
 }) {
+  const styles = useUiStyles();
   return (
-    <Pressable
-      onPress={onPress}
-      style={[styles.chip, active && styles.chipActive]}
-    >
+    <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
     </Pressable>
   );
@@ -78,6 +246,7 @@ export function Segmented({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const styles = useUiStyles();
   return (
     <View style={styles.segmentRow}>
       {options.map((opt) => (
@@ -106,6 +275,8 @@ export function ToggleRow({
   value: boolean;
   onChange: (value: boolean) => void;
 }) {
+  const colors = useColors();
+  const styles = useUiStyles();
   return (
     <View style={styles.toggleRow}>
       <View style={{ flex: 1, paddingRight: spacing.md }}>
@@ -123,6 +294,7 @@ export function ToggleRow({
 }
 
 export function StatBox({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  const styles = useUiStyles();
   return (
     <View style={[styles.statBox, accent ? { borderColor: accent } : null]}>
       <Text style={[styles.statValue, accent ? { color: accent } : null]}>{value}</Text>
@@ -132,6 +304,8 @@ export function StatBox({ label, value, accent }: { label: string; value: string
 }
 
 export function HeaderBar({ title }: { title: string }) {
+  const colors = useColors();
+  const styles = useUiStyles();
   return (
     <View style={styles.header}>
       <View style={styles.brandRow}>
@@ -143,158 +317,3 @@ export function HeaderBar({ title }: { title: string }) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-  },
-  title: {
-    color: colors.onSurface,
-    fontSize: 26,
-    fontWeight: '700',
-    letterSpacing: -0.4,
-  },
-  subtitle: {
-    color: colors.onSurfaceVariant,
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: spacing.sm,
-  },
-  body: {
-    color: colors.onSurface,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  primaryBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.pill,
-    minHeight: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.xl,
-  },
-  primaryBtnText: {
-    color: colors.onPrimary,
-    fontWeight: '800',
-    fontSize: 14,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-  },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    marginRight: spacing.sm,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    color: colors.onSurfaceVariant,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  chipTextActive: {
-    color: colors.onPrimary,
-  },
-  segmentRow: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceHigh,
-    borderRadius: radii.md,
-    padding: 4,
-    gap: 4,
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-  },
-  segmentActive: {
-    backgroundColor: colors.primary,
-  },
-  segmentText: {
-    color: colors.onSurfaceVariant,
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  segmentTextActive: {
-    color: colors.onPrimary,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  toggleLabel: {
-    color: colors.onSurface,
-    fontWeight: '600',
-    fontSize: 15,
-  },
-  toggleDesc: {
-    color: colors.onSurfaceVariant,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: colors.surfaceHigh,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-  },
-  statValue: {
-    color: colors.onSurface,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  statLabel: {
-    color: colors.onSurfaceVariant,
-    fontSize: 11,
-    marginTop: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    width: 110,
-  },
-  brand: {
-    color: colors.onSurface,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  headerTitle: {
-    color: colors.onSurface,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  headerSpacer: {
-    width: 110,
-  },
-});

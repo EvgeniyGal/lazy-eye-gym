@@ -9,7 +9,8 @@ import type { GameId } from '@/src/games/catalog';
 import { useT } from '@/src/i18n/I18nProvider';
 import { getLocalizedGame } from '@/src/i18n/localizeCatalog';
 import { useAppStore } from '@/src/state/AppStore';
-import { colors, spacing } from '@/src/theme/tokens';
+import { useColors } from '@/src/theme/ThemeProvider';
+import { spacing } from '@/src/theme/tokens';
 import type { GameResult } from '../types';
 import { AsteroidsGame } from '../asteroids/AsteroidsGame';
 import { BreakerGame } from '../breaker/BreakerGame';
@@ -21,6 +22,83 @@ import { TetrisGame } from '../tetris/TetrisGame';
 import { TwentyFortyEightGame } from '../twenty48/TwentyFortyEightGame';
 
 export function GameShell({ gameId }: { gameId: GameId }) {
+  const colors = useColors();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        root: {
+          flex: 1,
+        },
+        hud: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+        },
+        iconBtn: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        hudCenter: {
+          flex: 1,
+          alignItems: 'center',
+        },
+        hudTitle: {
+          fontWeight: '700',
+          fontSize: 16,
+        },
+        hudMeta: {
+          fontSize: 12,
+          marginTop: 2,
+        },
+        canvasWrap: {
+          flex: 1,
+        },
+        overlay: {
+          ...StyleSheet.absoluteFill,
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: spacing.xl,
+          gap: spacing.md,
+        },
+        overlayTitle: {
+          fontSize: 24,
+          fontWeight: '800',
+        },
+        overlayMeta: {
+          fontSize: 14,
+          textAlign: 'center',
+        },
+        primaryBtn: {
+          marginTop: spacing.md,
+          backgroundColor: colors.primary,
+          borderRadius: 999,
+          paddingHorizontal: 28,
+          paddingVertical: 14,
+          minWidth: 220,
+          alignItems: 'center',
+        },
+        primaryBtnText: {
+          color: colors.onPrimary,
+          fontWeight: '800',
+        },
+        secondaryBtn: {
+          borderRadius: 999,
+          borderWidth: 1.5,
+          paddingHorizontal: 28,
+          paddingVertical: 14,
+          minWidth: 220,
+          alignItems: 'center',
+        },
+        secondaryBtnText: {
+          fontWeight: '700',
+        },
+      }),
+    [colors],
+  );
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -206,76 +284,3 @@ export function GameShell({ gameId }: { gameId: GameId }) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  hud: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  hudCenter: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  hudTitle: {
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  hudMeta: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  canvasWrap: {
-    flex: 1,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-    gap: spacing.md,
-  },
-  overlayTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  overlayMeta: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  primaryBtn: {
-    marginTop: spacing.md,
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    minWidth: 220,
-    alignItems: 'center',
-  },
-  primaryBtnText: {
-    color: colors.onPrimary,
-    fontWeight: '800',
-  },
-  secondaryBtn: {
-    borderRadius: 999,
-    borderWidth: 1.5,
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    minWidth: 220,
-    alignItems: 'center',
-  },
-  secondaryBtnText: {
-    fontWeight: '700',
-  },
-});

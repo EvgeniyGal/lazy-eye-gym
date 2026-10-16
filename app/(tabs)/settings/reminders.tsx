@@ -10,7 +10,7 @@ import { useAppStore } from '@/src/state/AppStore';
 import { spacing } from '@/src/theme/tokens';
 
 import { SettingsBack } from './SettingsBack';
-import { settingsStyles as styles } from './styles';
+import { useSettingsStyles } from './styles';
 
 function formatClock(hour: number, minute: number) {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
@@ -26,6 +26,7 @@ const FREQUENCY_NOTE_KEYS: Record<ReminderFrequency, string> = {
 export default function ReminderSettingsScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useT();
+  const styles = useSettingsStyles();
   const { prefs, updatePrefs } = useAppStore();
   const [reminderNote, setReminderNote] = useState<string | null>(null);
 

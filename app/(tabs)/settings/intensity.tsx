@@ -10,7 +10,7 @@ import { useAppStore } from '@/src/state/AppStore';
 import { spacing } from '@/src/theme/tokens';
 
 import { SettingsBack } from './SettingsBack';
-import { settingsStyles as styles } from './styles';
+import { useSettingsStyles } from './styles';
 
 function IntensityRow({
   label,
@@ -29,6 +29,7 @@ function IntensityRow({
   trackBg: string;
   onChange: (v: number) => void;
 }) {
+  const styles = useSettingsStyles();
   const chrome = onLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)';
   const chromeText = onLight ? '#111' : '#f5f5f5';
   return (
@@ -61,6 +62,7 @@ function IntensityRow({
 export default function IntensitySettingsScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useT();
+  const styles = useSettingsStyles();
   const { activeProfile, intensity, setIntensity, palette } = useAppStore();
 
   const previewBg = backgroundCss(activeProfile.background);

@@ -94,6 +94,12 @@ export const en = {
     autoPauseDesc: 'Nudge to rest about every 20 minutes in-game',
     language: 'Language',
     languageHint: 'Choose app language, or follow your device language when supported.',
+    appearance: 'Appearance',
+    appearanceHint:
+      'App UI light or dark mode. Does not change glasses colours or dichoptic intensity.',
+    appearanceSystem: 'System default',
+    appearanceLight: 'Light',
+    appearanceDark: 'Dark',
     saved: 'Settings saved automatically on this device.',
     freqDaily: 'daily',
     freqWeekdays: 'weekdays',

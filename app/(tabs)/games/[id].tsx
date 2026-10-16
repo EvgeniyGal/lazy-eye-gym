@@ -11,9 +11,54 @@ import type { GameId } from '@/src/games/catalog';
 import { useT } from '@/src/i18n/I18nProvider';
 import { getLocalizedGame } from '@/src/i18n/localizeCatalog';
 import { useAppStore } from '@/src/state/AppStore';
-import { colors, spacing } from '@/src/theme/tokens';
+import { useColors } from '@/src/theme/ThemeProvider';
+import { spacing } from '@/src/theme/tokens';
 
 export default function GameDetailScreen() {
+  const colors = useColors();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        content: {
+          padding: spacing.lg,
+          gap: spacing.lg,
+        },
+        back: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 2,
+        },
+        backText: {
+          color: colors.primary,
+          fontWeight: '600',
+        },
+        stats: {
+          flexDirection: 'row',
+          gap: spacing.md,
+        },
+        section: {
+          color: colors.onSurface,
+          fontWeight: '700',
+          fontSize: 16,
+          marginBottom: 4,
+        },
+        historyRow: {
+          paddingVertical: spacing.md,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: colors.outlineVariant,
+        },
+        historyScore: {
+          color: colors.onSurface,
+          fontWeight: '700',
+        },
+        historyMeta: {
+          color: colors.onSurfaceVariant,
+          fontSize: 12,
+          marginTop: 4,
+        },
+      }),
+    [colors],
+  );
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useT();
   const game = useMemo(() => getLocalizedGame(String(id), t), [id, t]);
@@ -115,43 +160,3 @@ export default function GameDetailScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  content: {
-    padding: spacing.lg,
-    gap: spacing.lg,
-  },
-  back: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  backText: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  stats: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  section: {
-    color: colors.onSurface,
-    fontWeight: '700',
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  historyRow: {
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.outlineVariant,
-  },
-  historyScore: {
-    color: colors.onSurface,
-    fontWeight: '700',
-  },
-  historyMeta: {
-    color: colors.onSurfaceVariant,
-    fontSize: 12,
-    marginTop: 4,
-  },
-});

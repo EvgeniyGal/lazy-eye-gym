@@ -96,6 +96,12 @@ export const de = {
     language: 'Sprache',
     languageHint:
       'Wähle die App-Sprache oder folge der Sprache deines Geräts, sofern unterstützt.',
+    appearance: 'Darstellung',
+    appearanceHint:
+      'Helles oder dunkles App-Design. Ändert nicht Brillenfarben oder dichoptische Intensität.',
+    appearanceSystem: 'Systemstandard',
+    appearanceLight: 'Hell',
+    appearanceDark: 'Dunkel',
     saved: 'Einstellungen werden automatisch auf diesem Gerät gespeichert.',
     freqDaily: 'täglich',
     freqWeekdays: 'werktags',

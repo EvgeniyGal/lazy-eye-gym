@@ -14,9 +14,116 @@ import {
 import { useT } from '@/src/i18n/I18nProvider';
 import { getLocalizedGames } from '@/src/i18n/localizeCatalog';
 import { useAppStore } from '@/src/state/AppStore';
-import { colors, radii, spacing } from '@/src/theme/tokens';
+import { useColors } from '@/src/theme/ThemeProvider';
+import { radii, spacing } from '@/src/theme/tokens';
 
 export default function HomeScreen() {
+  const colors = useColors();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        content: {
+          padding: spacing.lg,
+          gap: spacing.lg,
+        },
+        hero: {
+          gap: spacing.sm,
+        },
+        summaryRow: {
+          flexDirection: 'row',
+          gap: spacing.md,
+          marginTop: spacing.md,
+        },
+        chip: {
+          flex: 1,
+          backgroundColor: colors.surfaceHigh,
+          borderRadius: radii.md,
+          padding: spacing.md,
+          borderWidth: 1,
+          borderColor: colors.outlineVariant,
+        },
+        chipLabel: {
+          color: colors.onSurfaceVariant,
+          fontSize: 11,
+          fontWeight: '700',
+          textTransform: 'uppercase',
+          letterSpacing: 0.4,
+        },
+        chipValue: {
+          color: colors.onSurface,
+          fontSize: 18,
+          fontWeight: '800',
+          marginTop: 4,
+        },
+        notice: {
+          borderTopWidth: 2,
+          borderTopColor: colors.secondaryContainer,
+        },
+        noticeRow: {
+          flexDirection: 'row',
+          gap: spacing.md,
+        },
+        noticeTitle: {
+          color: colors.onSurface,
+          fontWeight: '700',
+        },
+        quickRow: {
+          flexDirection: 'row',
+          gap: spacing.md,
+        },
+        quick: {
+          flex: 1,
+          backgroundColor: colors.surface,
+          borderRadius: radii.lg,
+          padding: spacing.lg,
+          borderWidth: 1,
+          borderColor: colors.outlineVariant,
+          gap: 6,
+        },
+        quickTitle: {
+          color: colors.onSurface,
+          fontWeight: '700',
+        },
+        quickSub: {
+          color: colors.onSurfaceVariant,
+          fontSize: 12,
+        },
+        sectionTitle: {
+          color: colors.onSurface,
+          fontWeight: '700',
+          fontSize: 16,
+        },
+        empty: {
+          color: colors.onSurfaceVariant,
+          fontSize: 14,
+          lineHeight: 20,
+        },
+        playRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+          paddingVertical: spacing.md,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: colors.outlineVariant,
+        },
+        playTitle: {
+          color: colors.onSurface,
+          fontWeight: '700',
+          fontSize: 15,
+        },
+        playMeta: {
+          color: colors.onSurfaceVariant,
+          fontSize: 12,
+          marginTop: 2,
+        },
+        playTime: {
+          color: colors.primary,
+          fontWeight: '800',
+          fontSize: 14,
+        },
+      }),
+    [colors],
+  );
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useT();
@@ -139,105 +246,3 @@ export default function HomeScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  content: {
-    padding: spacing.lg,
-    gap: spacing.lg,
-  },
-  hero: {
-    gap: spacing.sm,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-  chip: {
-    flex: 1,
-    backgroundColor: colors.surfaceHigh,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-  },
-  chipLabel: {
-    color: colors.onSurfaceVariant,
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  chipValue: {
-    color: colors.onSurface,
-    fontSize: 18,
-    fontWeight: '800',
-    marginTop: 4,
-  },
-  notice: {
-    borderTopWidth: 2,
-    borderTopColor: colors.secondaryContainer,
-  },
-  noticeRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  noticeTitle: {
-    color: colors.onSurface,
-    fontWeight: '700',
-  },
-  quickRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  quick: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    gap: 6,
-  },
-  quickTitle: {
-    color: colors.onSurface,
-    fontWeight: '700',
-  },
-  quickSub: {
-    color: colors.onSurfaceVariant,
-    fontSize: 12,
-  },
-  sectionTitle: {
-    color: colors.onSurface,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  empty: {
-    color: colors.onSurfaceVariant,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  playRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.outlineVariant,
-  },
-  playTitle: {
-    color: colors.onSurface,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  playMeta: {
-    color: colors.onSurfaceVariant,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  playTime: {
-    color: colors.primary,
-    fontWeight: '800',
-    fontSize: 14,
-  },
-});

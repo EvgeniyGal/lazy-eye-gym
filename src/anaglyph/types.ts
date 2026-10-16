@@ -25,6 +25,9 @@ export type AppLanguagePreference =
   | 'fr'
   | 'zh-CN';
 
+/** UI chrome only — does not change glass/optical colours. */
+export type AppColorSchemePreference = 'system' | 'light' | 'dark';
+
 export type AppPrefs = {
   lazyEyeEnabled: boolean;
   soundEffects: boolean;
@@ -38,6 +41,8 @@ export type AppPrefs = {
   reminderFrequency: ReminderFrequency;
   /** `system` follows device locale; unsupported device languages fall back to English. */
   language: AppLanguagePreference;
+  /** `system` follows device appearance; glass settings stay independent. */
+  colorScheme: AppColorSchemePreference;
 };
 
 export type DichopticPalette = {
@@ -76,6 +81,7 @@ export const DEFAULT_PREFS: AppPrefs = {
   reminderMinute: 0,
   reminderFrequency: 'daily',
   language: 'system',
+  colorScheme: 'system',
 };
 
 export const ACTIVE_PROFILE_KEY = 'anaglyph.activeProfileId';
