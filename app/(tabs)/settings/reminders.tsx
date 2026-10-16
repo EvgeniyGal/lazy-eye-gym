@@ -9,8 +9,8 @@ import { syncReminders } from '@/src/notifications/reminders';
 import { useAppStore } from '@/src/state/AppStore';
 import { spacing } from '@/src/theme/tokens';
 
-import { SettingsBack } from './SettingsBack';
-import { useSettingsStyles } from './styles';
+import { SettingsBack } from '@/src/components/settings/SettingsBack';
+import { useSettingsStyles } from '@/src/components/settings/styles';
 
 function formatClock(hour: number, minute: number) {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;

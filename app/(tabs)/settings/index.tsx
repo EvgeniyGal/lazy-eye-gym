@@ -9,7 +9,7 @@ import { useT } from '@/src/i18n/I18nProvider';
 import { useColors } from '@/src/theme/ThemeProvider';
 import { spacing } from '@/src/theme/tokens';
 
-import { useSettingsStyles } from './styles';
+import { useSettingsStyles } from '@/src/components/settings/styles';
 
 type SettingsRoute =
   | 'optical'

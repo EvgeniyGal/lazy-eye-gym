@@ -9,8 +9,8 @@ import { useT } from '@/src/i18n/I18nProvider';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing } from '@/src/theme/tokens';
 
-import { SettingsBack } from './SettingsBack';
-import { useSettingsStyles } from './styles';
+import { SettingsBack } from '@/src/components/settings/SettingsBack';
+import { useSettingsStyles } from '@/src/components/settings/styles';
 
 const OPTIONS: { value: AppColorSchemePreference; labelKey: string }[] = [
   { value: 'system', labelKey: 'settings.appearanceSystem' },

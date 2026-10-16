@@ -12,8 +12,8 @@ import { useAppStore } from '@/src/state/AppStore';
 import { useColors } from '@/src/theme/ThemeProvider';
 import { spacing } from '@/src/theme/tokens';
 
-import { SettingsBack } from './SettingsBack';
-import { useSettingsStyles } from './styles';
+import { SettingsBack } from '@/src/components/settings/SettingsBack';
+import { useSettingsStyles } from '@/src/components/settings/styles';
 
 export default function LanguageSettingsScreen() {
   const insets = useSafeAreaInsets();

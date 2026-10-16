@@ -9,8 +9,8 @@ import { useT } from '@/src/i18n/I18nProvider';
 import { useAppStore } from '@/src/state/AppStore';
 import { spacing } from '@/src/theme/tokens';
 
-import { SettingsBack } from './SettingsBack';
-import { useSettingsStyles } from './styles';
+import { SettingsBack } from '@/src/components/settings/SettingsBack';
+import { useSettingsStyles } from '@/src/components/settings/styles';
 
 function IntensityRow({
   label,
