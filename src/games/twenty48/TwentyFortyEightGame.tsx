@@ -6,13 +6,12 @@ import {
   matchFont,
 } from '@shopify/react-native-skia';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
 import { useGameAudio } from '@/src/audio/useGameAudio';
-import { useT } from '@/src/i18n/I18nProvider';
 import type { GameSceneProps } from '../types';
 
 type Dir = 'up' | 'down' | 'left' | 'right';
@@ -224,13 +223,11 @@ export function TwentyFortyEightGame({
   onScore,
   onGameOver,
 }: GameSceneProps) {
-  const { t } = useT();
   const { sfx } = useGameAudio(settings);
   const sfxRef = useRef(sfx);
   sfxRef.current = sfx;
-  const initialGridEye = (settings.gridEye as EyeSide) || 'left';
-  const [gridEye, setGridEye] = useState<EyeSide | null>(null);
-  const [tiles, setTiles] = useState<Tile[]>([]);
+  const gridEye = (settings.gridEye as EyeSide) || 'left';
+  const [tiles, setTiles] = useState<Tile[]>(() => seedBoard());
   const [score, setScore] = useState(0);
   const [busy, setBusy] = useState(false);
   const startMs = useRef(Date.now());
@@ -245,11 +242,7 @@ export function TwentyFortyEightGame({
   const leftColor = colorForEye(palette, 'left');
   const rightColor = colorForEye(palette, 'right');
   const gridColor = gridEye === 'right' ? rightColor : leftColor;
-  const tileColor =
-    gridEye == null
-      ? leftColor
-      : colorForEye(palette, otherEye(gridEye));
-  const onLightBg = boardBg === '#f4f4f4';
+  const tileColor = colorForEye(palette, otherEye(gridEye));
 
   const pad = 16;
   const boardSize = Math.min(width - pad * 2, height - pad * 2);
@@ -289,17 +282,6 @@ export function TwentyFortyEightGame({
     };
   }, [tileInner]);
 
-  const startGame = useCallback((eye: EyeSide) => {
-    setGridEye(eye);
-    const seeded = seedBoard();
-    setTiles(seeded);
-    tilesRef.current = seeded;
-    setScore(0);
-    scoreRef.current = 0;
-    startMs.current = Date.now();
-    ended.current = false;
-  }, []);
-
   useEffect(() => {
     onScore(score, maxTile(tiles));
   }, [onScore, score, tiles]);
@@ -312,7 +294,7 @@ export function TwentyFortyEightGame({
 
   const applyMove = useCallback(
     (dir: Dir) => {
-      if (!gridEye || paused || ended.current || busy) return;
+      if (paused || ended.current || busy) return;
       const plan = planMove(tilesRef.current, dir);
       if (!plan.changed) return;
 
@@ -371,7 +353,7 @@ export function TwentyFortyEightGame({
 
       frameRef.current = requestAnimationFrame(tick);
     },
-    [busy, gridEye, onGameOver, paused],
+    [busy, onGameOver, paused],
   );
 
   const pan = Gesture.Pan()
@@ -383,42 +365,6 @@ export function TwentyFortyEightGame({
       if (ax > ay) applyMove(e.translationX > 0 ? 'right' : 'left');
       else applyMove(e.translationY > 0 ? 'down' : 'up');
     });
-
-  if (!gridEye) {
-    const hintColor = onLightBg ? '#333' : '#b9cacb';
-    const titleColor = onLightBg ? '#111' : '#dae2fd';
-    return (
-      <View style={[styles.fill, styles.chooser, { backgroundColor: boardBg }]}>
-        <Text style={[styles.chooserTitle, { color: titleColor }]}>{t('twenty48.chooseTitle')}</Text>
-        <Text style={[styles.chooserSub, { color: hintColor }]}>{t('twenty48.chooseSub')}</Text>
-        <View style={styles.chooserRow}>
-          <Pressable
-            style={[styles.chooserBtn, { borderColor: leftColor, backgroundColor: boardBg }]}
-            onPress={() => startGame('left')}
-          >
-            <View style={[styles.swatch, { backgroundColor: leftColor }]} />
-            <Text style={[styles.chooserBtnText, { color: titleColor }]}>{t('twenty48.leftGrid')}</Text>
-            <Text style={[styles.chooserBtnHint, { color: hintColor }]}>{t('twenty48.leftHint')}</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.chooserBtn, { borderColor: rightColor, backgroundColor: boardBg }]}
-            onPress={() => startGame('right')}
-          >
-            <View style={[styles.swatch, { backgroundColor: rightColor }]} />
-            <Text style={[styles.chooserBtnText, { color: titleColor }]}>{t('twenty48.rightGrid')}</Text>
-            <Text style={[styles.chooserBtnHint, { color: hintColor }]}>{t('twenty48.rightHint')}</Text>
-          </Pressable>
-        </View>
-        <Pressable style={styles.defaultHint} onPress={() => startGame(initialGridEye)}>
-          <Text style={[styles.defaultHintText, { color: hintColor }]}>
-            {t('twenty48.useLast', {
-              side: t(initialGridEye === 'left' ? 'common.left' : 'common.right'),
-            })}
-          </Text>
-        </Pressable>
-      </View>
-    );
-  }
 
   return (
     <GestureDetector gesture={pan}>
@@ -478,55 +424,4 @@ export function TwentyFortyEightGame({
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  chooser: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    gap: 16,
-  },
-  chooserTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  chooserSub: {
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  chooserRow: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  chooserBtn: {
-    flex: 1,
-    borderWidth: 2,
-    borderRadius: 16,
-    paddingVertical: 20,
-    alignItems: 'center',
-    gap: 8,
-  },
-  swatch: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-  },
-  chooserBtnText: {
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  chooserBtnHint: {
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  defaultHint: {
-    marginTop: 8,
-    padding: 10,
-  },
-  defaultHintText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
 });
