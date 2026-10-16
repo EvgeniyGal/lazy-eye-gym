@@ -1,7 +1,10 @@
 import Constants from 'expo-constants';
+import { getLocales } from 'expo-localization';
 import { Platform } from 'react-native';
 
 import type { AppPrefs } from '@/src/anaglyph/types';
+import { setI18nLocale, t } from '@/src/i18n/i18n';
+import { resolveAppLocale } from '@/src/i18n/locales';
 
 const CHANNEL_ID = 'lazyeye-reminders';
 
@@ -48,16 +51,18 @@ function nextEvery2DayDates(hour: number, minute: number, count: number) {
 }
 
 export async function syncReminders(prefs: AppPrefs): Promise<{ ok: boolean; message?: string }> {
+  // Ensure notification text uses the language from the prefs being applied.
+  setI18nLocale(resolveAppLocale(prefs.language, getLocales()));
+
   if (Platform.OS === 'web') {
-    return { ok: false, message: 'Reminders are available on iOS and Android.' };
+    return { ok: false, message: t('reminders.webOnly') };
   }
 
   if (isExpoGo()) {
     // expo-notifications throws on import in Expo Go (SDK 53+). Prefs still save.
     return {
       ok: false,
-      message:
-        'Reminder preferences are saved. Scheduling needs a development build (not available in Expo Go).',
+      message: t('reminders.expoGo'),
     };
   }
 
@@ -65,7 +70,7 @@ export async function syncReminders(prefs: AppPrefs): Promise<{ ok: boolean; mes
   if (!Notifications) {
     return {
       ok: false,
-      message: 'Notifications are unavailable on this install. Use a development build.',
+      message: t('reminders.unavailable'),
     };
   }
 
@@ -80,7 +85,7 @@ export async function syncReminders(prefs: AppPrefs): Promise<{ ok: boolean; mes
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-      name: 'Training reminders',
+      name: t('reminders.channelName'),
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
@@ -107,14 +112,14 @@ export async function syncReminders(prefs: AppPrefs): Promise<{ ok: boolean; mes
       asked.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
   }
   if (!allowed) {
-    return { ok: false, message: 'Notification permission was denied.' };
+    return { ok: false, message: t('reminders.permissionDenied') };
   }
 
   const hour = Math.min(23, Math.max(0, Math.round(prefs.reminderHour)));
   const minute = Math.min(59, Math.max(0, Math.round(prefs.reminderMinute)));
   const content = {
-    title: 'Time for LazyEye Gym?',
-    body: 'A short dichoptic session when you are ready — play any game you like.',
+    title: t('reminders.title'),
+    body: t('reminders.body'),
     sound: true as const,
     ...(Platform.OS === 'android' ? { channelId: CHANNEL_ID } : {}),
   };
@@ -171,7 +176,7 @@ export async function syncReminders(prefs: AppPrefs): Promise<{ ok: boolean; mes
     }
     return { ok: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Could not schedule reminder.';
+    const message = error instanceof Error ? error.message : t('reminders.scheduleFailed');
     return { ok: false, message };
   }
 }

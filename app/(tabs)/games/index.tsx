@@ -6,13 +6,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, Chip, HeaderBar, Screen, Subtitle, Title } from '@/src/components/ui';
 import { getBestMetric, getBestScore } from '@/src/db/sessions';
-import { GAMES, gamesByCategory, type GameCategory, type GameId } from '@/src/games/catalog';
+import { GAMES, type GameCategory, type GameId } from '@/src/games/catalog';
+import { useT } from '@/src/i18n/I18nProvider';
+import { getLocalizedGamesByCategory } from '@/src/i18n/localizeCatalog';
 import { useAppStore } from '@/src/state/AppStore';
 import { colors, radii, spacing } from '@/src/theme/tokens';
 
 export default function GamesHubScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useT();
   const { activeProfile } = useAppStore();
   const [category, setCategory] = useState<GameCategory>('all');
   const [records, setRecords] = useState<Record<string, { score: number; metric: number }>>({});
@@ -32,29 +35,44 @@ export default function GamesHubScreen() {
     }, []),
   );
 
-  const list = gamesByCategory(category);
+  const list = getLocalizedGamesByCategory(category, t);
 
   return (
     <Screen>
       <View style={{ paddingTop: insets.top }}>
-        <HeaderBar title="Games" />
+        <HeaderBar title={t('gamesHub.header')} />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Title>Training Arena</Title>
+        <Title>{t('gamesHub.title')}</Title>
         <View style={styles.setupBar}>
           <Text style={styles.setupText}>
-            Active Setup · L ({Math.round(activeProfile.leftHue)}°) / R ({Math.round(activeProfile.rightHue)}°)
+            {t('gamesHub.activeSetup', {
+              left: Math.round(activeProfile.leftHue),
+              right: Math.round(activeProfile.rightHue),
+            })}
           </Text>
           <View style={styles.calTag}>
             <Ionicons name="checkmark-circle" size={14} color={colors.tertiary} />
-            <Text style={styles.calText}>Calibrated</Text>
+            <Text style={styles.calText}>{t('gamesHub.calibrated')}</Text>
           </View>
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: spacing.md }}>
-          <Chip label={`All Games (${GAMES.length})`} active={category === 'all'} onPress={() => setCategory('all')} />
-          <Chip label="Reflex & Tracking" active={category === 'reflex'} onPress={() => setCategory('reflex')} />
-          <Chip label="Spatial & Strategy" active={category === 'spatial'} onPress={() => setCategory('spatial')} />
+          <Chip
+            label={t('gamesHub.allGames', { count: GAMES.length })}
+            active={category === 'all'}
+            onPress={() => setCategory('all')}
+          />
+          <Chip
+            label={t('gamesHub.reflex')}
+            active={category === 'reflex'}
+            onPress={() => setCategory('reflex')}
+          />
+          <Chip
+            label={t('gamesHub.spatial')}
+            active={category === 'spatial'}
+            onPress={() => setCategory('spatial')}
+          />
         </ScrollView>
 
         {list.map((game) => (
@@ -64,16 +82,16 @@ export default function GamesHubScreen() {
             <Subtitle>{game.blurb}</Subtitle>
             <View style={styles.split}>
               <Text style={[styles.splitItem, { color: colors.secondary }]}>
-                Red/L: {game.dichopticSplit.leftLabel}
+                {t('gamesHub.redL', { label: game.dichopticSplit.leftLabel })}
               </Text>
               <Text style={[styles.splitItem, { color: colors.primary }]}>
-                Cyan/R: {game.dichopticSplit.rightLabel}
+                {t('gamesHub.cyanR', { label: game.dichopticSplit.rightLabel })}
               </Text>
             </View>
             <View style={styles.stats}>
               <View style={styles.stat}>
                 <Text style={styles.statVal}>{records[game.id]?.score ?? 0}</Text>
-                <Text style={styles.statLbl}>Score</Text>
+                <Text style={styles.statLbl}>{t('common.score')}</Text>
               </View>
               <View style={styles.stat}>
                 <Text style={styles.statVal}>{records[game.id]?.metric ?? 0}</Text>
@@ -85,7 +103,7 @@ export default function GamesHubScreen() {
               onPress={() => router.push(`/(tabs)/games/${game.id as GameId}`)}
             >
               <Ionicons name="play" size={16} color={colors.onPrimary} />
-              <Text style={styles.playText}>Open {game.shortTitle}</Text>
+              <Text style={styles.playText}>{t('gamesHub.openGame', { name: game.shortTitle })}</Text>
             </Pressable>
           </Card>
         ))}

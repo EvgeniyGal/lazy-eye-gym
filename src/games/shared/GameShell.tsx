@@ -5,7 +5,9 @@ import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { insertSession } from '@/src/db/sessions';
-import { getGame, type GameId } from '@/src/games/catalog';
+import type { GameId } from '@/src/games/catalog';
+import { useT } from '@/src/i18n/I18nProvider';
+import { getLocalizedGame } from '@/src/i18n/localizeCatalog';
 import { useAppStore } from '@/src/state/AppStore';
 import { colors, spacing } from '@/src/theme/tokens';
 import type { GameResult } from '../types';
@@ -23,7 +25,8 @@ export function GameShell({ gameId }: { gameId: GameId }) {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const { palette, activeProfile, getGameSettings, setGameSettings, prefs } = useAppStore();
-  const game = getGame(gameId)!;
+  const { t } = useT();
+  const game = useMemo(() => getLocalizedGame(gameId, t)!, [gameId, t]);
   const settings = getGameSettings(gameId);
   const soundOn = Boolean(settings.sound ?? true) && prefs.soundEffects;
 
@@ -137,7 +140,7 @@ export function GameShell({ gameId }: { gameId: GameId }) {
         <View style={styles.hudCenter}>
           <Text style={[styles.hudTitle, { color: hudFg }]}>{game.shortTitle}</Text>
           <Text style={[styles.hudMeta, { color: hudMuted }]}>
-            Score {score} · {game.metricLabel} {metric}
+            {t('gameShell.scoreLine', { score, metricLabel: game.metricLabel, metric })}
           </Text>
         </View>
         <Pressable
@@ -148,7 +151,7 @@ export function GameShell({ gameId }: { gameId: GameId }) {
             })
           }
           style={[styles.iconBtn, { backgroundColor: hudBtnBg, marginRight: 8 }]}
-          accessibilityLabel={soundOn ? 'Mute sounds' : 'Unmute sounds'}
+          accessibilityLabel={soundOn ? t('gameShell.mute') : t('gameShell.unmute')}
         >
           <Ionicons
             name={Boolean(settings.sound ?? true) ? 'volume-high' : 'volume-mute'}
@@ -180,18 +183,23 @@ export function GameShell({ gameId }: { gameId: GameId }) {
 
       {ended ? (
         <View style={[styles.overlay, { backgroundColor: onLight ? 'rgba(244,244,244,0.92)' : 'rgba(6,14,32,0.9)' }]}>
-          <Text style={[styles.overlayTitle, { color: hudFg }]}>Session complete</Text>
+          <Text style={[styles.overlayTitle, { color: hudFg }]}>{t('gameShell.sessionComplete')}</Text>
           <Text style={[styles.overlayMeta, { color: hudMuted }]}>
-            Score {ended.score} · {game.metricLabel} {ended.bestMetric} · {ended.durationSec}s
+            {t('gameShell.overlayMeta', {
+              score: ended.score,
+              metricLabel: game.metricLabel,
+              metric: ended.bestMetric,
+              duration: ended.durationSec,
+            })}
           </Text>
           <Pressable style={styles.primaryBtn} onPress={startFreshRun}>
-            <Text style={styles.primaryBtnText}>Start again</Text>
+            <Text style={styles.primaryBtnText}>{t('gameShell.startAgain')}</Text>
           </Pressable>
           <Pressable
             style={[styles.secondaryBtn, { borderColor: onLight ? '#333' : colors.outline }]}
             onPress={() => router.back()}
           >
-            <Text style={[styles.secondaryBtnText, { color: hudFg }]}>Back to game setup</Text>
+            <Text style={[styles.secondaryBtnText, { color: hudFg }]}>{t('gameShell.backToSetup')}</Text>
           </Pressable>
         </View>
       ) : null}

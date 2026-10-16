@@ -7,13 +7,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GameSettingsForm } from '@/src/components/GameSettingsForm';
 import { Card, HeaderBar, PrimaryButton, Screen, StatBox, Subtitle, Title } from '@/src/components/ui';
 import { getBestMetric, getBestScore, listSessionsForGame, type GameSession } from '@/src/db/sessions';
-import { getGame, type GameId } from '@/src/games/catalog';
+import type { GameId } from '@/src/games/catalog';
+import { useT } from '@/src/i18n/I18nProvider';
+import { getLocalizedGame } from '@/src/i18n/localizeCatalog';
 import { useAppStore } from '@/src/state/AppStore';
 import { colors, spacing } from '@/src/theme/tokens';
 
 export default function GameDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const game = getGame(String(id));
+  const { t } = useT();
+  const game = useMemo(() => getLocalizedGame(String(id), t), [id, t]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { getGameSettings, setGameSettings } = useAppStore();
@@ -41,8 +44,8 @@ export default function GameDetailScreen() {
     return (
       <Screen>
         <View style={{ padding: spacing.xl, paddingTop: insets.top + spacing.xl }}>
-          <Title>Game not found</Title>
-          <PrimaryButton label="Back to games" onPress={() => router.back()} />
+          <Title>{t('gameDetail.notFound')}</Title>
+          <PrimaryButton label={t('gameDetail.backToGames')} onPress={() => router.back()} />
         </View>
       </Screen>
     );
@@ -56,7 +59,7 @@ export default function GameDetailScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Pressable onPress={() => router.back()} style={styles.back}>
           <Ionicons name="chevron-back" size={18} color={colors.primary} />
-          <Text style={styles.backText}>Games</Text>
+          <Text style={styles.backText}>{t('gameDetail.games')}</Text>
         </Pressable>
 
         <Title>{game.title}</Title>
@@ -68,10 +71,8 @@ export default function GameDetailScreen() {
         </View>
 
         <Card>
-          <Text style={styles.section}>Game setup</Text>
-          <Subtitle style={{ marginBottom: spacing.md }}>
-            Level, colours, and eye roles for this training mode.
-          </Subtitle>
+          <Text style={styles.section}>{t('gameDetail.setup')}</Text>
+          <Subtitle style={{ marginBottom: spacing.md }}>{t('gameDetail.setupHint')}</Subtitle>
           <GameSettingsForm
             game={game}
             settings={settings}
@@ -80,23 +81,29 @@ export default function GameDetailScreen() {
         </Card>
 
         <PrimaryButton
-          label={`Play ${game.shortTitle}`}
+          label={t('gameDetail.play', { name: game.shortTitle })}
           icon="play"
           onPress={() => router.push(`/game/${game.id as GameId}`)}
         />
 
         <Card>
-          <Text style={styles.section}>Session history</Text>
+          <Text style={styles.section}>{t('gameDetail.history')}</Text>
           {history.length === 0 ? (
-            <Subtitle>No sessions yet. Play a round to start your local record.</Subtitle>
+            <Subtitle>{t('gameDetail.historyEmpty')}</Subtitle>
           ) : (
             history.map((session) => (
               <View key={session.id} style={styles.historyRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.historyScore}>Score {session.score}</Text>
+                  <Text style={styles.historyScore}>
+                    {t('gameDetail.historyScore', { score: session.score })}
+                  </Text>
                   <Text style={styles.historyMeta}>
-                    {new Date(session.endedAt).toLocaleString()} · {session.durationSec}s ·{' '}
-                    {game.metricLabel} {session.bestMetric}
+                    {t('gameDetail.historyMeta', {
+                      when: new Date(session.endedAt).toLocaleString(),
+                      duration: session.durationSec,
+                      metricLabel: game.metricLabel,
+                      metric: session.bestMetric,
+                    })}
                   </Text>
                 </View>
               </View>

@@ -1,3 +1,5 @@
+import { t } from '@/src/i18n/i18n';
+
 export type GameSession = {
   id: string;
   gameId: string;
@@ -53,12 +55,18 @@ export function formatDuration(totalSeconds: number): string {
   const minutes = Math.floor((sec % 3600) / 60);
   const seconds = sec % 60;
   if (hours > 0) {
-    return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+    return t('common.durationHoursMinutes', {
+      hours,
+      minutes: String(minutes).padStart(2, '0'),
+    });
   }
   if (minutes > 0) {
-    return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+    return t('common.durationMinutesSeconds', {
+      minutes,
+      seconds: String(seconds).padStart(2, '0'),
+    });
   }
-  return `${seconds}s`;
+  return t('common.durationSeconds', { seconds });
 }
 
 export function computeTrainingStats(sessions: GameSession[]): TrainingStats {

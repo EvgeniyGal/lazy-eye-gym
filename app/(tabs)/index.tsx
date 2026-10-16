@@ -11,13 +11,15 @@ import {
   getTrainingStats,
   type GamePlaytime,
 } from '@/src/db/sessions';
-import { GAMES } from '@/src/games/catalog';
+import { useT } from '@/src/i18n/I18nProvider';
+import { getLocalizedGames } from '@/src/i18n/localizeCatalog';
 import { useAppStore } from '@/src/state/AppStore';
 import { colors, radii, spacing } from '@/src/theme/tokens';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useT();
   const { prefs } = useAppStore();
   const [todaySeconds, setTodaySeconds] = useState(0);
   const [totalMinutes, setTotalMinutes] = useState(0);
@@ -36,7 +38,7 @@ export default function HomeScreen() {
 
   const playtimeRows = useMemo(() => {
     const map = new Map(byGame.map((row) => [row.gameId, row]));
-    return GAMES.map((game) => {
+    return getLocalizedGames(t).map((game) => {
       const stats = map.get(game.id);
       return {
         game,
@@ -44,32 +46,30 @@ export default function HomeScreen() {
         sessionCount: stats?.sessionCount ?? 0,
       };
     });
-  }, [byGame]);
+  }, [byGame, t]);
 
   const hasAnyPlaytime = playtimeRows.some((row) => row.durationSec > 0 || row.sessionCount > 0);
 
   return (
     <Screen>
       <View style={{ paddingTop: insets.top }}>
-        <HeaderBar title="Home" />
+        <HeaderBar title={t('home.header')} />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Card style={styles.hero}>
-          <Title>Welcome back, {prefs.displayName}!</Title>
-          <Subtitle>
-            Play whenever you like — no planned sessions. Pick any game and train at your own pace.
-          </Subtitle>
+          <Title>{t('home.welcome', { name: prefs.displayName })}</Title>
+          <Subtitle>{t('home.subtitle')}</Subtitle>
           <View style={styles.summaryRow}>
             <View style={styles.chip}>
-              <Text style={styles.chipLabel}>Today</Text>
+              <Text style={styles.chipLabel}>{t('home.today')}</Text>
               <Text style={styles.chipValue}>{formatDuration(todaySeconds)}</Text>
             </View>
             <View style={styles.chip}>
-              <Text style={styles.chipLabel}>All time</Text>
+              <Text style={styles.chipLabel}>{t('home.allTime')}</Text>
               <Text style={styles.chipValue}>
                 {totalMinutes >= 60
                   ? formatDuration(totalMinutes * 60)
-                  : `${totalMinutes}m`}
+                  : t('common.minutesShort', { count: totalMinutes })}
               </Text>
             </View>
           </View>
@@ -79,17 +79,16 @@ export default function HomeScreen() {
           <View style={styles.noticeRow}>
             <Ionicons name="shield-checkmark-outline" size={22} color={colors.secondary} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.noticeTitle}>Important notice</Text>
+              <Text style={styles.noticeTitle}>{t('home.noticeTitle')}</Text>
               <Body style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-                LazyEye Gym is a casual training tool, not a certified medical device. Consult an eye
-                care professional for diagnosis or treatment.
+                {t('home.noticeBody')}
               </Body>
             </View>
           </View>
         </Card>
 
         <PrimaryButton
-          label="Select Game"
+          label={t('home.selectGame')}
           icon="play"
           onPress={() => router.push('/(tabs)/games')}
         />
@@ -97,23 +96,23 @@ export default function HomeScreen() {
         <View style={styles.quickRow}>
           <Pressable style={styles.quick} onPress={() => router.push('/(tabs)/settings')}>
             <Ionicons name="settings-outline" size={22} color={colors.primary} />
-            <Text style={styles.quickTitle}>Settings</Text>
-            <Text style={styles.quickSub}>Glasses, intensity, reminders</Text>
+            <Text style={styles.quickTitle}>{t('home.settingsTitle')}</Text>
+            <Text style={styles.quickSub}>{t('home.settingsSub')}</Text>
           </Pressable>
           <Pressable style={styles.quick} onPress={() => router.push('/(tabs)/guide')}>
             <Ionicons name="eye-outline" size={22} color={colors.secondary} />
-            <Text style={styles.quickTitle}>How It Works</Text>
-            <Text style={styles.quickSub}>Anaglyph glasses guide</Text>
+            <Text style={styles.quickTitle}>{t('home.guideTitle')}</Text>
+            <Text style={styles.quickSub}>{t('home.guideSub')}</Text>
           </Pressable>
         </View>
 
         <Card>
-          <Text style={styles.sectionTitle}>Playtime by game</Text>
+          <Text style={styles.sectionTitle}>{t('home.playtimeTitle')}</Text>
           <Subtitle style={{ marginTop: 4, marginBottom: spacing.md }}>
-            How long you have played each game on this device.
+            {t('home.playtimeSub')}
           </Subtitle>
           {!hasAnyPlaytime ? (
-            <Text style={styles.empty}>No playtime yet — pick a game to start.</Text>
+            <Text style={styles.empty}>{t('home.playtimeEmpty')}</Text>
           ) : (
             playtimeRows.map(({ game, durationSec, sessionCount }) => (
               <Pressable
@@ -124,7 +123,9 @@ export default function HomeScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.playTitle}>{game.title}</Text>
                   <Text style={styles.playMeta}>
-                    {sessionCount} session{sessionCount === 1 ? '' : 's'}
+                    {t(sessionCount === 1 ? 'common.sessions_one' : 'common.sessions_other', {
+                      count: sessionCount,
+                    })}
                   </Text>
                 </View>
                 <Text style={styles.playTime}>{formatDuration(durationSec)}</Text>

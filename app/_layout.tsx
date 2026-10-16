@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
+import { I18nProvider } from '@/src/i18n/I18nProvider';
 import { AppProvider, useAppStore } from '@/src/state/AppStore';
 import { colors } from '@/src/theme/tokens';
 
@@ -54,17 +55,19 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppProvider>
-        <ThemeProvider value={navTheme}>
-          <Bootstrap>
-            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen
-                name="game/[id]"
-                options={{ animation: 'fade', contentStyle: { backgroundColor: 'transparent' } }}
-              />
-            </Stack>
-          </Bootstrap>
-        </ThemeProvider>
+        <I18nProvider>
+          <ThemeProvider value={navTheme}>
+            <Bootstrap>
+              <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen
+                  name="game/[id]"
+                  options={{ animation: 'fade', contentStyle: { backgroundColor: 'transparent' } }}
+                />
+              </Stack>
+            </Bootstrap>
+          </ThemeProvider>
+        </I18nProvider>
       </AppProvider>
     </GestureHandlerRootView>
   );

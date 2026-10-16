@@ -52,7 +52,16 @@
           "defaultChannel": "lazyeye-reminders"
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      [
+        "expo-localization",
+        {
+          "supportedLocales": {
+            "ios": ["en", "uk", "es", "de", "fr", "zh-Hans"],
+            "android": ["en", "uk", "es", "de", "fr", "zh-CN"]
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -16,6 +16,15 @@ export type IntensityBalance = {
 
 export type ReminderFrequency = 'daily' | 'weekdays' | 'every2days' | 'weekly';
 
+export type AppLanguagePreference =
+  | 'system'
+  | 'en'
+  | 'uk'
+  | 'es'
+  | 'de'
+  | 'fr'
+  | 'zh-CN';
+
 export type AppPrefs = {
   lazyEyeEnabled: boolean;
   soundEffects: boolean;
@@ -27,6 +36,8 @@ export type AppPrefs = {
   reminderHour: number;
   reminderMinute: number;
   reminderFrequency: ReminderFrequency;
+  /** `system` follows device locale; unsupported device languages fall back to English. */
+  language: AppLanguagePreference;
 };
 
 export type DichopticPalette = {
@@ -64,6 +75,7 @@ export const DEFAULT_PREFS: AppPrefs = {
   reminderHour: 18,
   reminderMinute: 0,
   reminderFrequency: 'daily',
+  language: 'system',
 };
 
 export const ACTIVE_PROFILE_KEY = 'anaglyph.activeProfileId';

@@ -12,6 +12,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
 import { useGameAudio } from '@/src/audio/useGameAudio';
+import { useT } from '@/src/i18n/I18nProvider';
 import type { GameSceneProps } from '../types';
 
 type Dir = 'up' | 'down' | 'left' | 'right';
@@ -223,6 +224,7 @@ export function TwentyFortyEightGame({
   onScore,
   onGameOver,
 }: GameSceneProps) {
+  const { t } = useT();
   const { sfx } = useGameAudio(settings);
   const sfxRef = useRef(sfx);
   sfxRef.current = sfx;
@@ -387,32 +389,31 @@ export function TwentyFortyEightGame({
     const titleColor = onLightBg ? '#111' : '#dae2fd';
     return (
       <View style={[styles.fill, styles.chooser, { backgroundColor: boardBg }]}>
-        <Text style={[styles.chooserTitle, { color: titleColor }]}>Choose grid colour</Text>
-        <Text style={[styles.chooserSub, { color: hintColor }]}>
-          Grid uses one eye channel. Number tiles use the other eye, on your optical background.
-          Digits match the background so they stay transparent.
-        </Text>
+        <Text style={[styles.chooserTitle, { color: titleColor }]}>{t('twenty48.chooseTitle')}</Text>
+        <Text style={[styles.chooserSub, { color: hintColor }]}>{t('twenty48.chooseSub')}</Text>
         <View style={styles.chooserRow}>
           <Pressable
             style={[styles.chooserBtn, { borderColor: leftColor, backgroundColor: boardBg }]}
             onPress={() => startGame('left')}
           >
             <View style={[styles.swatch, { backgroundColor: leftColor }]} />
-            <Text style={[styles.chooserBtnText, { color: titleColor }]}>Left grid</Text>
-            <Text style={[styles.chooserBtnHint, { color: hintColor }]}>Tiles → right eye</Text>
+            <Text style={[styles.chooserBtnText, { color: titleColor }]}>{t('twenty48.leftGrid')}</Text>
+            <Text style={[styles.chooserBtnHint, { color: hintColor }]}>{t('twenty48.leftHint')}</Text>
           </Pressable>
           <Pressable
             style={[styles.chooserBtn, { borderColor: rightColor, backgroundColor: boardBg }]}
             onPress={() => startGame('right')}
           >
             <View style={[styles.swatch, { backgroundColor: rightColor }]} />
-            <Text style={[styles.chooserBtnText, { color: titleColor }]}>Right grid</Text>
-            <Text style={[styles.chooserBtnHint, { color: hintColor }]}>Tiles → left eye</Text>
+            <Text style={[styles.chooserBtnText, { color: titleColor }]}>{t('twenty48.rightGrid')}</Text>
+            <Text style={[styles.chooserBtnHint, { color: hintColor }]}>{t('twenty48.rightHint')}</Text>
           </Pressable>
         </View>
         <Pressable style={styles.defaultHint} onPress={() => startGame(initialGridEye)}>
           <Text style={[styles.defaultHintText, { color: hintColor }]}>
-            Use last setup ({initialGridEye === 'left' ? 'Left' : 'Right'} grid)
+            {t('twenty48.useLast', {
+              side: t(initialGridEye === 'left' ? 'common.left' : 'common.right'),
+            })}
           </Text>
         </Pressable>
       </View>

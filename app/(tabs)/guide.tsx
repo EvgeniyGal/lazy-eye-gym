@@ -4,80 +4,58 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, HeaderBar, PrimaryButton, Screen, Subtitle, Title } from '@/src/components/ui';
-import { useAppStore } from '@/src/state/AppStore';
+import { useT } from '@/src/i18n/I18nProvider';
 import { colors, radii, spacing } from '@/src/theme/tokens';
-
-const FAQ = [
-  {
-    q: 'Why do parts of the game disappear if I close one eye?',
-    a: 'That is the point of dichoptic therapy. Each eye receives different critical elements so both eyes must stay active for fusion.',
-  },
-  {
-    q: 'Which glasses do I need?',
-    a: 'Standard red/cyan anaglyph glasses. Default assumption: red over left, cyan over right — swap in Settings if your pair differs.',
-  },
-  {
-    q: 'How long should I train?',
-    a: 'Aim for short sessions of about 15–20 minutes. Rest if you feel eye strain.',
-  },
-];
 
 export default function GuideScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useT();
   const [open, setOpen] = useState(0);
+
+  const faq = [
+    { q: t('guide.faq1q'), a: t('guide.faq1a') },
+    { q: t('guide.faq2q'), a: t('guide.faq2a') },
+    { q: t('guide.faq3q'), a: t('guide.faq3a') },
+  ];
+  const steps = [
+    { n: '1', t: t('guide.step1Title'), d: t('guide.step1Desc') },
+    { n: '2', t: t('guide.step2Title'), d: t('guide.step2Desc') },
+    { n: '3', t: t('guide.step3Title'), d: t('guide.step3Desc') },
+  ];
 
   return (
     <Screen>
       <View style={{ paddingTop: insets.top }}>
-        <HeaderBar title="Guide" />
+        <HeaderBar title={t('guide.header')} />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Title>How It Works</Title>
-        <Subtitle>
-          The science of dichoptic amblyopia training made simple. Rewire ocular suppression into
-          stereo fusion.
-        </Subtitle>
+        <Title>{t('guide.title')}</Title>
+        <Subtitle>{t('guide.subtitle')}</Subtitle>
 
         <Card>
-          <Text style={styles.section}>Neural fusion simulator</Text>
+          <Text style={styles.section}>{t('guide.neuralTitle')}</Text>
           <View style={styles.simRow}>
             <View style={[styles.simBox, { borderColor: colors.secondary }]}>
-              <Text style={[styles.simEye, { color: colors.secondary }]}>Left Eye</Text>
-              <Text style={styles.simMeta}>Red lens channel</Text>
-              <Text style={styles.simMeta}>Paddle / Borders</Text>
+              <Text style={[styles.simEye, { color: colors.secondary }]}>{t('guide.leftEye')}</Text>
+              <Text style={styles.simMeta}>{t('guide.leftMeta1')}</Text>
+              <Text style={styles.simMeta}>{t('guide.leftMeta2')}</Text>
             </View>
             <View style={[styles.simBox, { borderColor: colors.primary }]}>
-              <Text style={[styles.simEye, { color: colors.primary }]}>Right Eye</Text>
-              <Text style={styles.simMeta}>Cyan lens channel</Text>
-              <Text style={styles.simMeta}>Target / Ball / Grid</Text>
+              <Text style={[styles.simEye, { color: colors.primary }]}>{t('guide.rightEye')}</Text>
+              <Text style={styles.simMeta}>{t('guide.rightMeta1')}</Text>
+              <Text style={styles.simMeta}>{t('guide.rightMeta2')}</Text>
             </View>
           </View>
           <View style={styles.fusion}>
-            <Text style={styles.fusionTitle}>Visual Cortex Fusion</Text>
-            <Text style={styles.fusionTag}>DICHOPTIC 2D</Text>
+            <Text style={styles.fusionTitle}>{t('guide.fusionTitle')}</Text>
+            <Text style={styles.fusionTag}>{t('guide.fusionTag')}</Text>
           </View>
         </Card>
 
         <Card>
-          <Text style={styles.section}>Three steps to train</Text>
-          {[
-            {
-              n: '1',
-              t: 'Wear anaglyph glasses',
-              d: 'Red over left eye, cyan over right eye (or swap in Settings).',
-            },
-            {
-              n: '2',
-              t: 'Set up eye colours',
-              d: 'In Settings, match hues to your lenses and balance intensity until both eyes feel equally vivid.',
-            },
-            {
-              n: '3',
-              t: 'Play & merge',
-              d: 'Game elements are split between eyes — succeed only when both contribute.',
-            },
-          ].map((step) => (
+          <Text style={styles.section}>{t('guide.stepsTitle')}</Text>
+          {steps.map((step) => (
             <View key={step.n} style={styles.step}>
               <View style={styles.stepNum}>
                 <Text style={styles.stepNumText}>{step.n}</Text>
@@ -91,15 +69,13 @@ export default function GuideScreen() {
         </Card>
 
         <Card style={styles.safety}>
-          <Text style={styles.section}>Clinical safety guideline</Text>
-          <Subtitle>
-            Prefer 15–20 minute sessions. Take a break if you notice strain, headache, or discomfort.
-          </Subtitle>
+          <Text style={styles.section}>{t('guide.safetyTitle')}</Text>
+          <Subtitle>{t('guide.safetyBody')}</Subtitle>
         </Card>
 
         <Card>
-          <Text style={styles.section}>FAQ</Text>
-          {FAQ.map((item, index) => (
+          <Text style={styles.section}>{t('guide.faqTitle')}</Text>
+          {faq.map((item, index) => (
             <Pressable key={item.q} onPress={() => setOpen(index)} style={styles.faq}>
               <Text style={styles.faqQ}>{item.q}</Text>
               {open === index ? <Text style={styles.faqA}>{item.a}</Text> : null}
@@ -107,7 +83,11 @@ export default function GuideScreen() {
           ))}
         </Card>
 
-        <PrimaryButton label="Got it, Let's Play!" icon="game-controller" onPress={() => router.push('/(tabs)/games')} />
+        <PrimaryButton
+          label={t('guide.cta')}
+          icon="game-controller"
+          onPress={() => router.push('/(tabs)/games')}
+        />
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
     </Screen>

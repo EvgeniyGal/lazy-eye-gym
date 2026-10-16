@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +16,9 @@ import {
 } from '@/src/components/ui';
 import { backgroundCss, hslToHex } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
-import type { ReminderFrequency } from '@/src/anaglyph/types';
+import type { AppLanguagePreference, ReminderFrequency } from '@/src/anaglyph/types';
+import { useT } from '@/src/i18n/I18nProvider';
+import { LANGUAGE_PICKER_OPTIONS } from '@/src/i18n/locales';
 import { syncReminders } from '@/src/notifications/reminders';
 import { useAppStore } from '@/src/state/AppStore';
 import { colors, radii, spacing } from '@/src/theme/tokens';
@@ -24,8 +27,16 @@ function formatClock(hour: number, minute: number) {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
+const FREQUENCY_NOTE_KEYS: Record<ReminderFrequency, string> = {
+  daily: 'settings.freqDaily',
+  weekdays: 'settings.freqWeekdays',
+  every2days: 'settings.freqEvery2days',
+  weekly: 'settings.freqWeekly',
+};
+
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const { t, languagePreference } = useT();
   const {
     prefs,
     updatePrefs,
@@ -52,38 +63,42 @@ export default function SettingsScreen() {
     const result = await syncReminders(next);
     if (result.ok && next.remindersEnabled) {
       setReminderNote(
-        `Reminder set for ${formatClock(next.reminderHour, next.reminderMinute)} (${next.reminderFrequency}).`,
+        t('settings.reminderSet', {
+          time: formatClock(next.reminderHour, next.reminderMinute),
+          frequency: t(FREQUENCY_NOTE_KEYS[next.reminderFrequency]),
+        }),
       );
     } else if (result.ok) {
-      setReminderNote('Reminders turned off.');
+      setReminderNote(t('settings.remindersOff'));
     } else {
-      setReminderNote(result.message ?? 'Could not schedule reminder.');
+      setReminderNote(result.message ?? t('settings.reminderFailed'));
     }
+  };
+
+  const changeLanguage = (language: AppLanguagePreference) => {
+    updatePrefs({ language });
+    void syncReminders({ ...prefs, language });
   };
 
   return (
     <Screen>
       <View style={{ paddingTop: insets.top }}>
-        <HeaderBar title="Settings" />
+        <HeaderBar title={t('settings.header')} />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Title>Settings</Title>
-        <Subtitle>
-          Configure glasses colours, dichoptic intensity, and local play reminders.
-        </Subtitle>
+        <Title>{t('settings.title')}</Title>
+        <Subtitle>{t('settings.subtitle')}</Subtitle>
 
         <Card>
-          <Text style={styles.section}>Optical profile</Text>
-          <Subtitle style={{ marginBottom: spacing.md }}>
-            Set left and right lens colours to match your anaglyph glasses. Drag the bars to adjust.
-          </Subtitle>
+          <Text style={styles.section}>{t('settings.opticalProfile')}</Text>
+          <Subtitle style={{ marginBottom: spacing.md }}>{t('settings.opticalHint')}</Subtitle>
 
-          <Text style={styles.section}>Background</Text>
+          <Text style={styles.section}>{t('settings.background')}</Text>
           <Segmented
             options={[
-              { label: 'Black', value: 'black' },
-              { label: 'Gray', value: 'gray' },
-              { label: 'White', value: 'white' },
+              { label: t('settings.black'), value: 'black' },
+              { label: t('settings.gray'), value: 'gray' },
+              { label: t('settings.white'), value: 'white' },
             ]}
             value={activeProfile.background}
             onChange={(background) =>
@@ -95,9 +110,9 @@ export default function SettingsScreen() {
           />
 
           <View style={styles.eyePanel}>
-            <Text style={[styles.eyeTitle, { color: leftColor }]}>Left eye</Text>
+            <Text style={[styles.eyeTitle, { color: leftColor }]}>{t('common.leftEye')}</Text>
             <ColorDragSlider
-              label="Hue"
+              label={t('settings.hue')}
               kind="hue"
               value={activeProfile.leftHue}
               min={0}
@@ -106,7 +121,7 @@ export default function SettingsScreen() {
               onChange={(leftHue) => saveProfile({ ...activeProfile, leftHue })}
             />
             <ColorDragSlider
-              label="Lightness"
+              label={t('settings.lightness')}
               kind="lightness"
               value={activeProfile.leftLightness}
               min={8}
@@ -120,19 +135,19 @@ export default function SettingsScreen() {
             <View style={styles.circles}>
               <View style={styles.circleWrap}>
                 <View style={[styles.circle, { backgroundColor: leftColor }]} />
-                <Text style={[styles.circleLabel, { color: previewLabel }]}>Left</Text>
+                <Text style={[styles.circleLabel, { color: previewLabel }]}>{t('common.left')}</Text>
               </View>
               <View style={styles.circleWrap}>
                 <View style={[styles.circle, { backgroundColor: rightColor }]} />
-                <Text style={[styles.circleLabel, { color: previewLabel }]}>Right</Text>
+                <Text style={[styles.circleLabel, { color: previewLabel }]}>{t('common.right')}</Text>
               </View>
             </View>
           </View>
 
           <View style={styles.eyePanel}>
-            <Text style={[styles.eyeTitle, { color: rightColor }]}>Right eye</Text>
+            <Text style={[styles.eyeTitle, { color: rightColor }]}>{t('common.rightEye')}</Text>
             <ColorDragSlider
-              label="Hue"
+              label={t('settings.hue')}
               kind="hue"
               value={activeProfile.rightHue}
               min={0}
@@ -141,7 +156,7 @@ export default function SettingsScreen() {
               onChange={(rightHue) => saveProfile({ ...activeProfile, rightHue })}
             />
             <ColorDragSlider
-              label="Lightness"
+              label={t('settings.lightness')}
               kind="lightness"
               value={activeProfile.rightLightness}
               min={8}
@@ -151,28 +166,25 @@ export default function SettingsScreen() {
             />
           </View>
 
-          <PrimaryButton label="Swap Eyes" icon="swap-horizontal" onPress={swapEyes} />
+          <PrimaryButton label={t('settings.swapEyes')} icon="swap-horizontal" onPress={swapEyes} />
         </Card>
 
         <Card>
-          <Text style={styles.section}>Dichoptic intensity</Text>
-          <Subtitle>
-            Dim the dominant eye or boost the amblyopic eye until both colours feel equally vivid.
-            Preview uses your optical background so glasses filtering matches play.
-          </Subtitle>
+          <Text style={styles.section}>{t('settings.intensity')}</Text>
+          <Subtitle>{t('settings.intensityHint')}</Subtitle>
           <View style={[styles.intensityStage, { backgroundColor: previewBg }]}>
             <View style={styles.circles}>
               <View style={styles.circleWrap}>
                 <View style={[styles.circle, { backgroundColor: leftIntensityColor }]} />
-                <Text style={[styles.circleLabel, { color: previewLabel }]}>Left</Text>
+                <Text style={[styles.circleLabel, { color: previewLabel }]}>{t('common.left')}</Text>
               </View>
               <View style={styles.circleWrap}>
                 <View style={[styles.circle, { backgroundColor: rightIntensityColor }]} />
-                <Text style={[styles.circleLabel, { color: previewLabel }]}>Right</Text>
+                <Text style={[styles.circleLabel, { color: previewLabel }]}>{t('common.right')}</Text>
               </View>
             </View>
             <IntensityRow
-              label="Left eye"
+              label={t('common.leftEye')}
               value={intensity.left}
               fill={leftIntensityColor}
               solid={leftColor}
@@ -181,7 +193,7 @@ export default function SettingsScreen() {
               onChange={(left) => setIntensity({ ...intensity, left })}
             />
             <IntensityRow
-              label="Right eye"
+              label={t('common.rightEye')}
               value={intensity.right}
               fill={rightIntensityColor}
               solid={rightColor}
@@ -195,7 +207,7 @@ export default function SettingsScreen() {
               style={styles.preset}
               onPress={() => setIntensity({ left: 75, right: 75 })}
             >
-              <Text style={styles.presetText}>Equal 1:1</Text>
+              <Text style={styles.presetText}>{t('settings.equalPreset')}</Text>
             </Pressable>
             <Pressable
               style={styles.preset}
@@ -206,7 +218,7 @@ export default function SettingsScreen() {
                 })
               }
             >
-              <Text style={styles.presetText}>Left +20%</Text>
+              <Text style={styles.presetText}>{t('settings.leftPlus20')}</Text>
             </Pressable>
             <Pressable
               style={styles.preset}
@@ -217,26 +229,24 @@ export default function SettingsScreen() {
                 })
               }
             >
-              <Text style={styles.presetText}>Right +20%</Text>
+              <Text style={styles.presetText}>{t('settings.rightPlus20')}</Text>
             </Pressable>
           </View>
         </Card>
 
         <Card>
-          <Text style={styles.section}>Reminders</Text>
-          <Subtitle>
-            Local notifications only — choose how often and when you want a gentle nudge to play.
-          </Subtitle>
+          <Text style={styles.section}>{t('settings.reminders')}</Text>
+          <Subtitle>{t('settings.remindersHint')}</Subtitle>
           <ToggleRow
-            label="Enable reminders"
-            description="Schedule on this device"
+            label={t('settings.enableReminders')}
+            description={t('settings.enableRemindersDesc')}
             value={prefs.remindersEnabled}
             onChange={(remindersEnabled) => void applyReminderPatch({ remindersEnabled })}
           />
-          <Text style={[styles.section, { marginTop: spacing.md }]}>Time</Text>
+          <Text style={[styles.section, { marginTop: spacing.md }]}>{t('settings.time')}</Text>
           <View style={styles.timeRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.timeLabel}>Hour</Text>
+              <Text style={styles.timeLabel}>{t('settings.hour')}</Text>
               <View style={styles.stepRow}>
                 <Text
                   style={styles.stepBtn}
@@ -262,7 +272,7 @@ export default function SettingsScreen() {
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.timeLabel}>Minute</Text>
+              <Text style={styles.timeLabel}>{t('settings.minute')}</Text>
               <View style={styles.stepRow}>
                 <Text
                   style={styles.stepBtn}
@@ -288,13 +298,13 @@ export default function SettingsScreen() {
               </View>
             </View>
           </View>
-          <Text style={styles.section}>Frequency</Text>
+          <Text style={styles.section}>{t('settings.frequency')}</Text>
           <Segmented
             options={[
-              { label: 'Daily', value: 'daily' },
-              { label: 'Weekdays', value: 'weekdays' },
-              { label: 'Every 2d', value: 'every2days' },
-              { label: 'Weekly', value: 'weekly' },
+              { label: t('settings.daily'), value: 'daily' },
+              { label: t('settings.weekdays'), value: 'weekdays' },
+              { label: t('settings.every2d'), value: 'every2days' },
+              { label: t('settings.weekly'), value: 'weekly' },
             ]}
             value={prefs.reminderFrequency}
             onChange={(reminderFrequency) =>
@@ -307,13 +317,13 @@ export default function SettingsScreen() {
         </Card>
 
         <Card>
-          <Text style={styles.section}>Engine & feedback</Text>
-          <Text style={[styles.section, { marginTop: spacing.md }]}>Drift speed</Text>
+          <Text style={styles.section}>{t('settings.engine')}</Text>
+          <Text style={[styles.section, { marginTop: spacing.md }]}>{t('settings.driftSpeed')}</Text>
           <Segmented
             options={[
-              { label: 'Easy', value: 'easy' },
-              { label: 'Medium', value: 'medium' },
-              { label: 'Fast', value: 'fast' },
+              { label: t('common.easy'), value: 'easy' },
+              { label: t('common.medium'), value: 'medium' },
+              { label: t('settings.fast'), value: 'fast' },
             ]}
             value={prefs.driftSpeed}
             onChange={(driftSpeed) =>
@@ -321,26 +331,52 @@ export default function SettingsScreen() {
             }
           />
           <ToggleRow
-            label="Sound effects"
-            description="Audio cues during play"
+            label={t('settings.soundEffects')}
+            description={t('settings.soundEffectsDesc')}
             value={prefs.soundEffects}
             onChange={(soundEffects) => updatePrefs({ soundEffects })}
           />
           <ToggleRow
-            label="Haptic feedback"
-            description="Tactile clicks on fusion events"
+            label={t('settings.haptic')}
+            description={t('settings.hapticDesc')}
             value={prefs.hapticFeedback}
             onChange={(hapticFeedback) => updatePrefs({ hapticFeedback })}
           />
           <ToggleRow
-            label="Auto-pause on eye strain"
-            description="Nudge to rest about every 20 minutes in-game"
+            label={t('settings.autoPause')}
+            description={t('settings.autoPauseDesc')}
             value={prefs.autoPauseOnStrain}
             onChange={(autoPauseOnStrain) => updatePrefs({ autoPauseOnStrain })}
           />
         </Card>
 
-        <Text style={styles.saved}>Settings saved automatically on this device.</Text>
+        <Card>
+          <Text style={styles.section}>{t('settings.language')}</Text>
+          <Subtitle style={{ marginBottom: spacing.md }}>{t('settings.languageHint')}</Subtitle>
+          <View style={styles.langList}>
+            {LANGUAGE_PICKER_OPTIONS.map((opt) => {
+              const active = languagePreference === opt.value;
+              return (
+                <Pressable
+                  key={opt.value}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  onPress={() => changeLanguage(opt.value)}
+                  style={[styles.langRow, active && styles.langRowActive]}
+                >
+                  <Text style={[styles.langText, active && styles.langTextActive]}>
+                    {opt.value === 'system' ? t('common.systemDefault') : opt.label}
+                  </Text>
+                  {active ? (
+                    <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                  ) : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        </Card>
+
+        <Text style={styles.saved}>{t('settings.saved')}</Text>
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
     </Screen>
@@ -531,6 +567,33 @@ const styles = StyleSheet.create({
   },
   fill: {
     height: '100%',
+  },
+  langList: {
+    gap: spacing.sm,
+  },
+  langRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+  },
+  langRowActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceHighest,
+  },
+  langText: {
+    color: colors.onSurfaceVariant,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  langTextActive: {
+    color: colors.onSurface,
+    fontWeight: '700',
   },
   saved: {
     color: colors.tertiary,
