@@ -193,7 +193,7 @@ export const zhCN = {
   },
   catalog: {
     '2048': {
-      title: '2048 双眼分视版',
+      title: '2048',
       shortTitle: '2048',
       tag: '策略与融合',
       blurb: '选择一只眼睛显示网格；方块使用另一只眼睛，显示在您的光学背景上，数字为透明效果。',
@@ -265,7 +265,7 @@ export const zhCN = {
       field_snakeEye: '蛇的眼睛',
     },
     tetris: {
-      title: '俄罗斯方块 双眼分视版',
+      title: '俄罗斯方块',
       shortTitle: 'Tetris',
       tag: '空间与时机',
       blurb: '经典的堆叠消除玩法——每种方块都有各自的双眼分视颜色（眼睛 + 强度）。',

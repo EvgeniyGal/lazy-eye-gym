@@ -35,7 +35,7 @@ export type GameDefinition = {
 export const GAMES: GameDefinition[] = [
   {
     id: '2048',
-    title: '2048 Dichoptic',
+    title: '2048',
     shortTitle: '2048',
     tag: 'STRATEGY & FUSION',
     category: 'spatial',
@@ -310,7 +310,7 @@ export const GAMES: GameDefinition[] = [
   },
   {
     id: 'tetris',
-    title: 'Tetris Dichoptic',
+    title: 'Tetris',
     shortTitle: 'Tetris',
     tag: 'SPATIAL & TIMING',
     category: 'spatial',

@@ -210,7 +210,7 @@ export const es = {
   },
   catalog: {
     '2048': {
-      title: '2048 Dicóptico',
+      title: '2048',
       shortTitle: '2048',
       tag: 'ESTRATEGIA Y FUSIÓN',
       blurb:
@@ -286,7 +286,7 @@ export const es = {
       field_snakeEye: 'Ojo de la serpiente',
     },
     tetris: {
-      title: 'Tetris Dicóptico',
+      title: 'Tetris',
       shortTitle: 'Tetris',
       tag: 'ESPACIO Y PRECISIÓN',
       blurb:

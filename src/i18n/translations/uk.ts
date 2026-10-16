@@ -204,7 +204,7 @@ export const uk = {
   },
   catalog: {
     '2048': {
-      title: '2048 Дихоптик',
+      title: '2048',
       shortTitle: '2048',
       tag: 'СТРАТЕГІЯ ТА ЗЛИТТЯ',
       blurb:
@@ -279,7 +279,7 @@ export const uk = {
       field_snakeEye: 'Око змійки',
     },
     tetris: {
-      title: 'Тетріс Дихоптик',
+      title: 'Тетріс',
       shortTitle: 'Тетріс',
       tag: 'ПРОСТІР ТА ТАЙМІНГ',
       blurb:

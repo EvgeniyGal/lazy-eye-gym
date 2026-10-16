@@ -210,7 +210,7 @@ export const de = {
   },
   catalog: {
     '2048': {
-      title: '2048 Dichoptisch',
+      title: '2048',
       shortTitle: '2048',
       tag: 'STRATEGIE & FUSION',
       blurb:
@@ -286,7 +286,7 @@ export const de = {
       field_snakeEye: 'Schlangenauge',
     },
     tetris: {
-      title: 'Tetris Dichoptisch',
+      title: 'Tetris',
       shortTitle: 'Tetris',
       tag: 'RAUM & TIMING',
       blurb:
