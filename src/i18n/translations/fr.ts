@@ -49,6 +49,8 @@ export const fr = {
     title: 'Réglages',
     subtitle:
       'Configurez les couleurs des lunettes, l’intensité dichoptique et les rappels de jeu locaux.',
+    menuSubtitle: 'Choisissez une catégorie pour régler lunettes, intensité, rappels et plus.',
+    back: 'Réglages',
     opticalProfile: 'Profil optique',
     opticalHint:
       'Réglez les couleurs des verres gauche et droit pour qu’elles correspondent à vos lunettes anaglyphes. Faites glisser les barres pour ajuster.',
@@ -82,6 +84,7 @@ export const fr = {
     remindersOff: 'Rappels désactivés.',
     reminderFailed: 'Impossible de programmer le rappel.',
     engine: 'Moteur et retours',
+    engineHint: 'Son, haptique, vitesse de dérive et pause en cas de fatigue oculaire.',
     driftSpeed: 'Vitesse de dérive',
     fast: 'Rapide',
     soundEffects: 'Effets sonores',

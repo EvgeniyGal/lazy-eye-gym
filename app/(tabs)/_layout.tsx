@@ -45,6 +45,7 @@ export default function TabLayout() {
         options={{
           title: t('tabs.settings'),
           tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} />,
+          headerShown: false,
         }}
       />
       <Tabs.Screen

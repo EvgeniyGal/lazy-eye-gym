@@ -48,6 +48,8 @@ export const en = {
     header: 'Settings',
     title: 'Settings',
     subtitle: 'Configure glasses colours, dichoptic intensity, and local play reminders.',
+    menuSubtitle: 'Pick a category to adjust glasses, intensity, reminders, and more.',
+    back: 'Settings',
     opticalProfile: 'Optical profile',
     opticalHint:
       'Set left and right lens colours to match your anaglyph glasses. Drag the bars to adjust.',
@@ -81,6 +83,7 @@ export const en = {
     remindersOff: 'Reminders turned off.',
     reminderFailed: 'Could not schedule reminder.',
     engine: 'Engine & feedback',
+    engineHint: 'Sound, haptics, drift speed, and eye-strain pause.',
     driftSpeed: 'Drift speed',
     fast: 'Fast',
     soundEffects: 'Sound effects',

@@ -49,6 +49,8 @@ export const de = {
     title: 'Einstellungen',
     subtitle:
       'Lege Brillenfarben, dichoptische Intensität und lokale Spielerinnerungen fest.',
+    menuSubtitle: 'Wähle eine Kategorie für Brille, Intensität, Erinnerungen und mehr.',
+    back: 'Einstellungen',
     opticalProfile: 'Optisches Profil',
     opticalHint:
       'Stelle die Farben des linken und rechten Brillenglases passend zu deiner Anaglyphenbrille ein. Ziehe die Regler, um sie anzupassen.',
@@ -82,6 +84,7 @@ export const de = {
     remindersOff: 'Erinnerungen ausgeschaltet.',
     reminderFailed: 'Erinnerung konnte nicht geplant werden.',
     engine: 'Engine & Feedback',
+    engineHint: 'Sound, Haptik, Driftgeschwindigkeit und Pause bei Augenbelastung.',
     driftSpeed: 'Driftgeschwindigkeit',
     fast: 'Schnell',
     soundEffects: 'Soundeffekte',

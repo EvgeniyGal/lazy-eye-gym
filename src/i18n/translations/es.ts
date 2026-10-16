@@ -49,6 +49,8 @@ export const es = {
     title: 'Ajustes',
     subtitle:
       'Configura los colores de las gafas, la intensidad dicóptica y los recordatorios locales para jugar.',
+    menuSubtitle: 'Elige una categoría para ajustar gafas, intensidad, recordatorios y más.',
+    back: 'Ajustes',
     opticalProfile: 'Perfil óptico',
     opticalHint:
       'Ajusta los colores de las lentes izquierda y derecha para que coincidan con tus gafas anaglifo. Arrastra las barras para modificarlos.',
@@ -82,6 +84,7 @@ export const es = {
     remindersOff: 'Recordatorios desactivados.',
     reminderFailed: 'No se pudo programar el recordatorio.',
     engine: 'Motor y respuesta',
+    engineHint: 'Sonido, háptica, velocidad de deriva y pausa por fatiga visual.',
     driftSpeed: 'Velocidad de deriva',
     fast: 'Rápida',
     soundEffects: 'Efectos de sonido',
