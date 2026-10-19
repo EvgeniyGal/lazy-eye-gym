@@ -207,7 +207,8 @@ export function TetrisGame({
   const baseGravity = LEVELS[levelKey].gravityMs;
   const leftColor = colorForEye(palette, 'left');
   const rightColor = colorForEye(palette, 'right');
-  const frameColor = leftColor;
+  const gridEye: EyeSide = settings.gridEye === 'right' ? 'right' : 'left';
+  const frameColor = gridEye === 'left' ? leftColor : rightColor;
   const boardBg = palette.background;
   const eyeColor = (eye: EyeSide) => (eye === 'left' ? leftColor : rightColor);
 

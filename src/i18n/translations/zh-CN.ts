@@ -290,6 +290,7 @@ export const zhCN = {
       recordLabel: '最高得分',
       metricLabel: '已消除行数',
       field_difficulty: '难度',
+      field_gridEye: '网格颜色',
       field_sound: '游戏音效',
     },
     invaders: {

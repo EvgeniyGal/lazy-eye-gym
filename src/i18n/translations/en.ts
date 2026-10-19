@@ -305,6 +305,7 @@ export const en = {
       recordLabel: 'Best score',
       metricLabel: 'Lines cleared',
       field_difficulty: 'Level',
+      field_gridEye: 'Grid colour',
       field_sound: 'Game sounds',
     },
     invaders: {

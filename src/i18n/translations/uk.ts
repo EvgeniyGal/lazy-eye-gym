@@ -305,6 +305,7 @@ export const uk = {
       recordLabel: 'Найкращий рахунок',
       metricLabel: 'Очищено ліній',
       field_difficulty: 'Рівень',
+      field_gridEye: 'Колір сітки',
       field_sound: 'Звуки гри',
     },
     invaders: {

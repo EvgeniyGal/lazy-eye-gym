@@ -313,6 +313,7 @@ export const fr = {
       recordLabel: 'Meilleur score',
       metricLabel: 'Lignes effacées',
       field_difficulty: 'Niveau',
+      field_gridEye: 'Couleur de la grille',
       field_sound: 'Sons du jeu',
     },
     invaders: {

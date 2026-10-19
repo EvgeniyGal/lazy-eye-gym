@@ -297,6 +297,7 @@ export const GAMES: GameDefinition[] = [
     defaultSettings: {
       difficulty: 'easy',
       sound: true,
+      gridEye: 'left',
     },
     fields: [
       {
@@ -307,6 +308,15 @@ export const GAMES: GameDefinition[] = [
           { label: 'Easy', value: 'easy' },
           { label: 'Hard', value: 'hard' },
           { label: 'Extra hard', value: 'extraHard' },
+        ],
+      },
+      {
+        key: 'gridEye',
+        label: 'Grid colour',
+        type: 'eye',
+        options: [
+          { label: 'Left', value: 'left' },
+          { label: 'Right', value: 'right' },
         ],
       },
       {

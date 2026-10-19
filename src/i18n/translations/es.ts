@@ -312,6 +312,7 @@ export const es = {
       recordLabel: 'Mejor puntuación',
       metricLabel: 'Líneas eliminadas',
       field_difficulty: 'Nivel',
+      field_gridEye: 'Color de la cuadrícula',
       field_sound: 'Sonidos del juego',
     },
     invaders: {

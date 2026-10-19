@@ -312,6 +312,7 @@ export const de = {
       recordLabel: 'Beste Punktzahl',
       metricLabel: 'Aufgelöste Reihen',
       field_difficulty: 'Level',
+      field_gridEye: 'Rasterfarbe',
       field_sound: 'Spielsounds',
     },
     invaders: {
