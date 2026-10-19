@@ -241,8 +241,14 @@ export function MazeGame({
   // ~2× previous on-screen scale: fit ~7 tiles across the short side
   const cell = Math.max(44, Math.min(width, height) / 7);
   const speed = 5.2 * difficulty.speedMul;
-  const wallEye = (settings.wallEye as EyeSide) || 'left';
-  const actorEye = (settings.actorEye as EyeSide) || 'right';
+  // One setup control swaps both channels; actors always use the opposite eye.
+  const wallEye: EyeSide = (() => {
+    const channels = settings.channels;
+    if (channels === 'wallsRight') return 'right';
+    if (channels === 'wallsLeft') return 'left';
+    return settings.wallEye === 'right' ? 'right' : 'left';
+  })();
+  const actorEye: EyeSide = wallEye === 'left' ? 'right' : 'left';
   const wallColor = colorForEye(palette, wallEye);
   const actorColor = colorForEye(palette, actorEye);
   const leftColor = colorForEye(palette, 'left');

@@ -132,8 +132,7 @@ export const GAMES: GameDefinition[] = [
       difficulty: 'easy',
       maze: 'classic',
       sound: true,
-      wallEye: 'left',
-      actorEye: 'right',
+      channels: 'wallsLeft',
     },
     fields: [
       {
@@ -159,27 +158,18 @@ export const GAMES: GameDefinition[] = [
         ],
       },
       {
+        key: 'channels',
+        label: 'Colours',
+        type: 'segment',
+        options: [
+          { label: 'Walls L · Actors R', value: 'wallsLeft' },
+          { label: 'Walls R · Actors L', value: 'wallsRight' },
+        ],
+      },
+      {
         key: 'sound',
         label: 'Game sounds',
         type: 'toggle',
-      },
-      {
-        key: 'wallEye',
-        label: 'Walls eye',
-        type: 'eye',
-        options: [
-          { label: 'Left', value: 'left' },
-          { label: 'Right', value: 'right' },
-        ],
-      },
-      {
-        key: 'actorEye',
-        label: 'Actors eye',
-        type: 'eye',
-        options: [
-          { label: 'Left', value: 'left' },
-          { label: 'Right', value: 'right' },
-        ],
       },
     ],
   },

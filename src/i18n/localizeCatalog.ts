@@ -25,11 +25,14 @@ function optionLabel(
       return englishFallback.includes('/') ? t('common.leftRed') : t('common.left');
     case 'right':
       return englishFallback.includes('/') ? t('common.rightCyan') : t('common.right');
-    default:
-      if (fieldKey === 'maze') {
-        return t(`catalog.${gameId}.option_maze_${value}`);
+    default: {
+      const specific = `catalog.${gameId}.option_${fieldKey}_${value}`;
+      const translated = t(specific);
+      if (translated && translated !== specific && !translated.includes('missing')) {
+        return translated;
       }
       return englishFallback;
+    }
   }
 }
 
