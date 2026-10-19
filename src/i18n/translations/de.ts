@@ -334,13 +334,12 @@ export const de = {
       tag: 'PHYSIK & FUSION',
       blurb:
         'Drehe, beschleunige und zerstöre Felsen mit gemischten Augen — Größe und Randstärke unterscheiden sich; die Deckkraft folgt den Brilleneinstellungen.',
-      leftLabel: 'Schiff & Schüsse (gewähltes Auge)',
-      rightLabel: 'Gemischte Asteroiden',
+      leftLabel: 'Schiff & Schüsse',
+      rightLabel: 'Gemischte Asteroiden + Power-ups',
       recordLabel: 'Beste Punktzahl',
       metricLabel: 'Zerstörte Felsen',
       field_difficulty: 'Level',
       field_sound: 'Spielsounds',
-      field_shipEye: 'Auge für das Schiff',
     },
   },
 };

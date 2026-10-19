@@ -334,13 +334,12 @@ export const es = {
       tag: 'FÍSICA Y FUSIÓN',
       blurb:
         'Gira, propúlsate y destruye rocas con ojos mezclados: varían el tamaño y el grosor del borde; la opacidad sigue los ajustes de las gafas.',
-      leftLabel: 'Nave y disparos (ojo elegido)',
-      rightLabel: 'Asteroides mixtos',
+      leftLabel: 'Nave y disparos',
+      rightLabel: 'Asteroides mixtos + potencias',
       recordLabel: 'Mejor puntuación',
       metricLabel: 'Rocas destruidas',
       field_difficulty: 'Nivel',
       field_sound: 'Sonidos del juego',
-      field_shipEye: 'Ojo de la nave',
     },
   },
 };

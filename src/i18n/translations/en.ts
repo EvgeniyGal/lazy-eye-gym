@@ -326,14 +326,13 @@ export const en = {
       shortTitle: 'Asteroids',
       tag: 'PHYSICS & FUSION',
       blurb:
-        'Rotate, thrust, and blast mixed-eye rocks — size and border weight differ; opacity follows glass settings.',
-      leftLabel: 'Ship & shots (chosen eye)',
-      rightLabel: 'Mixed asteroids',
+        'Rotate, thrust, and blast mixed-eye rocks — pick up orbs for shield, spray, nova, slow, boost, and colour swap.',
+      leftLabel: 'Ship & shots',
+      rightLabel: 'Mixed asteroids + power orbs',
       recordLabel: 'Best score',
       metricLabel: 'Rocks destroyed',
       field_difficulty: 'Level',
       field_sound: 'Game sounds',
-      field_shipEye: 'Ship eye',
     },
   },
 } as const;

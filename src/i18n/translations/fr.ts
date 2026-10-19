@@ -335,13 +335,12 @@ export const fr = {
       tag: 'PHYSIQUE ET FUSION',
       blurb:
         'Tournez, propulsez-vous et détruisez des rochers aux yeux mixtes — la taille et l’épaisseur des bordures varient ; l’opacité suit les réglages des lunettes.',
-      leftLabel: 'Vaisseau et tirs (œil choisi)',
-      rightLabel: 'Astéroïdes mixtes',
+      leftLabel: 'Vaisseau et tirs',
+      rightLabel: 'Astéroïdes mixtes + bonus',
       recordLabel: 'Meilleur score',
       metricLabel: 'Rochers détruits',
       field_difficulty: 'Niveau',
       field_sound: 'Sons du jeu',
-      field_shipEye: 'Œil du vaisseau',
     },
   },
 };

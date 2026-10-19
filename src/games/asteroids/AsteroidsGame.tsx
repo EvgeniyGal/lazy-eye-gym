@@ -22,7 +22,20 @@ type Rock = {
   verts: { x: number; y: number }[];
 };
 
-type Bullet = { id: string; x: number; y: number; vx: number; vy: number; life: number };
+type Bullet = { id: string; x: number; y: number; vx: number; vy: number; life: number; heavy?: boolean };
+
+type PowerKind = 'swap' | 'shield' | 'spray' | 'slow' | 'nova' | 'boost';
+
+type PowerDrop = {
+  id: string;
+  kind: PowerKind;
+  eye: EyeSide;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+};
 
 const LEVELS = {
   easy: { rocks: 3, speed: 55, lives: 5, spin: 0.8 },
@@ -35,6 +48,10 @@ type LevelKey = keyof typeof LEVELS;
 const DECK_H = 108;
 const SHIP_R = 14;
 const THRUST = 210;
+const ORB_R = 15;
+const POWER_KINDS: PowerKind[] = ['swap', 'shield', 'spray', 'slow', 'nova', 'boost'];
+const SLOW_MS = 6500;
+const BOOST_MS = 6500;
 
 type PadId = 'left' | 'right' | 'thrust' | 'fire';
 type PadBox = { x: number; y: number; w: number; h: number };
@@ -54,7 +71,7 @@ function radiusFor(size: RockSize) {
 function borderFor(size: RockSize) {
   if (size === 'large') return 5;
   if (size === 'medium') return 3.5;
-  return 0; // small = filled
+  return 0;
 }
 
 function makeVerts(seed: number, r: number) {
@@ -68,14 +85,12 @@ function makeVerts(seed: number, r: number) {
   return verts;
 }
 
-/** Modular wrap — no off-screen dead zone. */
 function wrap(v: number, max: number) {
   if (max <= 0) return 0;
   const n = v % max;
   return n < 0 ? n + max : n;
 }
 
-/** Draw copies near edges so silhouettes stay continuous while wrapping. */
 function edgeOffsets(x: number, y: number, r: number, w: number, h: number): { x: number; y: number }[] {
   const pts: { x: number; y: number }[] = [{ x, y }];
   const left = x < r;
@@ -91,6 +106,113 @@ function edgeOffsets(x: number, y: number, r: number, w: number, h: number): { x
   if (left && bottom) pts.push({ x: x + w, y: y - h });
   if (right && bottom) pts.push({ x: x - w, y: y - h });
   return pts;
+}
+
+function pickPower(): PowerKind {
+  return POWER_KINDS[Math.floor(Math.random() * POWER_KINDS.length)]!;
+}
+
+function dropChance(size: RockSize) {
+  if (size === 'large') return 0.38;
+  if (size === 'medium') return 0.28;
+  return 0.18;
+}
+
+function PowerIcon({ kind, cx, cy, cut }: { kind: PowerKind; cx: number; cy: number; cut: string }) {
+  if (kind === 'shield') {
+    return (
+      <Path
+        path={Skia.PathBuilder.Make()
+          .moveTo(cx, cy - 8)
+          .lineTo(cx + 7, cy - 3)
+          .lineTo(cx + 7, cy + 2)
+          .lineTo(cx, cy + 9)
+          .lineTo(cx - 7, cy + 2)
+          .lineTo(cx - 7, cy - 3)
+          .close()
+          .detach()}
+        color={cut}
+      />
+    );
+  }
+  if (kind === 'spray') {
+    return (
+      <Group>
+        <Rect x={cx - 1.5} y={cy - 9} width={3} height={12} color={cut} />
+        <Rect x={cx - 7} y={cy - 5} width={3} height={10} color={cut} />
+        <Rect x={cx + 4} y={cy - 5} width={3} height={10} color={cut} />
+      </Group>
+    );
+  }
+  if (kind === 'slow') {
+    return (
+      <Path
+        path={Skia.PathBuilder.Make()
+          .moveTo(cx - 7, cy - 6)
+          .lineTo(cx, cy - 1)
+          .lineTo(cx + 7, cy - 6)
+          .lineTo(cx + 4, cy - 6)
+          .lineTo(cx, cy - 3)
+          .lineTo(cx - 4, cy - 6)
+          .close()
+          .moveTo(cx - 7, cy + 1)
+          .lineTo(cx, cy + 6)
+          .lineTo(cx + 7, cy + 1)
+          .lineTo(cx + 4, cy + 1)
+          .lineTo(cx, cy + 4)
+          .lineTo(cx - 4, cy + 1)
+          .close()
+          .detach()}
+        color={cut}
+      />
+    );
+  }
+  if (kind === 'nova') {
+    return (
+      <Group>
+        <Circle cx={cx} cy={cy} r={3} color={cut} />
+        <Rect x={cx - 1} y={cy - 9} width={2} height={5} color={cut} />
+        <Rect x={cx - 1} y={cy + 4} width={2} height={5} color={cut} />
+        <Rect x={cx - 9} y={cy - 1} width={5} height={2} color={cut} />
+        <Rect x={cx + 4} y={cy - 1} width={5} height={2} color={cut} />
+      </Group>
+    );
+  }
+  if (kind === 'boost') {
+    return (
+      <Path
+        path={Skia.PathBuilder.Make()
+          .moveTo(cx, cy - 8)
+          .lineTo(cx + 5, cy)
+          .lineTo(cx + 1, cy)
+          .lineTo(cx + 4, cy + 8)
+          .lineTo(cx - 5, cy)
+          .lineTo(cx - 1, cy)
+          .close()
+          .detach()}
+        color={cut}
+      />
+    );
+  }
+  // swap
+  const left = Skia.PathBuilder.Make()
+    .moveTo(cx - 9, cy)
+    .lineTo(cx - 1, cy - 7)
+    .lineTo(cx - 1, cy + 7)
+    .close()
+    .detach();
+  const right = Skia.PathBuilder.Make()
+    .moveTo(cx + 9, cy)
+    .lineTo(cx + 1, cy - 7)
+    .lineTo(cx + 1, cy + 7)
+    .close()
+    .detach();
+  return (
+    <Group>
+      <Path path={left} color={cut} />
+      <Path path={right} color={cut} />
+    </Group>
+  );
 }
 
 let seq = 0;
@@ -110,7 +232,6 @@ function spawnRocks(
     const ang = Math.random() * Math.PI * 2;
     let x = Math.random() * width;
     let y = Math.random() * height;
-    // Keep clear of ship spawn
     if (Math.hypot(x - cx, y - cy) < 120) {
       x = (x + width / 2) % width;
       y = (y + height / 2) % height;
@@ -181,7 +302,7 @@ export function AsteroidsGame({
   sfxRef.current = sfx;
 
   const level = LEVELS[resolveLevel(settings)];
-  const shipEye = (settings.shipEye as EyeSide) || 'left';
+  const [shipEye, setShipEye] = useState<EyeSide>('left');
   const shipColor = colorForEye(palette, shipEye);
   const leftColor = colorForEye(palette, 'left');
   const rightColor = colorForEye(palette, 'right');
@@ -202,8 +323,13 @@ export function AsteroidsGame({
     spawnRocks(level.rocks, width, playH, level.speed, level.spin, width / 2, playH / 2),
   );
   const [bullets, setBullets] = useState<Bullet[]>([]);
+  const [drops, setDrops] = useState<PowerDrop[]>([]);
   const [invulnUntil, setInvulnUntil] = useState(0);
   const [thrustOn, setThrustOn] = useState(false);
+  const [hasShield, setHasShield] = useState(false);
+  const [slowUntil, setSlowUntil] = useState(0);
+  const [boostUntil, setBoostUntil] = useState(0);
+  const [novaFlash, setNovaFlash] = useState(0);
   const [padActive, setPadActive] = useState({ left: false, right: false, thrust: false, fire: false });
 
   const startMs = useRef(Date.now());
@@ -213,10 +339,16 @@ export function AsteroidsGame({
   const fireCd = useRef(0);
   const wantFire = useRef(false);
   const thrustSfxAcc = useRef(0);
+  const killsSinceDrop = useRef(0);
+  const shipEyeRef = useRef(shipEye);
+  const shieldRef = useRef(false);
+  const slowRef = useRef(0);
+  const boostRef = useRef(0);
 
   const shipRef = useRef(ship);
   const rocksRef = useRef(rocks);
   const bulletsRef = useRef(bullets);
+  const dropsRef = useRef(drops);
   const livesRef = useRef(lives);
   const scoreRef = useRef(score);
   const destroyedRef = useRef(destroyed);
@@ -225,10 +357,15 @@ export function AsteroidsGame({
   shipRef.current = ship;
   rocksRef.current = rocks;
   bulletsRef.current = bullets;
+  dropsRef.current = drops;
   livesRef.current = lives;
   scoreRef.current = score;
   destroyedRef.current = destroyed;
   invulnRef.current = invulnUntil;
+  shipEyeRef.current = shipEye;
+  shieldRef.current = hasShield;
+  slowRef.current = slowUntil;
+  boostRef.current = boostUntil;
 
   useEffect(() => {
     onScore(score, destroyed);
@@ -250,17 +387,60 @@ export function AsteroidsGame({
       });
     };
 
+    const spawnDropAt = (x: number, y: number, eye: EyeSide, into: PowerDrop[]) => {
+      seq += 1;
+      const ang = Math.random() * Math.PI * 2;
+      into.push({
+        id: `d-${seq}`,
+        kind: pickPower(),
+        eye,
+        x,
+        y,
+        vx: Math.cos(ang) * 28,
+        vy: Math.sin(ang) * 28,
+        life: 12,
+      });
+      killsSinceDrop.current = 0;
+    };
+
+    const destroyRock = (
+      r: Rock,
+      nextScore: { n: number },
+      nextDestroyed: { n: number },
+      spawned: Rock[],
+      nextDrops: PowerDrop[],
+    ) => {
+      nextDestroyed.n += 1;
+      nextScore.n += r.size === 'large' ? 20 : r.size === 'medium' ? 50 : 100;
+      const kids = splitRock(r, level.speed * 1.1, level.spin);
+      if (kids.length) {
+        spawned.push(...kids);
+        sfxRef.current('ast_split');
+      } else {
+        sfxRef.current('ast_bang');
+      }
+      killsSinceDrop.current += 1;
+      if (killsSinceDrop.current >= 4 || Math.random() < dropChance(r.size)) {
+        spawnDropAt(r.x, r.y, r.eye, nextDrops);
+      }
+    };
+
     const tick = () => {
       if (ended.current) return;
       const now = Date.now();
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
 
+      const boosted = now < boostRef.current;
+      const rotSpd = boosted ? 4.6 : 3.2;
+      const thrust = boosted ? 320 : THRUST;
+      const maxSpd = boosted ? 320 : 260;
+
       let s = { ...shipRef.current };
-      s.angle += rotateDir.current * 3.2 * dt;
+      s.angle += rotateDir.current * rotSpd * dt;
       if (thrusting.current) {
-        s.vx += Math.cos(s.angle) * THRUST * dt;
-        s.vy += Math.sin(s.angle) * THRUST * dt;
+        s.vx += Math.cos(s.angle) * thrust * dt;
+        s.vy += Math.sin(s.angle) * thrust * dt;
         thrustSfxAcc.current += dt;
         if (thrustSfxAcc.current > 0.12) {
           thrustSfxAcc.current = 0;
@@ -270,9 +450,9 @@ export function AsteroidsGame({
       s.vx *= 0.995;
       s.vy *= 0.995;
       const spd = Math.hypot(s.vx, s.vy);
-      if (spd > 260) {
-        s.vx = (s.vx / spd) * 260;
-        s.vy = (s.vy / spd) * 260;
+      if (spd > maxSpd) {
+        s.vx = (s.vx / spd) * maxSpd;
+        s.vy = (s.vy / spd) * maxSpd;
       }
       s.x = wrap(s.x + s.vx * dt, width);
       s.y = wrap(s.y + s.vy * dt, playH);
@@ -280,7 +460,7 @@ export function AsteroidsGame({
       fireCd.current = Math.max(0, fireCd.current - dt);
       let nextBullets = [...bulletsRef.current];
       if (wantFire.current && fireCd.current <= 0) {
-        fireCd.current = 0.22;
+        fireCd.current = boosted ? 0.14 : 0.22;
         seq += 1;
         nextBullets.push({
           id: `b-${seq}`,
@@ -302,15 +482,25 @@ export function AsteroidsGame({
         }))
         .filter((b) => b.life > 0);
 
+      const rockSlow = now < slowRef.current ? 0.35 : 1;
       let nextRocks = rocksRef.current.map((r) => ({
         ...r,
-        x: wrap(r.x + r.vx * dt, width),
-        y: wrap(r.y + r.vy * dt, playH),
-        angle: r.angle + r.spin * dt,
+        x: wrap(r.x + r.vx * rockSlow * dt, width),
+        y: wrap(r.y + r.vy * rockSlow * dt, playH),
+        angle: r.angle + r.spin * rockSlow * dt,
       }));
 
-      let nextScore = scoreRef.current;
-      let nextDestroyed = destroyedRef.current;
+      let nextDrops = dropsRef.current
+        .map((d) => ({
+          ...d,
+          x: wrap(d.x + d.vx * dt, width),
+          y: wrap(d.y + d.vy * dt, playH),
+          life: d.life - dt,
+        }))
+        .filter((d) => d.life > 0);
+
+      const scoreBox = { n: scoreRef.current };
+      const destroyedBox = { n: destroyedRef.current };
       const spawned: Rock[] = [];
       const keptBullets: Bullet[] = [];
 
@@ -323,17 +513,10 @@ export function AsteroidsGame({
             continue;
           }
           const rad = radiusFor(r.size);
-          if (Math.hypot(b.x - r.x, b.y - r.y) < rad + 3) {
+          const pad = b.heavy ? 6 : 3;
+          if (Math.hypot(b.x - r.x, b.y - r.y) < rad + pad) {
             hit = true;
-            nextDestroyed += 1;
-            nextScore += r.size === 'large' ? 20 : r.size === 'medium' ? 50 : 100;
-            const kids = splitRock(r, level.speed * 1.1, level.spin);
-            if (kids.length) {
-              spawned.push(...kids);
-              sfxRef.current('ast_split');
-            } else {
-              sfxRef.current('ast_bang');
-            }
+            destroyRock(r, scoreBox, destroyedBox, spawned, nextDrops);
           } else {
             remain.push(r);
           }
@@ -343,9 +526,80 @@ export function AsteroidsGame({
       }
       nextRocks = [...nextRocks, ...spawned];
 
+      // Pickup powers
+      const keptDrops: PowerDrop[] = [];
+      for (const d of nextDrops) {
+        if (Math.hypot(d.x - s.x, d.y - s.y) < SHIP_R + ORB_R) {
+          scoreBox.n += 15;
+          if (d.kind === 'swap') {
+            const nextEye: EyeSide = shipEyeRef.current === 'left' ? 'right' : 'left';
+            shipEyeRef.current = nextEye;
+            setShipEye(nextEye);
+            nextRocks = nextRocks.map((r) => ({
+              ...r,
+              eye: r.eye === 'left' ? 'right' : 'left',
+            }));
+          } else if (d.kind === 'shield') {
+            shieldRef.current = true;
+            setHasShield(true);
+          } else if (d.kind === 'spray') {
+            const spreads = [-0.45, -0.22, 0, 0.22, 0.45];
+            for (const off of spreads) {
+              const ang = s.angle + off;
+              seq += 1;
+              keptBullets.push({
+                id: `sp-${seq}`,
+                x: s.x + Math.cos(ang) * 14,
+                y: s.y + Math.sin(ang) * 14,
+                vx: Math.cos(ang) * 400 + s.vx * 0.15,
+                vy: Math.sin(ang) * 400 + s.vy * 0.15,
+                life: 1.0,
+                heavy: true,
+              });
+            }
+            sfxRef.current('ast_shoot');
+          } else if (d.kind === 'slow') {
+            const until = now + SLOW_MS;
+            slowRef.current = until;
+            setSlowUntil(until);
+          } else if (d.kind === 'nova') {
+            const novaSpawned: Rock[] = [];
+            const novaDrops: PowerDrop[] = [];
+            const remain: Rock[] = [];
+            for (const r of nextRocks) {
+              if (Math.hypot(r.x - s.x, r.y - s.y) < 110) {
+                destroyRock(r, scoreBox, destroyedBox, novaSpawned, novaDrops);
+              } else {
+                remain.push(r);
+              }
+            }
+            nextRocks = [...remain, ...novaSpawned];
+            keptDrops.push(...novaDrops);
+            setNovaFlash(0.5);
+            sfxRef.current('ast_bang');
+          } else if (d.kind === 'boost') {
+            const until = now + BOOST_MS;
+            boostRef.current = until;
+            setBoostUntil(until);
+          }
+          sfxRef.current('ast_split');
+          continue;
+        }
+        keptDrops.push(d);
+      }
+      nextDrops = keptDrops;
+
       if (now > invulnRef.current) {
         for (const r of nextRocks) {
           if (Math.hypot(s.x - r.x, s.y - r.y) < radiusFor(r.size) + 10) {
+            if (shieldRef.current) {
+              shieldRef.current = false;
+              setHasShield(false);
+              invulnRef.current = now + 900;
+              setInvulnUntil(invulnRef.current);
+              sfxRef.current('ast_split');
+              break;
+            }
             const left = livesRef.current - 1;
             livesRef.current = left;
             setLives(left);
@@ -372,19 +626,24 @@ export function AsteroidsGame({
           s.x,
           s.y,
         );
-        nextScore += 150;
+        scoreBox.n += 150;
+        nextDrops = [];
+        killsSinceDrop.current = 0;
       }
 
       shipRef.current = s;
       rocksRef.current = nextRocks;
       bulletsRef.current = keptBullets;
-      scoreRef.current = nextScore;
-      destroyedRef.current = nextDestroyed;
+      dropsRef.current = nextDrops;
+      scoreRef.current = scoreBox.n;
+      destroyedRef.current = destroyedBox.n;
       setShip(s);
       setRocks(nextRocks);
       setBullets(keptBullets);
-      setScore(nextScore);
-      setDestroyed(nextDestroyed);
+      setDrops(nextDrops);
+      setScore(scoreBox.n);
+      setDestroyed(destroyedBox.n);
+      setNovaFlash((f) => (f > 0 ? Math.max(0, f - dt * 1.5) : 0));
 
       frame = requestAnimationFrame(tick);
     };
@@ -397,7 +656,9 @@ export function AsteroidsGame({
   const padRefs = useRef<Partial<Record<PadId, View | null>>>({});
 
   const measurePad = useCallback((id: PadId) => {
-    const node = padRefs.current[id] as (View & { measureInWindow?: (cb: (x: number, y: number, w: number, h: number) => void) => void }) | null;
+    const node = padRefs.current[id] as
+      | (View & { measureInWindow?: (cb: (x: number, y: number, w: number, h: number) => void) => void })
+      | null;
     node?.measureInWindow?.((x, y, w, h) => {
       padBoxes.current[id] = { x, y, w, h };
     });
@@ -421,7 +682,6 @@ export function AsteroidsGame({
     return hit;
   };
 
-  /** Track all fingers via nativeEvent.touches (Pressable is single-touch). */
   const applyTouches = (e: GestureResponderEvent) => {
     const touches = e.nativeEvent.touches;
     let left = false;
@@ -460,6 +720,8 @@ export function AsteroidsGame({
   };
 
   const blink = Date.now() < invulnUntil && Math.floor(Date.now() / 120) % 2 === 0;
+  const boosted = Date.now() < boostUntil;
+  const slowed = Date.now() < slowUntil;
 
   const shipPath = Skia.PathBuilder.Make()
     .moveTo(14, 0)
@@ -495,6 +757,7 @@ export function AsteroidsGame({
           return edgeOffsets(r.x, r.y, rad, width, playH).map((p, i) => (
             <Group
               key={`${r.id}-${i}`}
+              opacity={slowed ? 0.75 : 1}
               transform={[{ translateX: p.x }, { translateY: p.y }, { rotate: r.angle }]}
             >
               {bw > 0 ? (
@@ -511,9 +774,30 @@ export function AsteroidsGame({
           ));
         })}
 
+        {drops.map((d) => {
+          const fill = d.eye === 'left' ? leftColor : rightColor;
+          return (
+            <Group key={d.id}>
+              <Circle cx={d.x} cy={d.y} r={ORB_R + 3} color={fill} opacity={0.3} />
+              <Circle cx={d.x} cy={d.y} r={ORB_R} color={fill} />
+              <PowerIcon kind={d.kind} cx={d.x} cy={d.y} cut={boardBg} />
+            </Group>
+          );
+        })}
+
         {bullets.map((b) => (
-          <Circle key={b.id} cx={b.x} cy={b.y} r={2.5} color={shipColor} />
+          <Circle
+            key={b.id}
+            cx={b.x}
+            cy={b.y}
+            r={b.heavy ? 4 : 2.5}
+            color={shipColor}
+          />
         ))}
+
+        {novaFlash > 0 ? (
+          <Circle cx={ship.x} cy={ship.y} r={110} color={shipColor} opacity={novaFlash * 0.25} />
+        ) : null}
 
         {!blink
           ? edgeOffsets(ship.x, ship.y, SHIP_R, width, playH).map((p, i) => (
@@ -521,8 +805,14 @@ export function AsteroidsGame({
                 key={`ship-${i}`}
                 transform={[{ translateX: p.x }, { translateY: p.y }, { rotate: ship.angle }]}
               >
+                {hasShield ? (
+                  <Circle cx={0} cy={0} r={18} color={shipColor} opacity={0.28} />
+                ) : null}
                 <Path path={shipPath} color={shipColor} />
                 {thrustOn ? <Path path={thrustPath} color={shipColor} /> : null}
+                {boosted ? (
+                  <Rect x={-8} y={10} width={16} height={3} color={shipColor} opacity={0.7} />
+                ) : null}
               </Group>
             ))
           : null}
@@ -532,7 +822,6 @@ export function AsteroidsGame({
         ))}
       </Canvas>
 
-      {/* Single multi-touch surface — RN Pressable only tracks one finger. */}
       <View
         style={[styles.deck, { height: DECK_H, width, backgroundColor: boardBg }]}
         onTouchStart={applyTouches}

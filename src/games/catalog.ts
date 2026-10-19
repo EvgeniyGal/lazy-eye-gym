@@ -367,17 +367,16 @@ export const GAMES: GameDefinition[] = [
     shortTitle: 'Asteroids',
     tag: 'PHYSICS & FUSION',
     category: 'spatial',
-    blurb: 'Rotate, thrust, and blast mixed-eye rocks — size and border weight differ; opacity follows glass settings.',
+    blurb: 'Rotate, thrust, and blast mixed-eye rocks — pick up orbs for shield, spray, nova, slow, boost, and colour swap.',
     dichopticSplit: {
-      leftLabel: 'Ship & shots (chosen eye)',
-      rightLabel: 'Mixed asteroids',
+      leftLabel: 'Ship & shots',
+      rightLabel: 'Mixed asteroids + power orbs',
     },
     recordLabel: 'Best score',
     metricLabel: 'Rocks destroyed',
     defaultSettings: {
       difficulty: 'easy',
       sound: true,
-      shipEye: 'left',
     },
     fields: [
       {
@@ -394,15 +393,6 @@ export const GAMES: GameDefinition[] = [
         key: 'sound',
         label: 'Game sounds',
         type: 'toggle',
-      },
-      {
-        key: 'shipEye',
-        label: 'Ship eye',
-        type: 'eye',
-        options: [
-          { label: 'Left', value: 'left' },
-          { label: 'Right', value: 'right' },
-        ],
       },
     ],
   },
