@@ -131,6 +131,7 @@ export const GAMES: GameDefinition[] = [
     defaultSettings: {
       difficulty: 'easy',
       maze: 'classic',
+      scale: 'normal',
       sound: true,
       channels: 'wallsLeft',
     },
@@ -155,6 +156,16 @@ export const GAMES: GameDefinition[] = [
           { label: 'Isles', value: 'islands' },
           { label: 'Coil', value: 'coil' },
           { label: 'Keep', value: 'keep' },
+        ],
+      },
+      {
+        key: 'scale',
+        label: 'Scale',
+        type: 'segment',
+        options: [
+          { label: 'Small', value: 'small' },
+          { label: 'Normal', value: 'normal' },
+          { label: 'Large', value: 'large' },
         ],
       },
       {

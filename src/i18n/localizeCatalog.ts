@@ -21,6 +21,12 @@ function optionLabel(
       return t('common.hard');
     case 'extraHard':
       return t('common.extraHard');
+    case 'small':
+      return t('common.small');
+    case 'normal':
+      return t('common.normal');
+    case 'large':
+      return t('common.large');
     case 'left':
       return englishFallback.includes('/') ? t('common.leftRed') : t('common.left');
     case 'right':

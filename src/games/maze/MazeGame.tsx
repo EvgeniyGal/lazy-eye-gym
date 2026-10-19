@@ -238,8 +238,15 @@ export function MazeGame({
   const difficulty = DIFFICULTY[resolveDifficulty(settings)];
   const rows = mazeRows(maze);
   const cols = mazeCols(maze);
-  // ~2× previous on-screen scale: fit ~7 tiles across the short side
-  const cell = Math.max(44, Math.min(width, height) / 7);
+  const scale = String(settings.scale ?? 'normal');
+  const cell = (() => {
+    const short = Math.min(width, height);
+    const fit = Math.min(width / cols, height / rows);
+    if (scale === 'small') return Math.max(10, fit * 0.96);
+    if (scale === 'large') return Math.max(56, short / 4.5);
+    // Normal — close-up follow camera (~7 tiles across)
+    return Math.max(44, short / 7);
+  })();
   const speed = 5.2 * difficulty.speedMul;
   // One setup control swaps both channels; actors always use the opposite eye.
   const wallEye: EyeSide = (() => {
@@ -667,11 +674,19 @@ export function MazeGame({
 
   const frightened = Date.now() < frightenedUntil;
 
-  // Camera: keep Pac-Man centred; world scrolls around him
+  // Camera: follow Pac-Man; clamp so small scale can show the whole maze centred
   const pacWorldX = player.x * cell + cell / 2;
   const pacWorldY = player.y * cell + cell / 2;
-  const camX = width / 2 - pacWorldX;
-  const camY = height / 2 - pacWorldY;
+  const worldW = cols * cell;
+  const worldH = rows * cell;
+  const camX = (() => {
+    if (worldW <= width) return (width - worldW) / 2;
+    return Math.min(0, Math.max(width - worldW, width / 2 - pacWorldX));
+  })();
+  const camY = (() => {
+    if (worldH <= height) return (height - worldH) / 2;
+    return Math.min(0, Math.max(height - worldH, height / 2 - pacWorldY));
+  })();
 
   const pacR = cell * 0.42;
   const pacPath = pacManPath(pacWorldX, pacWorldY, pacR, dir.current, mouthOpen);
