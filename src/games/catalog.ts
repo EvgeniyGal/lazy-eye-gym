@@ -334,7 +334,7 @@ export const GAMES: GameDefinition[] = [
     category: 'reflex',
     blurb: 'Shoot a mixed-eye alien wave; focus targets pulse on the opposite eye for priority kills.',
     dichopticSplit: {
-      leftLabel: 'Ship & shots (chosen eye)',
+      leftLabel: 'Ship & shots',
       rightLabel: 'Mixed aliens + focus outline',
     },
     recordLabel: 'Best score',
@@ -342,7 +342,6 @@ export const GAMES: GameDefinition[] = [
     defaultSettings: {
       difficulty: 'easy',
       sound: true,
-      shipEye: 'left',
     },
     fields: [
       {
@@ -359,15 +358,6 @@ export const GAMES: GameDefinition[] = [
         key: 'sound',
         label: 'Game sounds',
         type: 'toggle',
-      },
-      {
-        key: 'shipEye',
-        label: 'Ship eye',
-        type: 'eye',
-        options: [
-          { label: 'Left', value: 'left' },
-          { label: 'Right', value: 'right' },
-        ],
       },
     ],
   },

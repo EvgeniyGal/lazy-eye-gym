@@ -322,13 +322,12 @@ export const fr = {
       tag: 'SUIVI ET VISÉE',
       blurb:
         'Tirez sur une vague d’aliens aux yeux mixtes ; les cibles prioritaires pulsent sur l’œil opposé pour des éliminations en priorité.',
-      leftLabel: 'Vaisseau et tirs (œil choisi)',
+      leftLabel: 'Vaisseau et tirs',
       rightLabel: 'Aliens mixtes + contour de focus',
       recordLabel: 'Meilleur score',
       metricLabel: 'Aliens détruits',
       field_difficulty: 'Niveau',
       field_sound: 'Sons du jeu',
-      field_shipEye: 'Œil du vaisseau',
     },
     asteroids: {
       title: 'Astéroïdes',

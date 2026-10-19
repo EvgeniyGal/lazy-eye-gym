@@ -321,13 +321,12 @@ export const es = {
       tag: 'SEGUIMIENTO Y PUNTERÍA',
       blurb:
         'Dispara a una oleada de alienígenas con ojos mezclados; los objetivos enfocados pulsan en el ojo opuesto para eliminarlos primero.',
-      leftLabel: 'Nave y disparos (ojo elegido)',
+      leftLabel: 'Nave y disparos',
       rightLabel: 'Alienígenas mixtos + contorno de foco',
       recordLabel: 'Mejor puntuación',
       metricLabel: 'Alienígenas destruidos',
       field_difficulty: 'Nivel',
       field_sound: 'Sonidos del juego',
-      field_shipEye: 'Ojo de la nave',
     },
     asteroids: {
       title: 'Asteroides',

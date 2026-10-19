@@ -314,13 +314,12 @@ export const en = {
       tag: 'TRACKING & AIM',
       blurb:
         'Shoot a mixed-eye alien wave; focus targets pulse on the opposite eye for priority kills.',
-      leftLabel: 'Ship & shots (chosen eye)',
+      leftLabel: 'Ship & shots',
       rightLabel: 'Mixed aliens + focus outline',
       recordLabel: 'Best score',
       metricLabel: 'Aliens destroyed',
       field_difficulty: 'Level',
       field_sound: 'Game sounds',
-      field_shipEye: 'Ship eye',
     },
     asteroids: {
       title: 'Asteroids',

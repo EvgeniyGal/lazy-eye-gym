@@ -319,7 +319,7 @@ export function InvadersGame({
   const difficulty = resolveLevel(settings);
   const level = LEVELS[difficulty];
   const totalStages = STAGES_PER_DIFFICULTY;
-  const [shipEye, setShipEye] = useState<EyeSide>((settings.shipEye as EyeSide) || 'left');
+  const [shipEye, setShipEye] = useState<EyeSide>('left');
   const focusEye: EyeSide = shipEye === 'left' ? 'right' : 'left';
   const shipColor = colorForEye(palette, shipEye);
   const leftColor = colorForEye(palette, 'left');

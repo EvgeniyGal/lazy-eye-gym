@@ -321,13 +321,12 @@ export const de = {
       tag: 'TRACKING & ZIELEN',
       blurb:
         'Schieße auf eine Alien-Welle mit gemischten Augen; Fokusziele pulsieren auf dem gegenüberliegenden Auge für Prioritätsabschüsse.',
-      leftLabel: 'Schiff & Schüsse (gewähltes Auge)',
+      leftLabel: 'Schiff & Schüsse',
       rightLabel: 'Gemischte Aliens + Fokusumriss',
       recordLabel: 'Beste Punktzahl',
       metricLabel: 'Zerstörte Aliens',
       field_difficulty: 'Level',
       field_sound: 'Spielsounds',
-      field_shipEye: 'Auge für das Schiff',
     },
     asteroids: {
       title: 'Asteroids',
