@@ -241,11 +241,12 @@ export function MazeGame({
   const scale = String(settings.scale ?? 'normal');
   const cell = (() => {
     const short = Math.min(width, height);
-    const fit = Math.min(width / cols, height / rows);
-    if (scale === 'small') return Math.max(10, fit * 0.96);
-    if (scale === 'large') return Math.max(56, short / 4.5);
-    // Normal — close-up follow camera (~7 tiles across)
-    return Math.max(44, short / 7);
+    // Small = whole maze on screen; large = former close-up (~7 tiles); normal in between
+    const smallCell = Math.max(10, Math.min(width / cols, height / rows) * 0.96);
+    const largeCell = Math.max(44, short / 7);
+    if (scale === 'small') return smallCell;
+    if (scale === 'large') return largeCell;
+    return smallCell + (largeCell - smallCell) * 0.5;
   })();
   const speed = 5.2 * difficulty.speedMul;
   // One setup control swaps both channels; actors always use the opposite eye.
