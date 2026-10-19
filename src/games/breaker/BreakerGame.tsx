@@ -86,125 +86,183 @@ function resolveLevel(settings: Record<string, string | number | boolean>): Leve
 }
 
 /**
- * Stage layouts: grid of HP values (0 = empty). Rows vary by stage.
+ * Each stage is a distinct “picture” of bricks (0 = empty).
+ * topRatio places the formation on screen — higher values float mid-field so the
+ * ball can fly above, bounce off the ceiling, and chip bricks from the top.
  * Difficulty clamps each cell to hpCap.
  */
-const STAGE_GRIDS: number[][][] = [
-  // 1 — sparse HP1
-  [
-    [1, 0, 1, 0, 1, 0, 1, 0],
-    [0, 1, 0, 1, 0, 1, 0, 1],
-    [1, 0, 1, 0, 1, 0, 1, 0],
-  ],
-  // 2
-  [
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [0, 1, 0, 1, 0, 1, 0, 1],
-    [1, 0, 1, 0, 1, 0, 1, 0],
-  ],
-  // 3
-  [
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [0, 1, 1, 1, 1, 1, 1, 0],
-  ],
-  // 4 — HP2 appears
-  [
-    [2, 1, 2, 1, 2, 1, 2, 1],
-    [1, 2, 1, 2, 1, 2, 1, 2],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [0, 1, 0, 1, 0, 1, 0, 1],
-  ],
-  // 5 pyramid
-  [
-    [0, 0, 0, 2, 2, 0, 0, 0],
-    [0, 0, 1, 2, 2, 1, 0, 0],
-    [0, 1, 1, 2, 2, 1, 1, 0],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-  ],
-  // 6
-  [
-    [2, 2, 1, 1, 1, 1, 2, 2],
-    [2, 1, 1, 1, 1, 1, 1, 2],
-    [1, 1, 0, 1, 1, 0, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-  ],
-  // 7
-  [
-    [2, 2, 2, 2, 2, 2, 2, 2],
-    [1, 0, 1, 0, 1, 0, 1, 0],
-    [2, 1, 2, 1, 2, 1, 2, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-  ],
-  // 8 — HP3
-  [
-    [3, 2, 3, 2, 3, 2, 3, 2],
-    [2, 1, 2, 1, 2, 1, 2, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [0, 2, 0, 2, 0, 2, 0, 2],
-    [1, 0, 1, 0, 1, 0, 1, 0],
-  ],
-  // 9 pillars
-  [
-    [3, 0, 2, 0, 2, 0, 3, 0],
-    [3, 0, 2, 0, 2, 0, 3, 0],
-    [3, 1, 2, 1, 2, 1, 3, 1],
-    [2, 1, 1, 1, 1, 1, 2, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-  ],
-  // 10
-  [
-    [3, 3, 2, 2, 2, 2, 3, 3],
-    [3, 2, 1, 1, 1, 1, 2, 3],
-    [2, 1, 0, 1, 1, 0, 1, 2],
-    [2, 1, 1, 1, 1, 1, 1, 2],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-  ],
-  // 11
-  [
-    [3, 3, 3, 3, 3, 3, 3, 3],
-    [2, 0, 2, 0, 2, 0, 2, 0],
-    [3, 2, 3, 2, 3, 2, 3, 2],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [2, 1, 2, 1, 2, 1, 2, 1],
-  ],
-  // 12 — HP4 anchors
-  [
-    [4, 2, 3, 2, 2, 3, 2, 4],
-    [3, 2, 1, 1, 1, 1, 2, 3],
-    [2, 1, 0, 2, 2, 0, 1, 2],
-    [3, 2, 1, 1, 1, 1, 2, 3],
-    [2, 2, 2, 2, 2, 2, 2, 2],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-  ],
-  // 13
-  [
-    [4, 3, 4, 3, 3, 4, 3, 4],
-    [3, 0, 2, 0, 0, 2, 0, 3],
-    [4, 2, 1, 2, 2, 1, 2, 4],
-    [2, 1, 1, 1, 1, 1, 1, 2],
-    [3, 2, 2, 2, 2, 2, 2, 3],
-    [1, 1, 0, 1, 1, 0, 1, 1],
-  ],
-  // 14
-  [
-    [4, 4, 3, 3, 3, 3, 4, 4],
-    [4, 3, 2, 2, 2, 2, 3, 4],
-    [3, 2, 0, 1, 1, 0, 2, 3],
-    [3, 2, 1, 4, 4, 1, 2, 3],
-    [2, 1, 1, 1, 1, 1, 1, 2],
-    [2, 2, 2, 2, 2, 2, 2, 2],
-  ],
-  // 15 finale
-  [
-    [4, 4, 4, 4, 4, 4, 4, 4],
-    [4, 3, 2, 3, 3, 2, 3, 4],
-    [3, 2, 0, 2, 2, 0, 2, 3],
-    [4, 2, 1, 4, 4, 1, 2, 4],
-    [3, 2, 1, 1, 1, 1, 2, 3],
-    [2, 1, 1, 1, 1, 1, 1, 2],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-  ],
+type StageLayout = { topRatio: number; grid: number[][] };
+
+const STAGE_LAYOUTS: StageLayout[] = [
+  // 1 — scattered stars (intro, near top)
+  {
+    topRatio: 0.06,
+    grid: [
+      [1, 0, 0, 1, 0, 0, 1, 0],
+      [0, 0, 1, 0, 1, 0, 0, 1],
+      [0, 1, 0, 0, 0, 1, 0, 0],
+      [1, 0, 0, 1, 0, 0, 1, 0],
+    ],
+  },
+  // 2 — smile arc (floating)
+  {
+    topRatio: 0.22,
+    grid: [
+      [0, 1, 0, 0, 0, 0, 1, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 0, 0, 0, 0, 1, 0],
+      [0, 0, 1, 0, 0, 1, 0, 0],
+      [0, 0, 0, 1, 1, 0, 0, 0],
+    ],
+  },
+  // 3 — checker ribbon
+  {
+    topRatio: 0.1,
+    grid: [
+      [1, 0, 1, 0, 1, 0, 1, 0],
+      [0, 1, 0, 1, 0, 1, 0, 1],
+      [1, 0, 1, 0, 1, 0, 1, 0],
+      [0, 1, 0, 1, 0, 1, 0, 1],
+    ],
+  },
+  // 4 — diamond (float; open sky above)
+  {
+    topRatio: 0.2,
+    grid: [
+      [0, 0, 0, 2, 2, 0, 0, 0],
+      [0, 0, 2, 1, 1, 2, 0, 0],
+      [0, 2, 1, 1, 1, 1, 2, 0],
+      [0, 0, 2, 1, 1, 2, 0, 0],
+      [0, 0, 0, 2, 2, 0, 0, 0],
+    ],
+  },
+  // 5 — pyramid
+  {
+    topRatio: 0.08,
+    grid: [
+      [0, 0, 0, 2, 2, 0, 0, 0],
+      [0, 0, 1, 2, 2, 1, 0, 0],
+      [0, 1, 1, 2, 2, 1, 1, 0],
+      [1, 1, 1, 1, 1, 1, 1, 1],
+    ],
+  },
+  // 6 — twin towers (ball flies between / above)
+  {
+    topRatio: 0.12,
+    grid: [
+      [2, 2, 0, 0, 0, 0, 2, 2],
+      [2, 1, 0, 0, 0, 0, 1, 2],
+      [2, 1, 0, 0, 0, 0, 1, 2],
+      [2, 2, 1, 0, 0, 1, 2, 2],
+      [1, 1, 1, 0, 0, 1, 1, 1],
+    ],
+  },
+  // 7 — hollow ring (courtyard for ceiling bounces)
+  {
+    topRatio: 0.18,
+    grid: [
+      [2, 2, 2, 2, 2, 2, 2, 2],
+      [2, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 0, 1, 1, 0, 0, 2],
+      [2, 2, 1, 1, 1, 1, 2, 2],
+    ],
+  },
+  // 8 — stairs / diagonal
+  {
+    topRatio: 0.1,
+    grid: [
+      [3, 0, 0, 0, 0, 0, 0, 0],
+      [2, 3, 0, 0, 0, 0, 0, 0],
+      [1, 2, 3, 0, 0, 0, 0, 0],
+      [0, 1, 2, 3, 0, 0, 0, 0],
+      [0, 0, 1, 2, 3, 0, 0, 0],
+      [0, 0, 0, 1, 2, 3, 1, 1],
+    ],
+  },
+  // 9 — plus / cross (mid-air)
+  {
+    topRatio: 0.2,
+    grid: [
+      [0, 0, 0, 3, 3, 0, 0, 0],
+      [0, 0, 0, 2, 2, 0, 0, 0],
+      [3, 2, 2, 1, 1, 2, 2, 3],
+      [0, 0, 0, 2, 2, 0, 0, 0],
+      [0, 0, 0, 3, 3, 0, 0, 0],
+    ],
+  },
+  // 10 — space invader
+  {
+    topRatio: 0.14,
+    grid: [
+      [0, 0, 3, 0, 0, 3, 0, 0],
+      [0, 3, 2, 3, 3, 2, 3, 0],
+      [3, 2, 1, 2, 2, 1, 2, 3],
+      [3, 0, 2, 1, 1, 2, 0, 3],
+      [0, 0, 1, 0, 0, 1, 0, 0],
+      [0, 2, 0, 0, 0, 0, 2, 0],
+    ],
+  },
+  // 11 — heart
+  {
+    topRatio: 0.16,
+    grid: [
+      [0, 3, 3, 0, 0, 3, 3, 0],
+      [3, 2, 2, 3, 3, 2, 2, 3],
+      [3, 2, 1, 1, 1, 1, 2, 3],
+      [0, 3, 2, 1, 1, 2, 3, 0],
+      [0, 0, 3, 2, 2, 3, 0, 0],
+      [0, 0, 0, 3, 3, 0, 0, 0],
+    ],
+  },
+  // 12 — arch gateway (open tunnel under arch)
+  {
+    topRatio: 0.12,
+    grid: [
+      [0, 4, 3, 2, 2, 3, 4, 0],
+      [4, 3, 0, 0, 0, 0, 3, 4],
+      [4, 2, 0, 0, 0, 0, 2, 4],
+      [3, 2, 0, 0, 0, 0, 2, 3],
+      [2, 1, 1, 0, 0, 1, 1, 2],
+    ],
+  },
+  // 13 — chevron / zigzag bands (floating)
+  {
+    topRatio: 0.18,
+    grid: [
+      [0, 0, 4, 3, 3, 4, 0, 0],
+      [0, 4, 3, 0, 0, 3, 4, 0],
+      [4, 3, 0, 0, 0, 0, 3, 4],
+      [0, 2, 3, 0, 0, 3, 2, 0],
+      [0, 0, 2, 1, 1, 2, 0, 0],
+      [1, 1, 0, 0, 0, 0, 1, 1],
+    ],
+  },
+  // 14 — twin islands with centre channel
+  {
+    topRatio: 0.15,
+    grid: [
+      [4, 4, 3, 0, 0, 3, 4, 4],
+      [4, 3, 2, 0, 0, 2, 3, 4],
+      [3, 2, 1, 0, 0, 1, 2, 3],
+      [0, 0, 0, 0, 0, 0, 0, 0],
+      [2, 3, 2, 0, 0, 2, 3, 2],
+      [1, 2, 1, 0, 0, 1, 2, 1],
+    ],
+  },
+  // 15 — fortress with courtyard (finale)
+  {
+    topRatio: 0.1,
+    grid: [
+      [4, 4, 4, 4, 4, 4, 4, 4],
+      [4, 0, 0, 0, 0, 0, 0, 4],
+      [4, 0, 3, 2, 2, 3, 0, 4],
+      [4, 0, 2, 0, 0, 2, 0, 4],
+      [4, 0, 3, 2, 2, 3, 0, 4],
+      [4, 3, 2, 1, 1, 2, 3, 4],
+      [3, 2, 1, 1, 1, 1, 2, 3],
+    ],
+  },
 ];
 
 function clampHp(v: number, cap: MaxHp): MaxHp {
@@ -251,9 +309,15 @@ function spawnBurst(brick: Brick, brickW: number): BurstShard[] {
   return shards;
 }
 
-function buildStageBricks(width: number, stageIndex: number, hpCap: MaxHp): Brick[] {
-  const grid = STAGE_GRIDS[Math.min(STAGE_GRIDS.length - 1, stageIndex)]!;
+function buildStageBricks(width: number, height: number, stageIndex: number, hpCap: MaxHp): Brick[] {
+  const layout = STAGE_LAYOUTS[Math.min(STAGE_LAYOUTS.length - 1, stageIndex)]!;
+  const grid = layout.grid;
   const brickW = (width - 32) / COLS - 6;
+  const rowPitch = BRICK_H + 8;
+  const formationH = grid.length * rowPitch;
+  // Keep the lowest brick clear of the paddle band so play stays fair
+  const maxTop = Math.max(28, height * 0.5 - formationH);
+  const top = Math.min(maxTop, Math.max(28, height * layout.topRatio));
   const list: Brick[] = [];
   for (let r = 0; r < grid.length; r += 1) {
     for (let c = 0; c < COLS; c += 1) {
@@ -263,7 +327,7 @@ function buildStageBricks(width: number, stageIndex: number, hpCap: MaxHp): Bric
       list.push({
         id: `b-${stageIndex}-${r}-${c}`,
         x: 16 + c * (brickW + 6),
-        y: 40 + r * (BRICK_H + 8),
+        y: top + r * rowPitch,
         hp: maxHp,
         maxHp,
         eye: (r + c) % 2 === 0 ? 'left' : 'right',
@@ -448,7 +512,7 @@ export function BreakerGame({
   const [paddleX, setPaddleX] = useState(width / 2 - basePaddleW / 2);
   const [balls, setBalls] = useState<Ball[]>(() => [makeBall(width, height, baseSpeed)]);
   const [bricks, setBricks] = useState<Brick[]>(() =>
-    buildStageBricks(width, 0, level.hpCap),
+    buildStageBricks(width, height, 0, level.hpCap),
   );
   const [drops, setDrops] = useState<PowerDrop[]>([]);
   const [score, setScore] = useState(0);
@@ -761,7 +825,7 @@ export function BreakerGame({
 
         stageRef.current = nextStage;
         setStage(nextStage);
-        const rebuilt = buildStageBricks(width, nextStage, level.hpCap);
+        const rebuilt = buildStageBricks(width, height, nextStage, level.hpCap);
         bricksRef.current = rebuilt;
         setBricks(rebuilt);
         const speedBoost = baseSpeed * (1 + nextStage * 0.04);
