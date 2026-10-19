@@ -7,6 +7,7 @@ import { withOpacity, type EyeSide } from '@/src/anaglyph/color';
 import { colorForEye, solidForEye } from '@/src/anaglyph/palette';
 import { useGameAudio } from '@/src/audio/useGameAudio';
 import type { GameSceneProps } from '../types';
+import { stagesForDifficulty, STAGES_PER_DIFFICULTY, type StageLayout } from './breakerStages';
 
 type MaxHp = 1 | 2 | 3 | 4;
 
@@ -66,7 +67,6 @@ type HitFlash = {
 const COLS = 8;
 const BRICK_H = 18;
 const ORB_R = 15;
-const TOTAL_STAGES = 15;
 const POWER_KINDS: PowerKind[] = ['multi', 'laser', 'wide', 'slow', 'swap'];
 const BURST_LIFE = 0.45;
 const FLASH_LIFE = 0.12;
@@ -84,186 +84,6 @@ function resolveLevel(settings: Record<string, string | number | boolean>): Leve
   if (raw === 'hard' || raw === 'extraHard') return raw;
   return 'easy';
 }
-
-/**
- * Each stage is a distinct “picture” of bricks (0 = empty).
- * topRatio places the formation on screen — higher values float mid-field so the
- * ball can fly above, bounce off the ceiling, and chip bricks from the top.
- * Difficulty clamps each cell to hpCap.
- */
-type StageLayout = { topRatio: number; grid: number[][] };
-
-const STAGE_LAYOUTS: StageLayout[] = [
-  // 1 — scattered stars (intro, near top)
-  {
-    topRatio: 0.06,
-    grid: [
-      [1, 0, 0, 1, 0, 0, 1, 0],
-      [0, 0, 1, 0, 1, 0, 0, 1],
-      [0, 1, 0, 0, 0, 1, 0, 0],
-      [1, 0, 0, 1, 0, 0, 1, 0],
-    ],
-  },
-  // 2 — smile arc (floating)
-  {
-    topRatio: 0.22,
-    grid: [
-      [0, 1, 0, 0, 0, 0, 1, 0],
-      [0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 1, 0, 0, 0, 0, 1, 0],
-      [0, 0, 1, 0, 0, 1, 0, 0],
-      [0, 0, 0, 1, 1, 0, 0, 0],
-    ],
-  },
-  // 3 — checker ribbon
-  {
-    topRatio: 0.1,
-    grid: [
-      [1, 0, 1, 0, 1, 0, 1, 0],
-      [0, 1, 0, 1, 0, 1, 0, 1],
-      [1, 0, 1, 0, 1, 0, 1, 0],
-      [0, 1, 0, 1, 0, 1, 0, 1],
-    ],
-  },
-  // 4 — diamond (float; open sky above)
-  {
-    topRatio: 0.2,
-    grid: [
-      [0, 0, 0, 2, 2, 0, 0, 0],
-      [0, 0, 2, 1, 1, 2, 0, 0],
-      [0, 2, 1, 1, 1, 1, 2, 0],
-      [0, 0, 2, 1, 1, 2, 0, 0],
-      [0, 0, 0, 2, 2, 0, 0, 0],
-    ],
-  },
-  // 5 — pyramid
-  {
-    topRatio: 0.08,
-    grid: [
-      [0, 0, 0, 2, 2, 0, 0, 0],
-      [0, 0, 1, 2, 2, 1, 0, 0],
-      [0, 1, 1, 2, 2, 1, 1, 0],
-      [1, 1, 1, 1, 1, 1, 1, 1],
-    ],
-  },
-  // 6 — twin towers (ball flies between / above)
-  {
-    topRatio: 0.12,
-    grid: [
-      [2, 2, 0, 0, 0, 0, 2, 2],
-      [2, 1, 0, 0, 0, 0, 1, 2],
-      [2, 1, 0, 0, 0, 0, 1, 2],
-      [2, 2, 1, 0, 0, 1, 2, 2],
-      [1, 1, 1, 0, 0, 1, 1, 1],
-    ],
-  },
-  // 7 — hollow ring (courtyard for ceiling bounces)
-  {
-    topRatio: 0.18,
-    grid: [
-      [2, 2, 2, 2, 2, 2, 2, 2],
-      [2, 0, 0, 0, 0, 0, 0, 2],
-      [2, 0, 0, 0, 0, 0, 0, 2],
-      [2, 0, 0, 1, 1, 0, 0, 2],
-      [2, 2, 1, 1, 1, 1, 2, 2],
-    ],
-  },
-  // 8 — stairs / diagonal
-  {
-    topRatio: 0.1,
-    grid: [
-      [3, 0, 0, 0, 0, 0, 0, 0],
-      [2, 3, 0, 0, 0, 0, 0, 0],
-      [1, 2, 3, 0, 0, 0, 0, 0],
-      [0, 1, 2, 3, 0, 0, 0, 0],
-      [0, 0, 1, 2, 3, 0, 0, 0],
-      [0, 0, 0, 1, 2, 3, 1, 1],
-    ],
-  },
-  // 9 — plus / cross (mid-air)
-  {
-    topRatio: 0.2,
-    grid: [
-      [0, 0, 0, 3, 3, 0, 0, 0],
-      [0, 0, 0, 2, 2, 0, 0, 0],
-      [3, 2, 2, 1, 1, 2, 2, 3],
-      [0, 0, 0, 2, 2, 0, 0, 0],
-      [0, 0, 0, 3, 3, 0, 0, 0],
-    ],
-  },
-  // 10 — space invader
-  {
-    topRatio: 0.14,
-    grid: [
-      [0, 0, 3, 0, 0, 3, 0, 0],
-      [0, 3, 2, 3, 3, 2, 3, 0],
-      [3, 2, 1, 2, 2, 1, 2, 3],
-      [3, 0, 2, 1, 1, 2, 0, 3],
-      [0, 0, 1, 0, 0, 1, 0, 0],
-      [0, 2, 0, 0, 0, 0, 2, 0],
-    ],
-  },
-  // 11 — heart
-  {
-    topRatio: 0.16,
-    grid: [
-      [0, 3, 3, 0, 0, 3, 3, 0],
-      [3, 2, 2, 3, 3, 2, 2, 3],
-      [3, 2, 1, 1, 1, 1, 2, 3],
-      [0, 3, 2, 1, 1, 2, 3, 0],
-      [0, 0, 3, 2, 2, 3, 0, 0],
-      [0, 0, 0, 3, 3, 0, 0, 0],
-    ],
-  },
-  // 12 — arch gateway (open tunnel under arch)
-  {
-    topRatio: 0.12,
-    grid: [
-      [0, 4, 3, 2, 2, 3, 4, 0],
-      [4, 3, 0, 0, 0, 0, 3, 4],
-      [4, 2, 0, 0, 0, 0, 2, 4],
-      [3, 2, 0, 0, 0, 0, 2, 3],
-      [2, 1, 1, 0, 0, 1, 1, 2],
-    ],
-  },
-  // 13 — chevron / zigzag bands (floating)
-  {
-    topRatio: 0.18,
-    grid: [
-      [0, 0, 4, 3, 3, 4, 0, 0],
-      [0, 4, 3, 0, 0, 3, 4, 0],
-      [4, 3, 0, 0, 0, 0, 3, 4],
-      [0, 2, 3, 0, 0, 3, 2, 0],
-      [0, 0, 2, 1, 1, 2, 0, 0],
-      [1, 1, 0, 0, 0, 0, 1, 1],
-    ],
-  },
-  // 14 — twin islands with centre channel
-  {
-    topRatio: 0.15,
-    grid: [
-      [4, 4, 3, 0, 0, 3, 4, 4],
-      [4, 3, 2, 0, 0, 2, 3, 4],
-      [3, 2, 1, 0, 0, 1, 2, 3],
-      [0, 0, 0, 0, 0, 0, 0, 0],
-      [2, 3, 2, 0, 0, 2, 3, 2],
-      [1, 2, 1, 0, 0, 1, 2, 1],
-    ],
-  },
-  // 15 — fortress with courtyard (finale)
-  {
-    topRatio: 0.1,
-    grid: [
-      [4, 4, 4, 4, 4, 4, 4, 4],
-      [4, 0, 0, 0, 0, 0, 0, 4],
-      [4, 0, 3, 2, 2, 3, 0, 4],
-      [4, 0, 2, 0, 0, 2, 0, 4],
-      [4, 0, 3, 2, 2, 3, 0, 4],
-      [4, 3, 2, 1, 1, 2, 3, 4],
-      [3, 2, 1, 1, 1, 1, 2, 3],
-    ],
-  },
-];
 
 function clampHp(v: number, cap: MaxHp): MaxHp {
   const n = Math.max(1, Math.min(cap, Math.min(4, v))) as MaxHp;
@@ -309,8 +129,15 @@ function spawnBurst(brick: Brick, brickW: number): BurstShard[] {
   return shards;
 }
 
-function buildStageBricks(width: number, height: number, stageIndex: number, hpCap: MaxHp): Brick[] {
-  const layout = STAGE_LAYOUTS[Math.min(STAGE_LAYOUTS.length - 1, stageIndex)]!;
+function buildStageBricks(
+  width: number,
+  height: number,
+  stageIndex: number,
+  difficulty: LevelKey,
+  hpCap: MaxHp,
+): Brick[] {
+  const pack = stagesForDifficulty(difficulty);
+  const layout: StageLayout = pack[Math.min(pack.length - 1, stageIndex)]!;
   const grid = layout.grid;
   const brickW = (width - 32) / COLS - 6;
   const rowPitch = BRICK_H + 8;
@@ -325,7 +152,7 @@ function buildStageBricks(width: number, height: number, stageIndex: number, hpC
       if (raw <= 0) continue;
       const maxHp = clampHp(raw, hpCap);
       list.push({
-        id: `b-${stageIndex}-${r}-${c}`,
+        id: `b-${difficulty}-${stageIndex}-${r}-${c}`,
         x: 16 + c * (brickW + 6),
         y: top + r * rowPitch,
         hp: maxHp,
@@ -498,7 +325,9 @@ export function BreakerGame({
   const { sfx } = useGameAudio(settings);
   const sfxRef = useRef(sfx);
   sfxRef.current = sfx;
-  const level = LEVELS[resolveLevel(settings)];
+  const difficulty = resolveLevel(settings);
+  const level = LEVELS[difficulty];
+  const totalStages = STAGES_PER_DIFFICULTY;
   const basePaddleW = Math.min(130, width * 0.3) * level.paddleSize;
   const paddleH = 14;
   const ballR = 8;
@@ -512,7 +341,7 @@ export function BreakerGame({
   const [paddleX, setPaddleX] = useState(width / 2 - basePaddleW / 2);
   const [balls, setBalls] = useState<Ball[]>(() => [makeBall(width, height, baseSpeed)]);
   const [bricks, setBricks] = useState<Brick[]>(() =>
-    buildStageBricks(width, height, 0, level.hpCap),
+    buildStageBricks(width, height, 0, difficulty, level.hpCap),
   );
   const [drops, setDrops] = useState<PowerDrop[]>([]);
   const [score, setScore] = useState(0);
@@ -818,14 +647,14 @@ export function BreakerGame({
         setScore(nextScore);
         sfxRef.current('brk_stage');
 
-        if (nextStage >= TOTAL_STAGES) {
+        if (nextStage >= totalStages) {
           finish();
           return;
         }
 
         stageRef.current = nextStage;
         setStage(nextStage);
-        const rebuilt = buildStageBricks(width, height, nextStage, level.hpCap);
+        const rebuilt = buildStageBricks(width, height, nextStage, difficulty, level.hpCap);
         bricksRef.current = rebuilt;
         setBricks(rebuilt);
         const speedBoost = baseSpeed * (1 + nextStage * 0.04);
@@ -855,7 +684,7 @@ export function BreakerGame({
 
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [basePaddleW, baseSpeed, brickW, height, level.hpCap, onGameOver, paused, width]);
+  }, [basePaddleW, baseSpeed, brickW, difficulty, height, level.hpCap, onGameOver, paused, totalStages, width]);
 
   const pan = Gesture.Pan()
     .runOnJS(true)
@@ -997,13 +826,13 @@ export function BreakerGame({
           ))}
 
           {/* Stage indicator — filled pips for current stage */}
-          {Array.from({ length: TOTAL_STAGES }).map((_, i) => (
+          {Array.from({ length: totalStages }).map((_, i) => (
             <Rect
               key={`st-${i}`}
-              x={width - 16 - (TOTAL_STAGES - 1 - i) * 7}
+              x={width - 14 - (totalStages - 1 - i) * 5.5}
               y={10}
-              width={5}
-              height={8}
+              width={4}
+              height={7}
               color={paddleColor}
               opacity={i <= stage ? 1 : 0.25}
             />
