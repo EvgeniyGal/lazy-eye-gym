@@ -1,7 +1,6 @@
 import { Canvas, Circle, Group, Path, Rect, Skia } from '@shopify/react-native-skia';
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
@@ -33,6 +32,10 @@ const LEVELS = {
 
 type LevelKey = keyof typeof LEVELS;
 
+const DECK_H = 108;
+const SHIP_R = 14;
+const THRUST = 210;
+
 function resolveLevel(settings: Record<string, string | number | boolean>): LevelKey {
   const raw = String(settings.difficulty ?? 'easy');
   if (raw === 'hard' || raw === 'extraHard') return raw;
@@ -62,10 +65,29 @@ function makeVerts(seed: number, r: number) {
   return verts;
 }
 
+/** Modular wrap — no off-screen dead zone. */
 function wrap(v: number, max: number) {
-  if (v < -40) return max + 40;
-  if (v > max + 40) return -40;
-  return v;
+  if (max <= 0) return 0;
+  const n = v % max;
+  return n < 0 ? n + max : n;
+}
+
+/** Draw copies near edges so silhouettes stay continuous while wrapping. */
+function edgeOffsets(x: number, y: number, r: number, w: number, h: number): { x: number; y: number }[] {
+  const pts: { x: number; y: number }[] = [{ x, y }];
+  const left = x < r;
+  const right = x > w - r;
+  const top = y < r;
+  const bottom = y > h - r;
+  if (left) pts.push({ x: x + w, y });
+  if (right) pts.push({ x: x - w, y });
+  if (top) pts.push({ x, y: y + h });
+  if (bottom) pts.push({ x, y: y - h });
+  if (left && top) pts.push({ x: x + w, y: y + h });
+  if (right && top) pts.push({ x: x - w, y: y + h });
+  if (left && bottom) pts.push({ x: x + w, y: y - h });
+  if (right && bottom) pts.push({ x: x - w, y: y - h });
+  return pts;
 }
 
 let seq = 0;
@@ -161,23 +183,25 @@ export function AsteroidsGame({
   const leftColor = colorForEye(palette, 'left');
   const rightColor = colorForEye(palette, 'right');
   const boardBg = palette.background;
+  const playH = Math.max(120, height - DECK_H);
 
   const [lives, setLives] = useState<number>(level.lives);
   const [score, setScore] = useState(0);
   const [destroyed, setDestroyed] = useState(0);
   const [ship, setShip] = useState({
     x: width / 2,
-    y: height / 2,
+    y: playH / 2,
     angle: -Math.PI / 2,
     vx: 0,
     vy: 0,
   });
   const [rocks, setRocks] = useState<Rock[]>(() =>
-    spawnRocks(level.rocks, width, height, level.speed, level.spin, width / 2, height / 2),
+    spawnRocks(level.rocks, width, playH, level.speed, level.spin, width / 2, playH / 2),
   );
   const [bullets, setBullets] = useState<Bullet[]>([]);
   const [invulnUntil, setInvulnUntil] = useState(0);
   const [thrustOn, setThrustOn] = useState(false);
+  const [padActive, setPadActive] = useState({ left: false, right: false, thrust: false, fire: false });
 
   const startMs = useRef(Date.now());
   const ended = useRef(false);
@@ -232,8 +256,8 @@ export function AsteroidsGame({
       let s = { ...shipRef.current };
       s.angle += rotateDir.current * 3.2 * dt;
       if (thrusting.current) {
-        s.vx += Math.cos(s.angle) * 180 * dt;
-        s.vy += Math.sin(s.angle) * 180 * dt;
+        s.vx += Math.cos(s.angle) * THRUST * dt;
+        s.vy += Math.sin(s.angle) * THRUST * dt;
         thrustSfxAcc.current += dt;
         if (thrustSfxAcc.current > 0.12) {
           thrustSfxAcc.current = 0;
@@ -248,7 +272,7 @@ export function AsteroidsGame({
         s.vy = (s.vy / spd) * 260;
       }
       s.x = wrap(s.x + s.vx * dt, width);
-      s.y = wrap(s.y + s.vy * dt, height);
+      s.y = wrap(s.y + s.vy * dt, playH);
 
       fireCd.current = Math.max(0, fireCd.current - dt);
       let nextBullets = [...bulletsRef.current];
@@ -270,7 +294,7 @@ export function AsteroidsGame({
         .map((b) => ({
           ...b,
           x: wrap(b.x + b.vx * dt, width),
-          y: wrap(b.y + b.vy * dt, height),
+          y: wrap(b.y + b.vy * dt, playH),
           life: b.life - dt,
         }))
         .filter((b) => b.life > 0);
@@ -278,7 +302,7 @@ export function AsteroidsGame({
       let nextRocks = rocksRef.current.map((r) => ({
         ...r,
         x: wrap(r.x + r.vx * dt, width),
-        y: wrap(r.y + r.vy * dt, height),
+        y: wrap(r.y + r.vy * dt, playH),
         angle: r.angle + r.spin * dt,
       }));
 
@@ -324,7 +348,7 @@ export function AsteroidsGame({
             setLives(left);
             invulnRef.current = now + 2000;
             setInvulnUntil(invulnRef.current);
-            s = { x: width / 2, y: height / 2, angle: -Math.PI / 2, vx: 0, vy: 0 };
+            s = { x: width / 2, y: playH / 2, angle: -Math.PI / 2, vx: 0, vy: 0 };
             sfxRef.current('ast_die');
             if (left <= 0) {
               finish();
@@ -339,7 +363,7 @@ export function AsteroidsGame({
         nextRocks = spawnRocks(
           level.rocks + 1,
           width,
-          height,
+          playH,
           level.speed * 1.08,
           level.spin,
           s.x,
@@ -364,41 +388,22 @@ export function AsteroidsGame({
 
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [height, level, onGameOver, paused, width]);
+  }, [level, onGameOver, paused, playH, width]);
+
+  const setRotate = (dir: -1 | 0 | 1) => {
+    rotateDir.current = dir;
+  };
 
   const setThrust = (on: boolean) => {
     thrusting.current = on;
     setThrustOn(on);
   };
 
-  const pan = Gesture.Pan()
-    .runOnJS(true)
-    .onBegin((e) => {
-      const dx = e.x - width / 2;
-      rotateDir.current = dx < -30 ? -1 : dx > 30 ? 1 : 0;
-      setThrust(e.y < height * 0.55);
-      wantFire.current = true;
-    })
-    .onUpdate((e) => {
-      const dx = e.x - width / 2;
-      rotateDir.current = Math.abs(dx) < 24 ? 0 : dx < 0 ? -1 : 1;
-      setThrust(e.y < height * 0.55);
-      wantFire.current = true;
-    })
-    .onEnd(() => {
-      rotateDir.current = 0;
-      setThrust(false);
-      wantFire.current = false;
-    });
+  const setFire = (on: boolean) => {
+    wantFire.current = on;
+    if (on) fireCd.current = 0;
+  };
 
-  const tap = Gesture.Tap()
-    .runOnJS(true)
-    .onEnd(() => {
-      wantFire.current = true;
-      fireCd.current = 0;
-    });
-
-  const gesture = Gesture.Simultaneous(pan, tap);
   const blink = Date.now() < invulnUntil && Math.floor(Date.now() / 120) % 2 === 0;
 
   const shipPath = Skia.PathBuilder.Make()
@@ -409,75 +414,171 @@ export function AsteroidsGame({
     .close()
     .detach();
 
+  const thrustPath = Skia.PathBuilder.Make()
+    .moveTo(-6, 0)
+    .lineTo(-16, 4)
+    .lineTo(-16, -4)
+    .close()
+    .detach();
+
+  const padStyle = (on: boolean) => ({
+    borderColor: shipColor,
+    backgroundColor: shipColor,
+    opacity: on ? 1 : 0.55,
+  });
+
   return (
-    <GestureDetector gesture={gesture}>
-      <View style={[styles.fill, { backgroundColor: boardBg }]}>
-        <Canvas style={{ width, height, backgroundColor: boardBg }}>
-          <Rect x={0} y={0} width={width} height={height} color={boardBg} />
+    <View style={[styles.fill, { backgroundColor: boardBg }]}>
+      <Canvas style={{ width, height: playH, backgroundColor: boardBg }}>
+        <Rect x={0} y={0} width={width} height={playH} color={boardBg} />
 
-          {rocks.map((r) => {
-            const fill = r.eye === 'left' ? leftColor : rightColor;
-            const bw = borderFor(r.size);
-            const path = rockPath(r);
-            return (
-              <Group
-                key={r.id}
-                transform={[
-                  { translateX: r.x },
-                  { translateY: r.y },
-                  { rotate: r.angle },
-                ]}
-              >
-                {bw > 0 ? (
-                  <Group>
-                    <Path path={path} color={fill} />
-                    <Group transform={[{ scale: Math.max(0.35, 1 - bw / radiusFor(r.size)) }]}>
-                      <Path path={path} color={boardBg} />
-                    </Group>
-                  </Group>
-                ) : (
-                  <Path path={path} color={fill} />
-                )}
-              </Group>
-            );
-          })}
-
-          {bullets.map((b) => (
-            <Circle key={b.id} cx={b.x} cy={b.y} r={2.5} color={shipColor} />
-          ))}
-
-          {!blink ? (
+        {rocks.map((r) => {
+          const fill = r.eye === 'left' ? leftColor : rightColor;
+          const bw = borderFor(r.size);
+          const path = rockPath(r);
+          const rad = radiusFor(r.size);
+          return edgeOffsets(r.x, r.y, rad, width, playH).map((p, i) => (
             <Group
-              transform={[
-                { translateX: ship.x },
-                { translateY: ship.y },
-                { rotate: ship.angle },
-              ]}
+              key={`${r.id}-${i}`}
+              transform={[{ translateX: p.x }, { translateY: p.y }, { rotate: r.angle }]}
             >
-              <Path path={shipPath} color={shipColor} />
-              {thrustOn ? (
-                <Path
-                  path={Skia.PathBuilder.Make()
-                    .moveTo(-6, 0)
-                    .lineTo(-16, 4)
-                    .lineTo(-16, -4)
-                    .close()
-                    .detach()}
-                  color={shipColor}
-                />
-              ) : null}
+              {bw > 0 ? (
+                <Group>
+                  <Path path={path} color={fill} />
+                  <Group transform={[{ scale: Math.max(0.35, 1 - bw / rad) }]}>
+                    <Path path={path} color={boardBg} />
+                  </Group>
+                </Group>
+              ) : (
+                <Path path={path} color={fill} />
+              )}
             </Group>
-          ) : null}
+          ));
+        })}
 
-          {Array.from({ length: lives }).map((_, i) => (
-            <Circle key={`life-${i}`} cx={16 + i * 14} cy={height - 14} r={5} color={shipColor} />
-          ))}
-        </Canvas>
+        {bullets.map((b) => (
+          <Circle key={b.id} cx={b.x} cy={b.y} r={2.5} color={shipColor} />
+        ))}
+
+        {!blink
+          ? edgeOffsets(ship.x, ship.y, SHIP_R, width, playH).map((p, i) => (
+              <Group
+                key={`ship-${i}`}
+                transform={[{ translateX: p.x }, { translateY: p.y }, { rotate: ship.angle }]}
+              >
+                <Path path={shipPath} color={shipColor} />
+                {thrustOn ? <Path path={thrustPath} color={shipColor} /> : null}
+              </Group>
+            ))
+          : null}
+
+        {Array.from({ length: lives }).map((_, i) => (
+          <Circle key={`life-${i}`} cx={16 + i * 14} cy={playH - 14} r={5} color={shipColor} />
+        ))}
+      </Canvas>
+
+      <View style={[styles.deck, { height: DECK_H, width, backgroundColor: boardBg }]}>
+        <View style={styles.deckLeft}>
+          <Pressable
+            style={[styles.pad, styles.padRotate, padStyle(padActive.left)]}
+            onPressIn={() => {
+              setRotate(-1);
+              setPadActive((p) => ({ ...p, left: true }));
+            }}
+            onPressOut={() => {
+              if (rotateDir.current === -1) setRotate(0);
+              setPadActive((p) => ({ ...p, left: false }));
+            }}
+          >
+            <Text style={[styles.padLabel, { color: boardBg }]}>◀</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.pad, styles.padThrust, padStyle(padActive.thrust)]}
+            onPressIn={() => {
+              setThrust(true);
+              setPadActive((p) => ({ ...p, thrust: true }));
+            }}
+            onPressOut={() => {
+              setThrust(false);
+              setPadActive((p) => ({ ...p, thrust: false }));
+            }}
+          >
+            <Text style={[styles.padLabel, { color: boardBg }]}>▲</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.pad, styles.padRotate, padStyle(padActive.right)]}
+            onPressIn={() => {
+              setRotate(1);
+              setPadActive((p) => ({ ...p, right: true }));
+            }}
+            onPressOut={() => {
+              if (rotateDir.current === 1) setRotate(0);
+              setPadActive((p) => ({ ...p, right: false }));
+            }}
+          >
+            <Text style={[styles.padLabel, { color: boardBg }]}>▶</Text>
+          </Pressable>
+        </View>
+
+        <Pressable
+          style={[styles.pad, styles.padFire, padStyle(padActive.fire)]}
+          onPressIn={() => {
+            setFire(true);
+            setPadActive((p) => ({ ...p, fire: true }));
+          }}
+          onPressOut={() => {
+            setFire(false);
+            setPadActive((p) => ({ ...p, fire: false }));
+          }}
+        >
+          <Text style={[styles.padLabel, styles.fireLabel, { color: boardBg }]}>FIRE</Text>
+        </Pressable>
       </View>
-    </GestureDetector>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  deck: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    paddingTop: 6,
+    gap: 12,
+  },
+  deckLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  pad: {
+    borderWidth: 2,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  padRotate: {
+    width: 56,
+    height: 64,
+  },
+  padThrust: {
+    width: 56,
+    height: 72,
+  },
+  padFire: {
+    width: 96,
+    height: 80,
+  },
+  padLabel: {
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  fireLabel: {
+    fontSize: 16,
+    letterSpacing: 1,
+  },
 });
