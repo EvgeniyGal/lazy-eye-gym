@@ -274,7 +274,6 @@ export const uk = {
       metricLabel: 'Знищено цеглин',
       field_difficulty: 'Рівень',
       field_sound: 'Звуки гри',
-      field_paddleEye: 'Око ракетки (початок)',
     },
     snake: {
       title: 'Змійка Фьюжн',

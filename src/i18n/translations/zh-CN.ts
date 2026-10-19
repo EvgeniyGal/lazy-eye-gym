@@ -261,7 +261,6 @@ export const zhCN = {
       metricLabel: '已清除砖块',
       field_difficulty: '难度',
       field_sound: '游戏音效',
-      field_paddleEye: '球拍眼睛（起始）',
     },
     snake: {
       title: '贪吃蛇融合',

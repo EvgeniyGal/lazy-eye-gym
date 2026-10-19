@@ -281,7 +281,6 @@ export const es = {
       metricLabel: 'Ladrillos destruidos',
       field_difficulty: 'Nivel',
       field_sound: 'Sonidos del juego',
-      field_paddleEye: 'Ojo de la pala (inicio)',
     },
     snake: {
       title: 'Snake Fusion',

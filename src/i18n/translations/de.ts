@@ -281,7 +281,6 @@ export const de = {
       metricLabel: 'Zerstörte Steine',
       field_difficulty: 'Level',
       field_sound: 'Spielsounds',
-      field_paddleEye: 'Auge für den Schläger (Start)',
     },
     snake: {
       title: 'Snake Fusion',

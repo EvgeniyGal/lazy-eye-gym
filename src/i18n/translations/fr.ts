@@ -282,7 +282,6 @@ export const fr = {
       metricLabel: 'Briques détruites',
       field_difficulty: 'Niveau',
       field_sound: 'Sons du jeu',
-      field_paddleEye: 'Œil de la raquette (départ)',
     },
     snake: {
       title: 'Snake Fusion',

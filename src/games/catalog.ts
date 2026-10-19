@@ -200,7 +200,6 @@ export const GAMES: GameDefinition[] = [
     defaultSettings: {
       difficulty: 'easy',
       sound: true,
-      paddleEye: 'left',
     },
     fields: [
       {
@@ -217,15 +216,6 @@ export const GAMES: GameDefinition[] = [
         key: 'sound',
         label: 'Game sounds',
         type: 'toggle',
-      },
-      {
-        key: 'paddleEye',
-        label: 'Paddle eye (start)',
-        type: 'eye',
-        options: [
-          { label: 'Left', value: 'left' },
-          { label: 'Right', value: 'right' },
-        ],
       },
     ],
   },

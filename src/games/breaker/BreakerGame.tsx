@@ -440,7 +440,6 @@ export function BreakerGame({
   const ballR = 8;
   const baseSpeed = 260 * level.speed;
   const startLives = level.lives;
-  const startPaddleEye = (settings.paddleEye as EyeSide) || 'left';
 
   const brickW = (width - 32) / COLS - 6;
 
@@ -462,8 +461,8 @@ export function BreakerGame({
   const [lasers, setLasers] = useState<{ id: string; x: number; y: number }[]>([]);
   const [bursts, setBursts] = useState<BurstShard[]>([]);
   const [flashes, setFlashes] = useState<HitFlash[]>([]);
-  const [paddleEye, setPaddleEye] = useState<EyeSide>(startPaddleEye);
-  const [ballEye, setBallEye] = useState<EyeSide>(startPaddleEye === 'left' ? 'right' : 'left');
+  const [paddleEye, setPaddleEye] = useState<EyeSide>('left');
+  const [ballEye, setBallEye] = useState<EyeSide>('right');
 
   const pointerX = useRef(width / 2);
   const startMs = useRef(Date.now());

@@ -275,7 +275,6 @@ export const en = {
       metricLabel: 'Bricks cleared',
       field_difficulty: 'Level',
       field_sound: 'Game sounds',
-      field_paddleEye: 'Paddle eye (start)',
     },
     snake: {
       title: 'Snake Fusion',
