@@ -466,7 +466,7 @@ export function BreakerGame({
       if (isLaser) {
         laserCooldown.current -= dt;
         if (laserCooldown.current <= 0) {
-          laserCooldown.current = 0.45;
+          laserCooldown.current = 1.1;
           const inset = 6;
           dropSeq += 1;
           nextLasers.push({ id: `lz-${dropSeq}`, x: px + inset, y: py });
@@ -602,7 +602,7 @@ export function BreakerGame({
               vx: src.vx * 0.85,
               vy: src.vy * 0.95,
             });
-          } else if (d.kind === 'laser') nextP.laserUntil = now + 5000;
+          } else if (d.kind === 'laser') nextP.laserUntil = now + 2800;
           else if (d.kind === 'wide') nextP.wideUntil = now + 10000;
           else if (d.kind === 'slow') nextP.slowUntil = now + 10000;
           else if (d.kind === 'swap') {
