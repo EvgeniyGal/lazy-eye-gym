@@ -1,18 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GameSettingsForm } from '@/src/components/GameSettingsForm';
 import { Card, HeaderBar, PrimaryButton, Screen, StatBox, Subtitle, Title } from '@/src/components/ui';
-import { getBestMetric, getBestScore, listSessionsForGame, type GameSession } from '@/src/db/sessions';
+import {
+  countSessionsForGame,
+  getBestMetric,
+  getBestScore,
+  listSessionsForGame,
+  type GameSession,
+} from '@/src/db/sessions';
 import type { GameId } from '@/src/games/catalog';
 import { useT } from '@/src/i18n/I18nProvider';
 import { getLocalizedGame } from '@/src/i18n/localizeCatalog';
 import { useAppStore } from '@/src/state/AppStore';
 import { useColors } from '@/src/theme/ThemeProvider';
 import { spacing } from '@/src/theme/tokens';
+
+const TOP_PAGE_SIZE = 10;
 
 export default function GameDetailScreen() {
   const colors = useColors();
@@ -43,9 +51,19 @@ export default function GameDetailScreen() {
           marginBottom: 4,
         },
         historyRow: {
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: spacing.md,
           paddingVertical: spacing.md,
           borderBottomWidth: StyleSheet.hairlineWidth,
           borderBottomColor: colors.outlineVariant,
+        },
+        rank: {
+          color: colors.onSurfaceVariant,
+          fontWeight: '700',
+          fontSize: 13,
+          minWidth: 28,
+          paddingTop: 2,
         },
         historyScore: {
           color: colors.onSurface,
@@ -55,6 +73,19 @@ export default function GameDetailScreen() {
           color: colors.onSurfaceVariant,
           fontSize: 12,
           marginTop: 4,
+        },
+        loadMore: {
+          marginTop: spacing.md,
+          paddingVertical: spacing.md,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 12,
+          backgroundColor: colors.surfaceHigh,
+        },
+        loadMoreText: {
+          color: colors.primary,
+          fontWeight: '700',
+          fontSize: 14,
         },
       }),
     [colors],
@@ -67,7 +98,9 @@ export default function GameDetailScreen() {
   const { getGameSettings, setGameSettings } = useAppStore();
   const [best, setBest] = useState(0);
   const [metric, setMetric] = useState(0);
-  const [history, setHistory] = useState<GameSession[]>([]);
+  const [topScores, setTopScores] = useState<GameSession[]>([]);
+  const [totalScores, setTotalScores] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const settings = useMemo(
     () => (game ? getGameSettings(game.id) : {}),
@@ -80,10 +113,26 @@ export default function GameDetailScreen() {
       void (async () => {
         setBest(await getBestScore(game.id));
         setMetric(await getBestMetric(game.id));
-        setHistory(await listSessionsForGame(game.id, 20));
+        const [scores, total] = await Promise.all([
+          listSessionsForGame(game.id, TOP_PAGE_SIZE, 0),
+          countSessionsForGame(game.id),
+        ]);
+        setTopScores(scores);
+        setTotalScores(total);
       })();
     }, [game]),
   );
+
+  const loadMore = useCallback(async () => {
+    if (!game || loadingMore || topScores.length >= totalScores) return;
+    setLoadingMore(true);
+    try {
+      const next = await listSessionsForGame(game.id, TOP_PAGE_SIZE, topScores.length);
+      setTopScores((prev) => [...prev, ...next]);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [game, loadingMore, topScores.length, totalScores]);
 
   if (!game) {
     return (
@@ -95,6 +144,8 @@ export default function GameDetailScreen() {
       </Screen>
     );
   }
+
+  const canLoadMore = topScores.length < totalScores;
 
   return (
     <Screen>
@@ -132,27 +183,43 @@ export default function GameDetailScreen() {
         />
 
         <Card>
-          <Text style={styles.section}>{t('gameDetail.history')}</Text>
-          {history.length === 0 ? (
-            <Subtitle>{t('gameDetail.historyEmpty')}</Subtitle>
+          <Text style={styles.section}>{t('gameDetail.topScores')}</Text>
+          {topScores.length === 0 ? (
+            <Subtitle>{t('gameDetail.topScoresEmpty')}</Subtitle>
           ) : (
-            history.map((session) => (
-              <View key={session.id} style={styles.historyRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.historyScore}>
-                    {t('gameDetail.historyScore', { score: session.score })}
-                  </Text>
-                  <Text style={styles.historyMeta}>
-                    {t('gameDetail.historyMeta', {
-                      when: new Date(session.endedAt).toLocaleString(),
-                      duration: session.durationSec,
-                      metricLabel: game.metricLabel,
-                      metric: session.bestMetric,
-                    })}
-                  </Text>
+            <>
+              {topScores.map((session, index) => (
+                <View key={session.id} style={styles.historyRow}>
+                  <Text style={styles.rank}>{t('gameDetail.topScoresRank', { rank: index + 1 })}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.historyScore}>
+                      {t('gameDetail.historyScore', { score: session.score })}
+                    </Text>
+                    <Text style={styles.historyMeta}>
+                      {t('gameDetail.historyMeta', {
+                        when: new Date(session.endedAt).toLocaleString(),
+                        duration: session.durationSec,
+                        metricLabel: game.metricLabel,
+                        metric: session.bestMetric,
+                      })}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            ))
+              ))}
+              {canLoadMore ? (
+                <Pressable
+                  onPress={() => void loadMore()}
+                  disabled={loadingMore}
+                  style={({ pressed }) => [styles.loadMore, pressed && { opacity: 0.85 }]}
+                >
+                  {loadingMore ? (
+                    <ActivityIndicator color={colors.primary} />
+                  ) : (
+                    <Text style={styles.loadMoreText}>{t('gameDetail.loadMore')}</Text>
+                  )}
+                </Pressable>
+              ) : null}
+            </>
           )}
         </Card>
         <View style={{ height: spacing.xxl }} />

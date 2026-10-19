@@ -72,13 +72,27 @@ export async function insertSession(
   return session;
 }
 
-export async function listSessionsForGame(gameId: string, limit = 50): Promise<GameSession[]> {
+export async function listSessionsForGame(
+  gameId: string,
+  limit = 50,
+  offset = 0,
+): Promise<GameSession[]> {
   const db = await getDb();
   return db.getAllAsync<GameSession>(
-    `SELECT * FROM sessions WHERE gameId = ? ORDER BY endedAt DESC LIMIT ?`,
+    `SELECT * FROM sessions WHERE gameId = ? ORDER BY score DESC, endedAt DESC LIMIT ? OFFSET ?`,
     gameId,
     limit,
+    offset,
   );
+}
+
+export async function countSessionsForGame(gameId: string): Promise<number> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ n: number }>(
+    `SELECT COUNT(*) as n FROM sessions WHERE gameId = ?`,
+    gameId,
+  );
+  return row?.n ?? 0;
 }
 
 export async function getBestScore(gameId: string): Promise<number> {

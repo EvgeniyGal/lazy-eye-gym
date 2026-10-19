@@ -44,12 +44,21 @@ export async function insertSession(
   return session;
 }
 
-export async function listSessionsForGame(gameId: string, limit = 50): Promise<GameSession[]> {
+export async function listSessionsForGame(
+  gameId: string,
+  limit = 50,
+  offset = 0,
+): Promise<GameSession[]> {
   const all = await readAll();
   return all
     .filter((s) => s.gameId === gameId)
-    .sort((a, b) => b.endedAt.localeCompare(a.endedAt))
-    .slice(0, limit);
+    .sort((a, b) => b.score - a.score || b.endedAt.localeCompare(a.endedAt))
+    .slice(offset, offset + limit);
+}
+
+export async function countSessionsForGame(gameId: string): Promise<number> {
+  const all = await readAll();
+  return all.filter((s) => s.gameId === gameId).length;
 }
 
 export async function getBestScore(gameId: string): Promise<number> {

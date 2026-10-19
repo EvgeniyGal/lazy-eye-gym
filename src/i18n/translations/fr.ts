@@ -167,9 +167,11 @@ export const fr = {
     setup: 'Configuration du jeu',
     setupHint: 'Niveau, couleurs et rôles des yeux pour ce mode d’entraînement.',
     play: 'Jouer à %{name}',
-    history: 'Historique des séances',
-    historyEmpty:
-      'Aucune séance pour l’instant. Jouez une partie pour commencer votre historique local.',
+    topScores: 'Meilleurs scores',
+    topScoresEmpty:
+      'Aucun score pour l’instant. Jouez une partie pour commencer votre classement local.',
+    topScoresRank: '#%{rank}',
+    loadMore: 'Charger plus',
     historyScore: 'Score %{score}',
     historyMeta: '%{when} · %{duration} s · %{metricLabel} %{metric}',
   },
