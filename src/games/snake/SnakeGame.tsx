@@ -41,11 +41,23 @@ export function SnakeGame({
   const { sfx } = useGameAudio(settings);
   const sfxRef = useRef(sfx);
   sfxRef.current = sfx;
-  const grid = Number(settings.gridSize ?? 16);
+  const difficulty = (() => {
+    const raw = String(settings.difficulty ?? 'easy');
+    if (raw === 'hard') return { speed: 1.15, gridSize: 16 } as const;
+    if (raw === 'extraHard') return { speed: 1.55, gridSize: 20 } as const;
+    return { speed: 0.75, gridSize: 12 } as const;
+  })();
+  const grid = difficulty.gridSize;
   const wrap = Boolean(settings.wrap);
-  const baseTickMs = 180 / Number(settings.speed ?? 1);
-  const gridEye = (settings.gridEye as EyeSide) || 'left';
-  const snakeEye = (settings.snakeEye as EyeSide) || 'right';
+  const baseTickMs = 180 / difficulty.speed;
+  // One setup control swaps both channels; snake always uses the opposite eye.
+  const gridEye: EyeSide = (() => {
+    const channels = settings.channels;
+    if (channels === 'gridRight') return 'right';
+    if (channels === 'gridLeft') return 'left';
+    return settings.gridEye === 'right' ? 'right' : 'left';
+  })();
+  const snakeEye: EyeSide = gridEye === 'left' ? 'right' : 'left';
   const gridColor = colorForEye(palette, gridEye);
   const snakeColor = colorForEye(palette, snakeEye);
   const boardBg = palette.background;
