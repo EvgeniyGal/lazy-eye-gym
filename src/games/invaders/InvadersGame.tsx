@@ -27,9 +27,17 @@ type Alien = {
   alive: boolean;
 };
 
-type Bullet = { id: string; x: number; y: number; vy: number; friendly: boolean };
+type Bullet = {
+  id: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  friendly: boolean;
+  rocket?: boolean;
+};
 
-type PowerKind = 'repulsor' | 'shield' | 'overdrive';
+type PowerKind = 'repulsor' | 'shield' | 'overdrive' | 'rocket' | 'bomb' | 'swap';
 
 type PowerDrop = {
   id: string;
@@ -49,9 +57,22 @@ type Bunker = {
 };
 
 const COLS = 8;
-const ORB_R = 14;
+const ORB_R = 16;
 const OVERDRIVE_MS = 6000;
-const POWER_KINDS: PowerKind[] = ['repulsor', 'shield', 'overdrive'];
+const DROP_FALL = 70;
+const POWER_KINDS: PowerKind[] = ['repulsor', 'shield', 'overdrive', 'rocket', 'bomb', 'swap'];
+
+/** Chance a destroyed alien drops a power orb (any kind can drop). */
+function dropChanceForKind(kind: AlienKind): number {
+  if (kind === 4) return 0.55;
+  if (kind === 3) return 0.42;
+  if (kind === 2) return 0.28;
+  return 0.16;
+}
+
+function pickPowerKind(): PowerKind {
+  return POWER_KINDS[Math.floor(Math.random() * POWER_KINDS.length)]!;
+}
 
 const LEVELS = {
   easy: { speed: 28, bombEvery: 2.4, lives: 5, fireMs: 580 },
@@ -185,7 +206,6 @@ function alienPath(kind: AlienKind, x: number, y: number, cell: number) {
 
 function PowerIcon({ kind, cx, cy, cut }: { kind: PowerKind; cx: number; cy: number; cut: string }) {
   if (kind === 'repulsor') {
-    // Upward arrow
     return (
       <Path
         path={Skia.PathBuilder.Make()
@@ -218,20 +238,66 @@ function PowerIcon({ kind, cx, cy, cut }: { kind: PowerKind; cx: number; cy: num
       />
     );
   }
-  // Overdrive — bolt diamond
+  if (kind === 'overdrive') {
+    return (
+      <Path
+        path={Skia.PathBuilder.Make()
+          .moveTo(cx, cy - 8)
+          .lineTo(cx + 5, cy)
+          .lineTo(cx + 1, cy)
+          .lineTo(cx + 4, cy + 8)
+          .lineTo(cx - 5, cy)
+          .lineTo(cx - 1, cy)
+          .close()
+          .detach()}
+        color={cut}
+      />
+    );
+  }
+  if (kind === 'rocket') {
+    // Pointed missile
+    return (
+      <Path
+        path={Skia.PathBuilder.Make()
+          .moveTo(cx, cy - 9)
+          .lineTo(cx + 5, cy - 1)
+          .lineTo(cx + 3, cy - 1)
+          .lineTo(cx + 3, cy + 7)
+          .lineTo(cx - 3, cy + 7)
+          .lineTo(cx - 3, cy - 1)
+          .lineTo(cx - 5, cy - 1)
+          .close()
+          .detach()}
+        color={cut}
+      />
+    );
+  }
+  if (kind === 'bomb') {
+    return (
+      <Group>
+        <Circle cx={cx} cy={cy + 1} r={6.5} color={cut} />
+        <Rect x={cx - 1.5} y={cy - 9} width={3} height={5} color={cut} />
+      </Group>
+    );
+  }
+  // swap ↔ opposing arrows
+  const left = Skia.PathBuilder.Make()
+    .moveTo(cx - 9, cy)
+    .lineTo(cx - 1, cy - 7)
+    .lineTo(cx - 1, cy + 7)
+    .close()
+    .detach();
+  const right = Skia.PathBuilder.Make()
+    .moveTo(cx + 9, cy)
+    .lineTo(cx + 1, cy - 7)
+    .lineTo(cx + 1, cy + 7)
+    .close()
+    .detach();
   return (
-    <Path
-      path={Skia.PathBuilder.Make()
-        .moveTo(cx, cy - 8)
-        .lineTo(cx + 5, cy)
-        .lineTo(cx + 1, cy)
-        .lineTo(cx + 4, cy + 8)
-        .lineTo(cx - 5, cy)
-        .lineTo(cx - 1, cy)
-        .close()
-        .detach()}
-      color={cut}
-    />
+    <Group>
+      <Path path={left} color={cut} />
+      <Path path={right} color={cut} />
+    </Group>
   );
 }
 
@@ -253,7 +319,7 @@ export function InvadersGame({
   const difficulty = resolveLevel(settings);
   const level = LEVELS[difficulty];
   const totalStages = STAGES_PER_DIFFICULTY;
-  const shipEye = (settings.shipEye as EyeSide) || 'left';
+  const [shipEye, setShipEye] = useState<EyeSide>((settings.shipEye as EyeSide) || 'left');
   const focusEye: EyeSide = shipEye === 'left' ? 'right' : 'left';
   const shipColor = colorForEye(palette, shipEye);
   const leftColor = colorForEye(palette, 'left');
@@ -283,6 +349,7 @@ export function InvadersGame({
   const [pulse, setPulse] = useState(0);
   const [hasShield, setHasShield] = useState(false);
   const [overdriveUntil, setOverdriveUntil] = useState(0);
+  const [bombFlash, setBombFlash] = useState(0);
 
   const startMs = useRef(Date.now());
   const ended = useRef(false);
@@ -295,6 +362,8 @@ export function InvadersGame({
   const fireCd = useRef(0);
   const pointerX = useRef(width / 2);
   const wantFire = useRef(false);
+  const killsSinceDrop = useRef(0);
+  const shipEyeRef = useRef(shipEye);
 
   const aliensRef = useRef(aliens);
   const bulletsRef = useRef(bullets);
@@ -321,6 +390,7 @@ export function InvadersGame({
   shipXRef.current = shipX;
   shieldRef.current = hasShield;
   overdriveRef.current = overdriveUntil;
+  shipEyeRef.current = shipEye;
 
   const overdriveActive = Date.now() < overdriveUntil;
   const shipW = baseShipW * (overdriveActive ? 1.45 : 1);
@@ -374,7 +444,7 @@ export function InvadersGame({
         seq += 1;
         bulletsRef.current = [
           ...bulletsRef.current,
-          { id: `b-${seq}`, x: sx + curShipW / 2, y: shipY, vy: -420, friendly: true },
+          { id: `b-${seq}`, x: sx + curShipW / 2, y: shipY, vx: 0, vy: -420, friendly: true },
         ];
         sfxRef.current('inv_shoot');
       }
@@ -406,11 +476,11 @@ export function InvadersGame({
 
       bombAcc.current += dt;
       let nextBullets = bulletsRef.current
-        .map((b) => ({ ...b, y: b.y + b.vy * dt }))
-        .filter((b) => b.y > -20 && b.y < height + 20);
+        .map((b) => ({ ...b, x: b.x + b.vx * dt, y: b.y + b.vy * dt }))
+        .filter((b) => b.y > -40 && b.y < height + 20 && b.x > -40 && b.x < width + 40);
 
       let nextDrops = dropsRef.current
-        .map((d) => ({ ...d, y: d.y + 90 * dt }))
+        .map((d) => ({ ...d, y: d.y + DROP_FALL * dt }))
         .filter((d) => d.y < height + 30);
 
       let nextBunkers = [...bunkersRef.current];
@@ -425,6 +495,7 @@ export function InvadersGame({
             id: `bb-${seq}`,
             x: originX.current + a.col * cell + cell / 2,
             y: originY.current + a.row * cell + cell,
+            vx: 0,
             vy: 180 + stageRef.current * 10,
             friendly: false,
           });
@@ -438,14 +509,50 @@ export function InvadersGame({
         pickFocus(nextAliens.filter((a) => a.alive));
       }
 
+      let nextScore = scoreRef.current;
+      let nextKilled = killedRef.current;
+
+      const applyAlienDamage = (
+        pool: Alien[],
+        pred: (a: Alien) => boolean,
+        amount: number,
+      ): Alien[] =>
+        pool.map((a) => {
+          if (!a.alive || !pred(a)) return a;
+          const hp = a.hp - amount;
+          if (hp <= 0) {
+            const bonus = a.id === focusRef.current ? 40 : 0;
+            nextScore += 10 * a.maxHp + bonus;
+            nextKilled += 1;
+            if (a.id === focusRef.current) {
+              focusRef.current = null;
+              setFocusId(null);
+            }
+            return { ...a, hp: 0, alive: false };
+          }
+          return { ...a, hp };
+        });
+
+      const spawnDrop = (ax: number, ay: number, eye: EyeSide) => {
+        seq += 1;
+        nextDrops.push({
+          id: `d-${seq}`,
+          kind: pickPowerKind(),
+          eye,
+          x: ax + cell / 2,
+          y: ay + cell / 2,
+        });
+        killsSinceDrop.current = 0;
+      };
+
       // Power pickup
       const remainingDrops: PowerDrop[] = [];
       for (const d of nextDrops) {
         if (
           d.y + ORB_R >= shipY &&
           d.y - ORB_R <= shipY + shipH &&
-          d.x >= sx - 4 &&
-          d.x <= sx + curShipW + 4
+          d.x >= sx - 8 &&
+          d.x <= sx + curShipW + 8
         ) {
           if (d.kind === 'repulsor') {
             originY.current = Math.max(24, originY.current - cell);
@@ -456,7 +563,40 @@ export function InvadersGame({
             const until = now + OVERDRIVE_MS;
             overdriveRef.current = until;
             setOverdriveUntil(until);
+          } else if (d.kind === 'rocket') {
+            const cx = sx + curShipW / 2;
+            const spreads = [-110, -55, 0, 55, 110];
+            for (const vx of spreads) {
+              seq += 1;
+              nextBullets.push({
+                id: `rk-${seq}`,
+                x: cx,
+                y: shipY - 4,
+                vx,
+                vy: -520,
+                friendly: true,
+                rocket: true,
+              });
+            }
+            sfxRef.current('inv_shoot');
+          } else if (d.kind === 'bomb') {
+            const shipCol = Math.round((sx + curShipW / 2 - originX.current) / cell);
+            nextAliens = applyAlienDamage(
+              nextAliens,
+              (a) => Math.abs(a.col - shipCol) <= 1,
+              2,
+            );
+            setBombFlash(0.55);
+            sfxRef.current('inv_bomb');
+          } else if (d.kind === 'swap') {
+            const nextEye: EyeSide = shipEyeRef.current === 'left' ? 'right' : 'left';
+            shipEyeRef.current = nextEye;
+            setShipEye(nextEye);
+            nextAliens = nextAliens.map((a) =>
+              a.alive ? { ...a, eye: a.eye === 'left' ? 'right' : 'left' } : a,
+            );
           }
+          nextScore += 15;
           sfxRef.current('inv_hit');
           continue;
         }
@@ -464,8 +604,6 @@ export function InvadersGame({
       }
       nextDrops = remainingDrops;
 
-      let nextScore = scoreRef.current;
-      let nextKilled = killedRef.current;
       const kept: Bullet[] = [];
 
       const hitBunker = (bx: number, by: number, friendly: boolean) => {
@@ -508,13 +646,20 @@ export function InvadersGame({
         }
 
         let hit = false;
+        const dmg = b.rocket ? 2 : 1;
+        const pad = b.rocket ? 4 : 0;
         nextAliens = nextAliens.map((a) => {
           if (!a.alive || hit) return a;
           const ax = originX.current + a.col * cell;
           const ay = originY.current + a.row * cell;
-          if (b.x >= ax && b.x <= ax + cell && b.y >= ay && b.y <= ay + cell * 0.8) {
+          if (
+            b.x >= ax - pad &&
+            b.x <= ax + cell + pad &&
+            b.y >= ay - pad &&
+            b.y <= ay + cell * 0.8 + pad
+          ) {
             hit = true;
-            const hp = a.hp - 1;
+            const hp = a.hp - dmg;
             if (hp <= 0) {
               const bonus = a.id === focusRef.current ? 40 : 0;
               nextScore += 10 * a.maxHp + bonus;
@@ -524,15 +669,10 @@ export function InvadersGame({
                 focusRef.current = null;
                 setFocusId(null);
               }
-              if ((a.kind === 3 || a.kind === 4) && Math.random() < 0.18) {
-                seq += 1;
-                nextDrops.push({
-                  id: `d-${seq}`,
-                  kind: POWER_KINDS[Math.floor(Math.random() * POWER_KINDS.length)]!,
-                  eye: Math.random() > 0.5 ? 'left' : 'right',
-                  x: ax + cell / 2,
-                  y: ay + cell / 2,
-                });
+              killsSinceDrop.current += 1;
+              const forceDrop = killsSinceDrop.current >= 4;
+              if (forceDrop || Math.random() < dropChanceForKind(a.kind)) {
+                spawnDrop(ax, ay, a.eye);
               }
               return { ...a, hp: 0, alive: false };
             }
@@ -575,6 +715,8 @@ export function InvadersGame({
         focusRef.current = null;
         setFocusId(null);
         focusAcc.current = 5;
+        killsSinceDrop.current = 0;
+        nextDrops = [];
       }
 
       aliensRef.current = nextAliens;
@@ -589,6 +731,7 @@ export function InvadersGame({
       setBunkers(nextBunkers);
       setScore(nextScore);
       setKilled(nextKilled);
+      setBombFlash((f) => (f > 0 ? Math.max(0, f - dt * 1.4) : 0));
       setPulse((p) => (p + dt * 4) % (Math.PI * 2));
 
       frame = requestAnimationFrame(tick);
@@ -686,22 +829,40 @@ export function InvadersGame({
             const fill = d.eye === 'left' ? leftColor : rightColor;
             return (
               <Group key={d.id}>
+                <Circle cx={d.x} cy={d.y} r={ORB_R + 3} color={fill} opacity={0.35} />
                 <Circle cx={d.x} cy={d.y} r={ORB_R} color={fill} />
                 <PowerIcon kind={d.kind} cx={d.x} cy={d.y} cut={boardBg} />
               </Group>
             );
           })}
 
-          {bullets.map((b) => (
-            <Rect
-              key={b.id}
-              x={b.x - 2}
-              y={b.y - 6}
-              width={4}
-              height={10}
-              color={b.friendly ? shipColor : focusColor}
-            />
-          ))}
+          {bullets.map((b) =>
+            b.rocket ? (
+              <Path
+                key={b.id}
+                path={Skia.PathBuilder.Make()
+                  .moveTo(b.x, b.y - 10)
+                  .lineTo(b.x + 5, b.y + 4)
+                  .lineTo(b.x - 5, b.y + 4)
+                  .close()
+                  .detach()}
+                color={shipColor}
+              />
+            ) : (
+              <Rect
+                key={b.id}
+                x={b.x - 2}
+                y={b.y - 6}
+                width={4}
+                height={10}
+                color={b.friendly ? shipColor : focusColor}
+              />
+            ),
+          )}
+
+          {bombFlash > 0 ? (
+            <Rect x={0} y={0} width={width} height={height} color={focusColor} opacity={bombFlash * 0.35} />
+          ) : null}
 
           <RoundedRect x={shipX} y={shipY} width={shipW} height={shipH} r={4} color={shipColor} />
           <Rect x={shipX + shipW / 2 - 2} y={shipY - 6} width={4} height={8} color={shipColor} />
