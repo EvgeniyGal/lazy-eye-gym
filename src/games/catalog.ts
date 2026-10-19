@@ -234,6 +234,7 @@ export const GAMES: GameDefinition[] = [
     metricLabel: 'Food eaten',
     defaultSettings: {
       difficulty: 'easy',
+      boardSize: 'large',
       wrap: false,
       sound: true,
       channels: 'gridLeft',
@@ -247,6 +248,16 @@ export const GAMES: GameDefinition[] = [
           { label: 'Easy', value: 'easy' },
           { label: 'Hard', value: 'hard' },
           { label: 'Extra hard', value: 'extraHard' },
+        ],
+      },
+      {
+        key: 'boardSize',
+        label: 'Board size',
+        type: 'segment',
+        options: [
+          { label: 'Small', value: 'small' },
+          { label: 'Large', value: 'large' },
+          { label: 'Extra large', value: 'extraLarge' },
         ],
       },
       {

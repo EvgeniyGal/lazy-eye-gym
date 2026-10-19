@@ -41,15 +41,20 @@ export function SnakeGame({
   const { sfx } = useGameAudio(settings);
   const sfxRef = useRef(sfx);
   sfxRef.current = sfx;
-  const difficulty = (() => {
+  const speed = (() => {
     const raw = String(settings.difficulty ?? 'easy');
-    if (raw === 'hard') return { speed: 1.15, gridSize: 16 } as const;
-    if (raw === 'extraHard') return { speed: 1.55, gridSize: 20 } as const;
-    return { speed: 0.75, gridSize: 12 } as const;
+    if (raw === 'hard') return 1.15;
+    if (raw === 'extraHard') return 1.55;
+    return 0.75;
   })();
-  const grid = difficulty.gridSize;
+  const grid = (() => {
+    const raw = String(settings.boardSize ?? 'large');
+    if (raw === 'small') return 12;
+    if (raw === 'extraLarge') return 20;
+    return 16;
+  })();
   const wrap = Boolean(settings.wrap);
-  const baseTickMs = 180 / difficulty.speed;
+  const baseTickMs = 180 / speed;
   // One setup control swaps both channels; snake always uses the opposite eye.
   const gridEye: EyeSide = (() => {
     const channels = settings.channels;
@@ -242,26 +247,17 @@ export function SnakeGame({
         <Canvas style={{ width, height, backgroundColor: boardBg }}>
           <Rect x={0} y={0} width={width} height={height} color={boardBg} />
           <RoundedRect x={ox} y={oy} width={size} height={size} r={12} color={boardBg} />
-          {Array.from({ length: grid }).map((_, i) => (
-            <React.Fragment key={i}>
-              <Rect
-                x={ox + i * cell}
-                y={oy}
-                width={1}
-                height={size}
-                color={gridColor}
-                opacity={0.45}
-              />
-              <Rect
-                x={ox}
-                y={oy + i * cell}
-                width={size}
-                height={1}
-                color={gridColor}
-                opacity={0.45}
-              />
-            </React.Fragment>
-          ))}
+          {/* grid + 1 lines so the right & bottom borders are visible */}
+          {Array.from({ length: grid + 1 }).map((_, i) => {
+            const vx = i === grid ? ox + size - 1 : ox + i * cell;
+            const hy = i === grid ? oy + size - 1 : oy + i * cell;
+            return (
+              <React.Fragment key={i}>
+                <Rect x={vx} y={oy} width={1} height={size} color={gridColor} opacity={0.45} />
+                <Rect x={ox} y={hy} width={size} height={1} color={gridColor} opacity={0.45} />
+              </React.Fragment>
+            );
+          })}
           {obstacles.map((o, i) => (
             <React.Fragment key={`o-${o.x}-${o.y}-${i}`}>
               <RoundedRect
