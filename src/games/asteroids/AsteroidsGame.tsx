@@ -1,6 +1,6 @@
 import { Canvas, Circle, Group, Path, Rect, Skia } from '@shopify/react-native-skia';
-import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
@@ -35,6 +35,9 @@ type LevelKey = keyof typeof LEVELS;
 const DECK_H = 108;
 const SHIP_R = 14;
 const THRUST = 210;
+
+type PadId = 'left' | 'right' | 'thrust' | 'fire';
+type PadBox = { x: number; y: number; w: number; h: number };
 
 function resolveLevel(settings: Record<string, string | number | boolean>): LevelKey {
   const raw = String(settings.difficulty ?? 'easy');
@@ -390,18 +393,70 @@ export function AsteroidsGame({
     return () => cancelAnimationFrame(frame);
   }, [level, onGameOver, paused, playH, width]);
 
-  const setRotate = (dir: -1 | 0 | 1) => {
-    rotateDir.current = dir;
+  const padBoxes = useRef<Partial<Record<PadId, PadBox>>>({});
+  const padRefs = useRef<Partial<Record<PadId, View | null>>>({});
+
+  const measurePad = useCallback((id: PadId) => {
+    const node = padRefs.current[id] as (View & { measureInWindow?: (cb: (x: number, y: number, w: number, h: number) => void) => void }) | null;
+    node?.measureInWindow?.((x, y, w, h) => {
+      padBoxes.current[id] = { x, y, w, h };
+    });
+  }, []);
+
+  const padAt = (pageX: number, pageY: number): PadId | null => {
+    const expand = 12;
+    let hit: PadId | null = null;
+    (Object.keys(padBoxes.current) as PadId[]).forEach((id) => {
+      const b = padBoxes.current[id];
+      if (!b) return;
+      if (
+        pageX >= b.x - expand &&
+        pageX <= b.x + b.w + expand &&
+        pageY >= b.y - expand &&
+        pageY <= b.y + b.h + expand
+      ) {
+        hit = id;
+      }
+    });
+    return hit;
   };
 
-  const setThrust = (on: boolean) => {
-    thrusting.current = on;
-    setThrustOn(on);
+  /** Track all fingers via nativeEvent.touches (Pressable is single-touch). */
+  const applyTouches = (e: GestureResponderEvent) => {
+    const touches = e.nativeEvent.touches;
+    let left = false;
+    let right = false;
+    let thrust = false;
+    let fire = false;
+    for (let i = 0; i < touches.length; i += 1) {
+      const t = touches[i]!;
+      const id = padAt(t.pageX, t.pageY);
+      if (id === 'left') left = true;
+      else if (id === 'right') right = true;
+      else if (id === 'thrust') thrust = true;
+      else if (id === 'fire') fire = true;
+    }
+
+    if (left && !right) rotateDir.current = -1;
+    else if (right && !left) rotateDir.current = 1;
+    else rotateDir.current = 0;
+
+    thrusting.current = thrust;
+    setThrustOn(thrust);
+
+    const wasFiring = wantFire.current;
+    wantFire.current = fire;
+    if (fire && !wasFiring) fireCd.current = 0;
+
+    setPadActive({ left, right, thrust, fire });
   };
 
-  const setFire = (on: boolean) => {
-    wantFire.current = on;
-    if (on) fireCd.current = 0;
+  const clearTouches = () => {
+    rotateDir.current = 0;
+    thrusting.current = false;
+    wantFire.current = false;
+    setThrustOn(false);
+    setPadActive({ left: false, right: false, thrust: false, fire: false });
   };
 
   const blink = Date.now() < invulnUntil && Math.floor(Date.now() / 120) % 2 === 0;
@@ -477,62 +532,54 @@ export function AsteroidsGame({
         ))}
       </Canvas>
 
-      <View style={[styles.deck, { height: DECK_H, width, backgroundColor: boardBg }]}>
-        <View style={styles.deckLeft}>
-          <Pressable
+      {/* Single multi-touch surface — RN Pressable only tracks one finger. */}
+      <View
+        style={[styles.deck, { height: DECK_H, width, backgroundColor: boardBg }]}
+        onTouchStart={applyTouches}
+        onTouchMove={applyTouches}
+        onTouchEnd={applyTouches}
+        onTouchCancel={clearTouches}
+      >
+        <View style={styles.deckLeft} pointerEvents="none">
+          <View
+            ref={(n) => {
+              padRefs.current.left = n;
+            }}
             style={[styles.pad, styles.padRotate, padStyle(padActive.left)]}
-            onPressIn={() => {
-              setRotate(-1);
-              setPadActive((p) => ({ ...p, left: true }));
-            }}
-            onPressOut={() => {
-              if (rotateDir.current === -1) setRotate(0);
-              setPadActive((p) => ({ ...p, left: false }));
-            }}
+            onLayout={() => measurePad('left')}
           >
             <Text style={[styles.padLabel, { color: boardBg }]}>◀</Text>
-          </Pressable>
-          <Pressable
+          </View>
+          <View
+            ref={(n) => {
+              padRefs.current.thrust = n;
+            }}
             style={[styles.pad, styles.padThrust, padStyle(padActive.thrust)]}
-            onPressIn={() => {
-              setThrust(true);
-              setPadActive((p) => ({ ...p, thrust: true }));
-            }}
-            onPressOut={() => {
-              setThrust(false);
-              setPadActive((p) => ({ ...p, thrust: false }));
-            }}
+            onLayout={() => measurePad('thrust')}
           >
             <Text style={[styles.padLabel, { color: boardBg }]}>▲</Text>
-          </Pressable>
-          <Pressable
+          </View>
+          <View
+            ref={(n) => {
+              padRefs.current.right = n;
+            }}
             style={[styles.pad, styles.padRotate, padStyle(padActive.right)]}
-            onPressIn={() => {
-              setRotate(1);
-              setPadActive((p) => ({ ...p, right: true }));
-            }}
-            onPressOut={() => {
-              if (rotateDir.current === 1) setRotate(0);
-              setPadActive((p) => ({ ...p, right: false }));
-            }}
+            onLayout={() => measurePad('right')}
           >
             <Text style={[styles.padLabel, { color: boardBg }]}>▶</Text>
-          </Pressable>
+          </View>
         </View>
 
-        <Pressable
+        <View
+          ref={(n) => {
+            padRefs.current.fire = n;
+          }}
           style={[styles.pad, styles.padFire, padStyle(padActive.fire)]}
-          onPressIn={() => {
-            setFire(true);
-            setPadActive((p) => ({ ...p, fire: true }));
-          }}
-          onPressOut={() => {
-            setFire(false);
-            setPadActive((p) => ({ ...p, fire: false }));
-          }}
+          pointerEvents="none"
+          onLayout={() => measurePad('fire')}
         >
           <Text style={[styles.padLabel, styles.fireLabel, { color: boardBg }]}>FIRE</Text>
-        </Pressable>
+        </View>
       </View>
     </View>
   );
