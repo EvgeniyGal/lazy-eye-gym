@@ -306,7 +306,6 @@ export const en = {
       metricLabel: 'Lines cleared',
       field_difficulty: 'Level',
       field_sound: 'Game sounds',
-      field_pieceEye: 'Falling piece eye',
     },
     invaders: {
       title: 'Space Invaders',

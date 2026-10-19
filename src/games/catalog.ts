@@ -297,7 +297,6 @@ export const GAMES: GameDefinition[] = [
     defaultSettings: {
       difficulty: 'easy',
       sound: true,
-      pieceEye: 'left',
     },
     fields: [
       {
@@ -314,15 +313,6 @@ export const GAMES: GameDefinition[] = [
         key: 'sound',
         label: 'Game sounds',
         type: 'toggle',
-      },
-      {
-        key: 'pieceEye',
-        label: 'Falling piece eye',
-        type: 'eye',
-        options: [
-          { label: 'Left', value: 'left' },
-          { label: 'Right', value: 'right' },
-        ],
       },
     ],
   },

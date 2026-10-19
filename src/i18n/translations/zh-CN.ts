@@ -291,7 +291,6 @@ export const zhCN = {
       metricLabel: '已消除行数',
       field_difficulty: '难度',
       field_sound: '游戏音效',
-      field_pieceEye: '下落方块眼睛',
     },
     invaders: {
       title: '太空侵略者',

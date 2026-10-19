@@ -313,7 +313,6 @@ export const de = {
       metricLabel: 'Aufgelöste Reihen',
       field_difficulty: 'Level',
       field_sound: 'Spielsounds',
-      field_pieceEye: 'Auge für fallende Steine',
     },
     invaders: {
       title: 'Space Invaders',

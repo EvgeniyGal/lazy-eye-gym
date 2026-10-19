@@ -306,7 +306,6 @@ export const uk = {
       metricLabel: 'Очищено ліній',
       field_difficulty: 'Рівень',
       field_sound: 'Звуки гри',
-      field_pieceEye: 'Око фігури, що падає',
     },
     invaders: {
       title: 'Космічні загарбники',

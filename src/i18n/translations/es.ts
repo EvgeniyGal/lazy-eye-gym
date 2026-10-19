@@ -313,7 +313,6 @@ export const es = {
       metricLabel: 'Líneas eliminadas',
       field_difficulty: 'Nivel',
       field_sound: 'Sonidos del juego',
-      field_pieceEye: 'Ojo de la pieza que cae',
     },
     invaders: {
       title: 'Invasores del espacio',

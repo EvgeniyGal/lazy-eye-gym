@@ -314,7 +314,6 @@ export const fr = {
       metricLabel: 'Lignes effacées',
       field_difficulty: 'Niveau',
       field_sound: 'Sons du jeu',
-      field_pieceEye: 'Œil de la pièce qui tombe',
     },
     invaders: {
       title: 'Space Invaders',

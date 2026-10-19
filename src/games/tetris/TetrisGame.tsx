@@ -5,7 +5,6 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
-import type { DichopticPalette } from '@/src/anaglyph/types';
 import { useGameAudio } from '@/src/audio/useGameAudio';
 import type { GameSceneProps } from '../types';
 
@@ -14,7 +13,7 @@ const ROWS = 20;
 const LOCK_MS = 300;
 
 type PieceKind = 'I' | 'J' | 'L' | 'O' | 'S' | 'T' | 'Z';
-type Cell = PieceKind | null;
+type Cell = { kind: PieceKind; eye: EyeSide } | null;
 type Board = Cell[][];
 type Point = { x: number; y: number };
 
@@ -23,6 +22,7 @@ type Active = {
   rot: number;
   x: number;
   y: number;
+  eye: EyeSide;
 };
 
 /** Spawn orientations only — other rotations are derived with CW (x,y)→(-y,x). */
@@ -71,17 +71,6 @@ const BASE: Record<PieceKind, Point[]> = {
   ],
 };
 
-/** Eye channel per figure (opacity always from glass settings). */
-const PIECE_EYE: Record<PieceKind, 'primary' | 'secondary'> = {
-  I: 'primary',
-  O: 'secondary',
-  T: 'primary',
-  S: 'secondary',
-  Z: 'primary',
-  J: 'secondary',
-  L: 'primary',
-};
-
 function rotateCW(p: Point): Point {
   return { x: -p.y, y: p.x };
 }
@@ -95,10 +84,10 @@ function shapeAt(kind: PieceKind, rot: number): Point[] {
   return cells;
 }
 
-function colorForKind(palette: DichopticPalette, kind: PieceKind, primaryEye: EyeSide) {
-  const secondary: EyeSide = primaryEye === 'left' ? 'right' : 'left';
-  const eye = PIECE_EYE[kind] === 'primary' ? primaryEye : secondary;
-  return colorForEye(palette, eye);
+/** Prefer the opposite eye so colours flip often; still allow a rare same-eye repeat. */
+function pickEye(prev?: EyeSide): EyeSide {
+  if (prev && Math.random() < 0.78) return prev === 'left' ? 'right' : 'left';
+  return Math.random() > 0.5 ? 'left' : 'right';
 }
 
 const BAG_ORDER: PieceKind[] = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
@@ -147,8 +136,8 @@ function fits(board: Board, piece: Active): boolean {
   return true;
 }
 
-function spawnPiece(kind: PieceKind): Active {
-  return { kind, rot: 0, x: 4, y: 1 };
+function spawnPiece(kind: PieceKind, eye: EyeSide): Active {
+  return { kind, rot: 0, x: 4, y: 1, eye };
 }
 
 function ghostY(board: Board, piece: Active): number {
@@ -161,7 +150,7 @@ function lockPiece(board: Board, piece: Active): Board {
   const next = board.map((row) => [...row]) as Board;
   for (const c of cellsOf(piece)) {
     if (c.y >= 0 && c.y < ROWS && c.x >= 0 && c.x < COLS) {
-      next[c.y]![c.x] = piece.kind;
+      next[c.y]![c.x] = { kind: piece.kind, eye: piece.eye };
     }
   }
   return next;
@@ -216,30 +205,39 @@ export function TetrisGame({
   sfxRef.current = sfx;
   const levelKey = resolveLevel(settings);
   const baseGravity = LEVELS[levelKey].gravityMs;
-  const pieceEye = (settings.pieceEye as EyeSide) || 'left';
-  const frameColor = colorForEye(palette, pieceEye);
+  const leftColor = colorForEye(palette, 'left');
+  const rightColor = colorForEye(palette, 'right');
+  const frameColor = leftColor;
   const boardBg = palette.background;
-  const kindColor = (kind: PieceKind) => colorForKind(palette, kind, pieceEye);
+  const eyeColor = (eye: EyeSide) => (eye === 'left' ? leftColor : rightColor);
 
   const bagRef = useRef<PieceKind[]>(shuffleBag());
+  const lastEyeRef = useRef<EyeSide | undefined>(undefined);
   const takeNext = (): PieceKind => {
     if (bagRef.current.length === 0) bagRef.current = shuffleBag();
     return bagRef.current.shift()!;
   };
+  const takeQueued = (): { kind: PieceKind; eye: EyeSide } => {
+    const kind = takeNext();
+    const eye = pickEye(lastEyeRef.current);
+    lastEyeRef.current = eye;
+    return { kind, eye };
+  };
 
-  const first = useRef(takeNext());
-  const second = useRef(takeNext());
+  const first = useRef(takeQueued());
+  const second = useRef(takeQueued());
 
   const [board, setBoard] = useState<Board>(() => emptyBoard());
-  const [active, setActive] = useState<Active>(() => spawnPiece(first.current));
-  const [nextKind, setNextKind] = useState<PieceKind>(second.current);
+  const [active, setActive] = useState<Active>(() => spawnPiece(first.current.kind, first.current.eye));
+  const [nextKind, setNextKind] = useState<PieceKind>(second.current.kind);
+  const [nextEye, setNextEye] = useState<EyeSide>(second.current.eye);
   const [score, setScore] = useState(0);
   const [lines, setLines] = useState(0);
   const [level, setLevel] = useState(0);
 
   const boardRef = useRef(board);
   const activeRef = useRef(active);
-  const nextRef = useRef(nextKind);
+  const nextRef = useRef({ kind: nextKind, eye: nextEye });
   const scoreRef = useRef(score);
   const linesRef = useRef(lines);
   const levelRef = useRef(level);
@@ -253,7 +251,7 @@ export function TetrisGame({
 
   boardRef.current = board;
   activeRef.current = active;
-  nextRef.current = nextKind;
+  nextRef.current = { kind: nextKind, eye: nextEye };
   scoreRef.current = score;
   linesRef.current = lines;
   levelRef.current = level;
@@ -286,11 +284,12 @@ export function TetrisGame({
   };
 
   const spawnFromBag = (boardNow: Board): Active | null => {
-    const kind = nextRef.current;
-    const following = takeNext();
+    const queued = nextRef.current;
+    const following = takeQueued();
     nextRef.current = following;
-    setNextKind(following);
-    const piece = spawnPiece(kind);
+    setNextKind(following.kind);
+    setNextEye(following.eye);
+    const piece = spawnPiece(queued.kind, queued.eye);
     if (!fits(boardNow, piece)) return null;
     grounded.current = false;
     lockUntil.current = 0;
@@ -458,9 +457,9 @@ export function TetrisGame({
   const activeCells = cellsOf(active);
   const ghostCells = cellsOf(ghost);
   const nextCells = shapeAt(nextKind, 0).map((p) => ({ x: p.x + 1, y: p.y + 1 }));
-  const activeColor = kindColor(active.kind);
-  const ghostColor = kindColor(active.kind);
-  const nextColor = kindColor(nextKind);
+  const activeColor = eyeColor(active.eye);
+  const ghostColor = eyeColor(active.eye);
+  const nextColor = eyeColor(nextEye);
 
   return (
     <GestureDetector gesture={gesture}>
@@ -504,10 +503,10 @@ export function TetrisGame({
             />
           ))}
 
-          {/* Locked stack — each cell keeps its piece colour */}
+          {/* Locked stack — each cell keeps the eye colour it spawned with */}
           {board.map((row, y) =>
-            row.map((kind, x) =>
-              kind ? (
+            row.map((cellData, x) =>
+              cellData ? (
                 <RoundedRect
                   key={`b-${x}-${y}`}
                   x={ox + x * cell + 1}
@@ -515,7 +514,7 @@ export function TetrisGame({
                   width={cell - 2}
                   height={cell - 2}
                   r={3}
-                  color={kindColor(kind)}
+                  color={eyeColor(cellData.eye)}
                 />
               ) : null,
             ),
