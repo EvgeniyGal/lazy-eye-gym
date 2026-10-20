@@ -4,7 +4,6 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { isHomeSupportCardVisible, snoozeHomeSupportCard } from '@/src/billing/tipJar';
 import { Body, Card, HeaderBar, PrimaryButton, Screen, Subtitle, Title } from '@/src/components/ui';
 import {
   formatDuration,
@@ -139,18 +138,6 @@ export default function HomeScreen() {
           fontWeight: '700',
           fontSize: 13,
         },
-        supportLater: {
-          borderRadius: radii.md,
-          paddingVertical: spacing.sm,
-          paddingHorizontal: spacing.md,
-          borderWidth: 1,
-          borderColor: colors.outlineVariant,
-        },
-        supportLaterText: {
-          color: colors.onSurfaceVariant,
-          fontWeight: '600',
-          fontSize: 13,
-        },
       }),
     [colors],
   );
@@ -161,11 +148,9 @@ export default function HomeScreen() {
   const [todaySeconds, setTodaySeconds] = useState(0);
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [byGame, setByGame] = useState<GamePlaytime[]>([]);
-  const [showSupportCard, setShowSupportCard] = useState(isHomeSupportCardVisible);
 
   useFocusEffect(
     useCallback(() => {
-      setShowSupportCard(isHomeSupportCardVisible());
       void (async () => {
         const [stats, playtime] = await Promise.all([getTrainingStats(), getPlaytimeByGame()]);
         setTodaySeconds(stats.todaySeconds);
@@ -214,38 +199,26 @@ export default function HomeScreen() {
           </View>
         </Card>
 
-        {showSupportCard ? (
-          <Card style={styles.notice}>
-            <View style={styles.noticeRow}>
-              <Ionicons name="heart-outline" size={22} color={colors.secondary} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.noticeTitle}>{t('home.supportCardTitle')}</Text>
-                <Body style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-                  {t('home.supportCardBody')}
-                </Body>
-                <View style={styles.supportActions}>
-                  <Pressable
-                    accessibilityRole="button"
-                    style={styles.supportCta}
-                    onPress={() => router.push('/(tabs)/settings/support')}
-                  >
-                    <Text style={styles.supportCtaText}>{t('home.supportCardCta')}</Text>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    style={styles.supportLater}
-                    onPress={() => {
-                      snoozeHomeSupportCard();
-                      setShowSupportCard(false);
-                    }}
-                  >
-                    <Text style={styles.supportLaterText}>{t('home.supportCardLater')}</Text>
-                  </Pressable>
-                </View>
+        <Card style={styles.notice}>
+          <View style={styles.noticeRow}>
+            <Ionicons name="heart-outline" size={22} color={colors.secondary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.noticeTitle}>{t('home.supportCardTitle')}</Text>
+              <Body style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
+                {t('home.supportCardBody')}
+              </Body>
+              <View style={styles.supportActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.supportCta}
+                  onPress={() => router.push('/(tabs)/settings/support')}
+                >
+                  <Text style={styles.supportCtaText}>{t('home.supportCardCta')}</Text>
+                </Pressable>
               </View>
             </View>
-          </Card>
-        ) : null}
+          </View>
+        </Card>
 
         <Card style={styles.notice}>
           <View style={styles.noticeRow}>

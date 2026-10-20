@@ -51,7 +51,6 @@ export const de = {
     supportCardBody:
       'LazyEye Gym bleibt kostenlos und ohne Werbung. Optionale Trinkgelder helfen, neue Spiele und Training zu finanzieren.',
     supportCardCta: 'Entwicklung unterstützen',
-    supportCardLater: 'Vielleicht später',
   },
   settings: {
     header: 'Einstellungen',

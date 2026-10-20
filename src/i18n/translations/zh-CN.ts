@@ -50,7 +50,6 @@ export const zhCN = {
     supportCardBody:
       'LazyEye Gym 保持免费且无广告。可选小费可帮助资助新游戏与训练改进。',
     supportCardCta: '支持开发',
-    supportCardLater: '稍后再说',
   },
   settings: {
     header: '设置',

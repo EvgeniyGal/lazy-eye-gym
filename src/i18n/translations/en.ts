@@ -51,7 +51,6 @@ export const en = {
     supportCardBody:
       'LazyEye Gym stays free with no ads. Optional tips help fund new games and training improvements.',
     supportCardCta: 'Support development',
-    supportCardLater: 'Maybe later',
   },
   settings: {
     header: 'Settings',

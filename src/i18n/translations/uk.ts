@@ -51,7 +51,6 @@ export const uk = {
     supportCardBody:
       'LazyEye Gym залишається безкоштовним без реклами. Добровільні чайові допомагають фінансувати нові ігри та покращення тренувань.',
     supportCardCta: 'Підтримати розробку',
-    supportCardLater: 'Можливо пізніше',
   },
   settings: {
     header: 'Налаштування',

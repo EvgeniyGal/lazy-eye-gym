@@ -51,7 +51,6 @@ export const fr = {
     supportCardBody:
       'LazyEye Gym reste gratuit et sans publicité. Les pourboires optionnels aident à financer de nouveaux jeux et améliorations.',
     supportCardCta: 'Soutenir le développement',
-    supportCardLater: 'Plus tard peut-être',
   },
   settings: {
     header: 'Réglages',

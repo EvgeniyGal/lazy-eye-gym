@@ -51,7 +51,6 @@ export const es = {
     supportCardBody:
       'LazyEye Gym sigue siendo gratis y sin anuncios. Las propinas opcionales ayudan a financiar nuevos juegos y mejoras.',
     supportCardCta: 'Apoyar el desarrollo',
-    supportCardLater: 'Quizá más tarde',
   },
   settings: {
     header: 'Ajustes',
