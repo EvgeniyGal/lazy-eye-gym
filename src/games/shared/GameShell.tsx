@@ -3,7 +3,7 @@ import { useNavigation, useRouter } from 'expo-router';
 import { usePreventRemove } from 'expo-router/build/react-navigation/core';
 import type { NavigationAction } from 'expo-router/build/react-navigation/routers';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { insertSession } from '@/src/db/sessions';
@@ -63,8 +63,8 @@ export function GameShell({ gameId }: { gameId: GameId }) {
         canvasWrap: {
           flex: 1,
         },
-        overlay: {
-          ...StyleSheet.absoluteFill,
+        modalRoot: {
+          flex: 1,
           alignItems: 'center',
           justifyContent: 'center',
           padding: spacing.xl,
@@ -335,8 +335,9 @@ export function GameShell({ gameId }: { gameId: GameId }) {
         />
       </View>
 
-      {leaveOpen && !ended ? (
-        <View style={[styles.overlay, { backgroundColor: overlayBg }]}>
+      {/* Modal sits above Skia canvases — absolute sibling overlays can end up under native Skia. */}
+      <Modal visible={leaveOpen && !ended} transparent animationType="fade" onRequestClose={stayInGame}>
+        <View style={[styles.modalRoot, { backgroundColor: overlayBg }]}>
           <Text style={[styles.overlayTitle, { color: hudFg }]}>{t('gameShell.leaveTitle')}</Text>
           <Text style={[styles.overlayMeta, { color: hudMuted }]}>{t('gameShell.leaveMessage')}</Text>
           <Pressable style={styles.primaryBtn} onPress={stayInGame}>
@@ -355,19 +356,21 @@ export function GameShell({ gameId }: { gameId: GameId }) {
             <Text style={[styles.secondaryBtnText, { color: hudFg }]}>{t('gameShell.leave')}</Text>
           </Pressable>
         </View>
-      ) : null}
+      </Modal>
 
-      {ended ? (
-        <View style={[styles.overlay, { backgroundColor: overlayBg }]}>
+      <Modal visible={!!ended} transparent animationType="fade" onRequestClose={() => router.back()}>
+        <View style={[styles.modalRoot, { backgroundColor: overlayBg }]}>
           <Text style={[styles.overlayTitle, { color: hudFg }]}>{t('gameShell.sessionComplete')}</Text>
-          <Text style={[styles.overlayMeta, { color: hudMuted }]}>
-            {t('gameShell.overlayMeta', {
-              score: ended.score,
-              metricLabel: game.metricLabel,
-              metric: ended.bestMetric,
-              duration: ended.durationSec,
-            })}
-          </Text>
+          {ended ? (
+            <Text style={[styles.overlayMeta, { color: hudMuted }]}>
+              {t('gameShell.overlayMeta', {
+                score: ended.score,
+                metricLabel: game.metricLabel,
+                metric: ended.bestMetric,
+                duration: ended.durationSec,
+              })}
+            </Text>
+          ) : null}
           <Pressable style={styles.primaryBtn} onPress={startFreshRun}>
             <Text style={styles.primaryBtnText}>{t('gameShell.startAgain')}</Text>
           </Pressable>
@@ -378,7 +381,7 @@ export function GameShell({ gameId }: { gameId: GameId }) {
             <Text style={[styles.secondaryBtnText, { color: hudFg }]}>{t('gameShell.backToSetup')}</Text>
           </Pressable>
         </View>
-      ) : null}
+      </Modal>
     </View>
   );
 }

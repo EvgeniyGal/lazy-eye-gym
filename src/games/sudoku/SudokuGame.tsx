@@ -104,12 +104,15 @@ export function SudokuGame({
   const finish = (won: boolean, nextFilled: number, nextScore: number) => {
     if (ended.current) return;
     ended.current = true;
-    sfx(won ? 'brk_stage' : 't48_over');
-    onGameOver({
+    const result = {
       score: nextScore,
       bestMetric: nextFilled,
       durationSec: Math.round((Date.now() - startMs.current) / 1000),
-    });
+    };
+    setTimeout(() => {
+      onGameOver(result);
+      sfx(won ? 'brk_stage' : 't48_over');
+    }, 0);
   };
 
   const placeDigit = (n: number) => {

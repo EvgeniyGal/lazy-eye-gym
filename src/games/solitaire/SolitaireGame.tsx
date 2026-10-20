@@ -90,12 +90,15 @@ export function SolitaireGame({
   const finish = (nextHome: number, nextScore: number) => {
     if (ended.current) return;
     ended.current = true;
-    sfx('brk_stage');
-    onGameOver({
+    const result = {
       score: nextScore,
       bestMetric: nextHome,
       durationSec: Math.round((Date.now() - startMs.current) / 1000),
-    });
+    };
+    setTimeout(() => {
+      onGameOver(result);
+      sfx('brk_stage');
+    }, 0);
   };
 
   const applyState = (next: GameState, scoreDelta = 0) => {

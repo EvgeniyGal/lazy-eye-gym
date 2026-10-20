@@ -97,12 +97,15 @@ export function CandyGame({
   const finish = (won: boolean, nextScore: number, nextCleared: number) => {
     if (ended.current) return;
     ended.current = true;
-    sfx(won ? 'brk_stage' : 't48_over');
-    onGameOver({
+    const result = {
       score: nextScore,
       bestMetric: nextCleared,
       durationSec: Math.round((Date.now() - startMs.current) / 1000),
-    });
+    };
+    setTimeout(() => {
+      onGameOver(result);
+      sfx(won ? 'brk_stage' : 't48_over');
+    }, 0);
   };
 
   const applyResolved = (nextBoard: Cell[][], gain: number, clearedN: number) => {

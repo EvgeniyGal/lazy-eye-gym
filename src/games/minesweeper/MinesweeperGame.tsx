@@ -58,9 +58,11 @@ export function MinesweeperGame({
 
   const startMs = useRef(Date.now());
   const ended = useRef(false);
+  const armedRef = useRef(false);
   const swapAcc = useRef(0);
   const gridRef = useRef(grid);
   gridRef.current = grid;
+  armedRef.current = armed;
 
   const pad = 8;
   const cellSize = Math.min((width - pad * 2) / size, (height - pad * 2 - 24) / size);
@@ -106,12 +108,16 @@ export function MinesweeperGame({
   const finish = (won: boolean, nextCleared: number, nextScore: number) => {
     if (ended.current) return;
     ended.current = true;
-    sfx(won ? 't48_merge' : 'ast_die');
-    onGameOver({
+    // Defer past the gesture handler so GameShell can mount the end Modal reliably.
+    const result = {
       score: nextScore,
       bestMetric: nextCleared,
       durationSec: Math.round((Date.now() - startMs.current) / 1000),
-    });
+    };
+    setTimeout(() => {
+      onGameOver(result);
+      sfx(won ? 't48_merge' : 'ast_die');
+    }, 0);
   };
 
   const atCell = (x: number, y: number) => {
@@ -123,34 +129,32 @@ export function MinesweeperGame({
 
   const revealAt = (r: number, c: number) => {
     if (ended.current) return;
-    let g = gridRef.current.map((row) => row.map((cell) => ({ ...cell })));
-    let nextArmed = armed;
-    if (!nextArmed) {
+    const g = gridRef.current.map((row) => row.map((cell) => ({ ...cell })));
+    if (!armedRef.current) {
       placeMines(g, mines, r, c);
-      nextArmed = true;
+      armedRef.current = true;
       setArmed(true);
     }
     const cell = g[r]![c]!;
     if (cell.flagged || cell.revealed) return;
     if (cell.mine) {
       for (const row of g) for (const x of row) if (x.mine) x.revealed = true;
+      gridRef.current = g;
       setGrid(g);
-      finish(false, cleared, score);
+      finish(false, countCleared(g), Math.max(0, score));
       return;
     }
-    const opened = revealFlood(g, r, c);
+    revealFlood(g, r, c);
     const nextCleared = countCleared(g);
     const elapsed = (Date.now() - startMs.current) / 1000;
     const nextScore = nextCleared * 10 + Math.max(0, Math.floor(400 - elapsed));
+    gridRef.current = g;
     setGrid(g);
     setCleared(nextCleared);
     setScore(nextScore);
     sfx('t48_move');
     if (isWin(g)) {
-      const bonus = 200 + mines * 5;
-      finish(true, nextCleared, nextScore + bonus);
-    } else if (opened) {
-      /* keep playing */
+      finish(true, nextCleared, nextScore + 200 + mines * 5);
     }
   };
 
@@ -160,6 +164,7 @@ export function MinesweeperGame({
     const cell = g[r]![c]!;
     if (cell.revealed) return;
     cell.flagged = !cell.flagged;
+    gridRef.current = g;
     setGrid(g);
     sfx('t48_merge');
   };
