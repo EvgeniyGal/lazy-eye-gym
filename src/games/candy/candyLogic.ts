@@ -124,6 +124,10 @@ export type ClearResult = {
   cleared: number;
   focusCleared: number;
   scoreGain: number;
+  clearedKeys: Set<string>;
+  spawnedSpecial: boolean;
+  usedLine: boolean;
+  usedBomb: boolean;
 };
 
 /** Clear matches, apply specials, gravity, refill. May cascade — call in loop. */
@@ -134,48 +138,52 @@ export function clearOnce(board: Cell[][]): ClearResult | null {
   const grid: (Cell | null)[][] = board.map((row) => row.map((c) => ({ ...c })));
   const specialSpawn: { r: number; c: number; special: Special; kind: Kind }[] = [];
 
+  const noteRun = (cells: { r: number; c: number }[], kind: Kind) => {
+    if (cells.length < 4) return;
+    const mid = cells[Math.floor(cells.length / 2)]!;
+    specialSpawn.push({
+      r: mid.r,
+      c: mid.c,
+      special: cells.length >= 5 ? 'bomb' : 'line',
+      kind,
+    });
+  };
+
   for (let r = 0; r < ROWS; r += 1) {
-    let run = 1;
+    let run: { r: number; c: number }[] = [{ r, c: 0 }];
     for (let c = 1; c <= COLS; c += 1) {
       const same = c < COLS && grid[r]![c]!.kind === grid[r]![c - 1]!.kind;
-      if (same) run += 1;
+      if (same) run.push({ r, c });
       else {
-        if (run >= 4) {
-          const mid = c - Math.ceil(run / 2);
-          specialSpawn.push({
-            r,
-            c: mid,
-            special: run >= 5 ? 'bomb' : 'line',
-            kind: grid[r]![mid]!.kind,
-          });
-        }
-        run = 1;
+        noteRun(run, grid[r]![run[0]!.c]!.kind);
+        run = c < COLS ? [{ r, c }] : [];
+      }
+    }
+  }
+  for (let c = 0; c < COLS; c += 1) {
+    let run: { r: number; c: number }[] = [{ r: 0, c }];
+    for (let r = 1; r <= ROWS; r += 1) {
+      const same = r < ROWS && grid[r]![c]!.kind === grid[r - 1]![c]!.kind;
+      if (same) run.push({ r, c });
+      else {
+        noteRun(run, grid[run[0]!.r]![c]!.kind);
+        run = r < ROWS ? [{ r, c }] : [];
       }
     }
   }
 
-  const toClear = new Set(matches);
-  for (const key of [...matches]) {
-    const [rs, cs] = key.split(',').map(Number) as [number, number];
-    const cell = grid[rs]![cs]!;
-    if (cell.special === 'line') {
-      for (let c = 0; c < COLS; c += 1) toClear.add(`${rs},${c}`);
-      for (let r = 0; r < ROWS; r += 1) toClear.add(`${r},${cs}`);
-    } else if (cell.special === 'bomb') {
-      for (let r = 0; r < ROWS; r += 1) {
-        for (let c = 0; c < COLS; c += 1) {
-          if (grid[r]![c]?.kind === cell.kind) toClear.add(`${r},${c}`);
-        }
-      }
-    }
-  }
+  const toClear = expandClears(grid, matches);
 
   let cleared = 0;
   let focusCleared = 0;
+  let usedLine = false;
+  let usedBomb = false;
   for (const key of toClear) {
     const [r, c] = key.split(',').map(Number) as [number, number];
     const cell = grid[r]![c];
     if (!cell) continue;
+    if (cell.special === 'line') usedLine = true;
+    if (cell.special === 'bomb') usedBomb = true;
     if (cell.focus) focusCleared += 1;
     grid[r]![c] = null;
     cleared += 1;
@@ -199,7 +207,37 @@ export function clearOnce(board: Cell[][]): ClearResult | null {
   }
 
   const scoreGain = cleared * 10 + focusCleared * 40;
-  return { board: next, cleared, focusCleared, scoreGain };
+  return {
+    board: next,
+    cleared,
+    focusCleared,
+    scoreGain,
+    clearedKeys: toClear,
+    spawnedSpecial: specialSpawn.some((sp) => toClear.has(`${sp.r},${sp.c}`)),
+    usedLine,
+    usedBomb,
+  };
+}
+
+/** Expand match set with line/bomb special effects (for preview + clear). */
+export function expandClears(board: (Cell | null)[][], matches: Set<string>): Set<string> {
+  const toClear = new Set(matches);
+  for (const key of [...matches]) {
+    const [rs, cs] = key.split(',').map(Number) as [number, number];
+    const cell = board[rs]?.[cs];
+    if (!cell) continue;
+    if (cell.special === 'line') {
+      for (let c = 0; c < COLS; c += 1) toClear.add(`${rs},${c}`);
+      for (let r = 0; r < ROWS; r += 1) toClear.add(`${r},${cs}`);
+    } else if (cell.special === 'bomb') {
+      for (let r = 0; r < ROWS; r += 1) {
+        for (let c = 0; c < COLS; c += 1) {
+          if (board[r]?.[c]?.kind === cell.kind) toClear.add(`${r},${c}`);
+        }
+      }
+    }
+  }
+  return toClear;
 }
 
 export function resolveBoard(board: Cell[][]): ClearResult {
@@ -207,6 +245,10 @@ export function resolveBoard(board: Cell[][]): ClearResult {
   let cleared = 0;
   let focusCleared = 0;
   let scoreGain = 0;
+  let spawnedSpecial = false;
+  let usedLine = false;
+  let usedBomb = false;
+  const clearedKeys = new Set<string>();
   for (let i = 0; i < 20; i += 1) {
     const step = clearOnce(cur);
     if (!step) break;
@@ -214,8 +256,21 @@ export function resolveBoard(board: Cell[][]): ClearResult {
     cleared += step.cleared;
     focusCleared += step.focusCleared;
     scoreGain += step.scoreGain;
+    spawnedSpecial = spawnedSpecial || step.spawnedSpecial;
+    usedLine = usedLine || step.usedLine;
+    usedBomb = usedBomb || step.usedBomb;
+    for (const k of step.clearedKeys) clearedKeys.add(k);
   }
-  return { board: cur, cleared, focusCleared, scoreGain };
+  return {
+    board: cur,
+    cleared,
+    focusCleared,
+    scoreGain,
+    clearedKeys,
+    spawnedSpecial,
+    usedLine,
+    usedBomb,
+  };
 }
 
 export function markFocus(board: Cell[][]): Cell[][] {

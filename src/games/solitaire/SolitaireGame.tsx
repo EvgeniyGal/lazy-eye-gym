@@ -106,7 +106,6 @@ function SuitMark({
       </Group>
     );
   }
-  // Club
   const r = s * 0.36;
   return (
     <Group>
@@ -165,18 +164,21 @@ export function SolitaireGame({
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  const pad = 6;
-  const cardW = Math.min(52, (width - pad * 8) / 7);
-  const cardH = cardW * 1.4;
-  const topY = 10;
-  const tabY = topY + cardH + 16;
-  const stackGap = Math.min(18, cardH * 0.28);
+  const pad = 8;
+  // Horizontal rows: 7 tableau lanes stacked vertically, cards fan left→right.
+  const topH = Math.min(72, height * 0.16);
+  const cardH = Math.min(64, Math.max(40, (height - topH - pad * 3) / 7 - 4));
+  const cardW = Math.min(cardH / 1.35, 50);
+  const topY = pad;
+  const tabY0 = topY + topH + pad;
+  const rowGap = Math.max(cardH + 4, (height - tabY0 - pad) / 7);
+  const fanGap = Math.max(16, cardW * 0.38);
 
   const font = useMemo(
     () =>
       matchFont({
         fontFamily: Platform.select({ ios: 'Helvetica', default: 'sans-serif' })!,
-        fontSize: Math.max(10, cardW * 0.32),
+        fontSize: Math.max(10, cardW * 0.34),
         fontWeight: '700',
       }),
     [cardW],
@@ -209,35 +211,36 @@ export function SolitaireGame({
     if (isWon(next)) finish(h, nextScore + 300);
   };
 
+  const rowY = (col: number) => tabY0 + col * rowGap;
+
   const hitTest = (x: number, y: number): Hit | null => {
-    // stock
     if (x >= pad && x <= pad + cardW && y >= topY && y <= topY + cardH) return { kind: 'stock' };
-    // waste
-    const wx = pad + cardW + 8;
+    const wx = pad + cardW + 10;
     if (x >= wx && x <= wx + cardW && y >= topY && y <= topY + cardH) return { kind: 'waste' };
-    // foundations
     for (let i = 0; i < 4; i += 1) {
-      const fx = width - pad - (4 - i) * (cardW + 6);
+      const fx = width - pad - (4 - i) * (cardW + 8);
       if (x >= fx && x <= fx + cardW && y >= topY && y <= topY + cardH) {
         return { kind: 'foundation', i };
       }
     }
-    // tableau
     for (let col = 0; col < 7; col += 1) {
-      const cx = pad + col * (cardW + pad);
+      const cy = rowY(col);
+      if (y < cy || y > cy + cardH) continue;
       const pile = stateRef.current.tableau[col]!;
       if (!pile.length) {
-        if (x >= cx && x <= cx + cardW && y >= tabY && y <= tabY + cardH) {
-          return { kind: 'tableau', col, index: 0 };
-        }
+        if (x >= pad && x <= pad + cardW + 24) return { kind: 'tableau', col, index: 0 };
         continue;
       }
+      // Prefer topmost (rightmost) card under the tap.
       for (let i = pile.length - 1; i >= 0; i -= 1) {
-        const cy = tabY + i * stackGap;
-        const h = i === pile.length - 1 ? cardH : stackGap;
-        if (x >= cx && x <= cx + cardW && y >= cy && y <= cy + h) {
-          return { kind: 'tableau', col, index: i };
-        }
+        const cx = pad + i * fanGap;
+        const w = i === pile.length - 1 ? cardW : fanGap;
+        if (x >= cx && x <= cx + w) return { kind: 'tableau', col, index: i };
+      }
+      // Tap past the last card still targets this row (drop onto pile top).
+      const lastX = pad + (pile.length - 1) * fanGap;
+      if (x > lastX && x < width - pad) {
+        return { kind: 'tableau', col, index: pile.length - 1 };
       }
     }
     return null;
@@ -272,7 +275,6 @@ export function SolitaireGame({
     if (!sel) {
       const card = peekCard(stateRef.current, target);
       if (!card || (target.where === 'tableau' && !card.faceUp)) return;
-      // empty tableau tap without selection — ignore
       if (target.where === 'tableau') {
         const pile = stateRef.current.tableau[target.col]!;
         if (!pile.length) return;
@@ -286,7 +288,6 @@ export function SolitaireGame({
       return;
     }
 
-    // auto foundation helper: double-tap same selection tries foundations
     if (
       sel.where === target.where &&
       ((sel.where === 'waste' && target.where === 'waste') ||
@@ -311,9 +312,19 @@ export function SolitaireGame({
       return;
     }
 
-    const moved = tryMove(stateRef.current, sel, target);
+    // Dropping onto a tableau row always stacks onto that column's top.
+    const dest: Sel =
+      target.where === 'tableau'
+        ? {
+            where: 'tableau',
+            col: target.col,
+            index: Math.max(0, stateRef.current.tableau[target.col]!.length - 1),
+          }
+        : target;
+
+    const moved = tryMove(stateRef.current, sel, dest);
     if (moved) {
-      const delta = target.where === 'foundation' ? 15 : 5;
+      const delta = dest.where === 'foundation' ? 15 : 5;
       applyState(moved, delta);
       sfx('t48_merge');
     } else {
@@ -327,7 +338,7 @@ export function SolitaireGame({
     .onEnd((e) => onTap(e.x, e.y));
 
   const drawCard = (
-    card: { suit: import('./solitaireLogic').Suit; rank: number; faceUp: boolean; id: string },
+    card: { suit: Suit; rank: number; faceUp: boolean; id: string },
     x: number,
     y: number,
     highlight: boolean,
@@ -335,7 +346,15 @@ export function SolitaireGame({
     const color = card.faceUp ? (isRed(card.suit) ? leftColor : rightColor) : backColor;
     return (
       <Group key={`${card.id}-${x}-${y}`}>
-        <RoundedRect x={x} y={y} width={cardW} height={cardH} r={5} color={color} opacity={card.faceUp ? 0.92 : 0.55} />
+        <RoundedRect
+          x={x}
+          y={y}
+          width={cardW}
+          height={cardH}
+          r={5}
+          color={color}
+          opacity={card.faceUp ? 0.92 : 0.55}
+        />
         <RoundedRect
           x={x + 2}
           y={y + 2}
@@ -367,16 +386,9 @@ export function SolitaireGame({
             />
             <SuitMark
               suit={card.suit}
-              cx={x + cardW * 0.5}
+              cx={x + cardW * 0.55}
               cy={y + cardH * 0.58}
-              size={cardW * 0.22}
-              color={boardBg}
-            />
-            <SuitMark
-              suit={card.suit}
-              cx={x + cardW - 10}
-              cy={y + 11}
-              size={cardW * 0.12}
+              size={cardW * 0.2}
               color={boardBg}
             />
           </Group>
@@ -402,7 +414,6 @@ export function SolitaireGame({
         <Canvas style={{ width, height }}>
           <Rect x={0} y={0} width={width} height={height} color={boardBg} />
 
-          {/* stock */}
           <RoundedRect
             x={pad}
             y={topY}
@@ -413,29 +424,27 @@ export function SolitaireGame({
             opacity={state.stock.length ? 0.55 : 0.2}
           />
 
-          {/* waste */}
-          {state.waste.length
-            ? drawCard(
-                state.waste[state.waste.length - 1]!,
-                pad + cardW + 8,
-                topY,
-                selectedMatch({ where: 'waste' }),
-              )
-            : (
-              <RoundedRect
-                x={pad + cardW + 8}
-                y={topY}
-                width={cardW}
-                height={cardH}
-                r={5}
-                color={rightColor}
-                opacity={0.15}
-              />
-            )}
+          {state.waste.length ? (
+            drawCard(
+              state.waste[state.waste.length - 1]!,
+              pad + cardW + 10,
+              topY,
+              selectedMatch({ where: 'waste' }),
+            )
+          ) : (
+            <RoundedRect
+              x={pad + cardW + 10}
+              y={topY}
+              width={cardW}
+              height={cardH}
+              r={5}
+              color={rightColor}
+              opacity={0.15}
+            />
+          )}
 
-          {/* foundations */}
           {state.foundations.map((pile, i) => {
-            const fx = width - pad - (4 - i) * (cardW + 6);
+            const fx = width - pad - (4 - i) * (cardW + 8);
             if (!pile.length) {
               return (
                 <RoundedRect
@@ -458,15 +467,14 @@ export function SolitaireGame({
             );
           })}
 
-          {/* tableau */}
           {state.tableau.map((pile, col) => {
-            const cx = pad + col * (cardW + pad);
+            const cy = rowY(col);
             if (!pile.length) {
               return (
                 <RoundedRect
                   key={`t-${col}`}
-                  x={cx}
-                  y={tabY}
+                  x={pad}
+                  y={cy}
                   width={cardW}
                   height={cardH}
                   r={5}
@@ -480,8 +488,8 @@ export function SolitaireGame({
                 {pile.map((card, index) =>
                   drawCard(
                     card,
-                    cx,
-                    tabY + index * stackGap,
+                    pad + index * fanGap,
+                    cy,
                     selectedMatch({ where: 'tableau', col, index }),
                   ),
                 )}
