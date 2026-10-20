@@ -16,10 +16,14 @@ import { spacing } from '@/src/theme/tokens';
 import type { GameResult } from '../types';
 import { AsteroidsGame } from '../asteroids/AsteroidsGame';
 import { BreakerGame } from '../breaker/BreakerGame';
+import { CandyGame } from '../candy/CandyGame';
 import { InvadersGame } from '../invaders/InvadersGame';
 import { MazeGame } from '../maze/MazeGame';
+import { MinesweeperGame } from '../minesweeper/MinesweeperGame';
 import { PongGame } from '../pong/PongGame';
 import { SnakeGame } from '../snake/SnakeGame';
+import { SolitaireGame } from '../solitaire/SolitaireGame';
+import { SudokuGame } from '../sudoku/SudokuGame';
 import { TetrisGame } from '../tetris/TetrisGame';
 import { TwentyFortyEightGame } from '../twenty48/TwentyFortyEightGame';
 
@@ -247,6 +251,14 @@ export function GameShell({ gameId }: { gameId: GameId }) {
         return InvadersGame;
       case 'asteroids':
         return AsteroidsGame;
+      case 'minesweeper':
+        return MinesweeperGame;
+      case 'sudoku':
+        return SudokuGame;
+      case 'solitaire':
+        return SolitaireGame;
+      case 'candy':
+        return CandyGame;
       default:
         return TwentyFortyEightGame;
     }

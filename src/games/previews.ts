@@ -12,4 +12,8 @@ export const GAME_PREVIEWS: Record<GameId, ImageSourcePropType> = {
   tetris: require('../../assets/images/games/tetris.png'),
   invaders: require('../../assets/images/games/invaders.png'),
   asteroids: require('../../assets/images/games/asteroids.png'),
+  minesweeper: require('../../assets/images/games/minesweeper.png'),
+  sudoku: require('../../assets/images/games/sudoku.png'),
+  solitaire: require('../../assets/images/games/solitaire.png'),
+  candy: require('../../assets/images/games/candy.png'),
 };

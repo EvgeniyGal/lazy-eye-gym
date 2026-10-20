@@ -17,6 +17,10 @@ const VALID: GameId[] = [
   'tetris',
   'invaders',
   'asteroids',
+  'minesweeper',
+  'sudoku',
+  'solitaire',
+  'candy',
 ];
 
 export default function GameSessionScreen() {

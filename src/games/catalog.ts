@@ -8,7 +8,11 @@ export type GameId =
   | 'snake'
   | 'tetris'
   | 'invaders'
-  | 'asteroids';
+  | 'asteroids'
+  | 'minesweeper'
+  | 'sudoku'
+  | 'solitaire'
+  | 'candy';
 
 export type GameCategory = 'all' | 'reflex' | 'spatial';
 
@@ -374,6 +378,160 @@ export const GAMES: GameDefinition[] = [
     },
     recordLabel: 'Best score',
     metricLabel: 'Rocks destroyed',
+    defaultSettings: {
+      difficulty: 'easy',
+      sound: true,
+    },
+    fields: [
+      {
+        key: 'difficulty',
+        label: 'Level',
+        type: 'segment',
+        options: [
+          { label: 'Easy', value: 'easy' },
+          { label: 'Hard', value: 'hard' },
+          { label: 'Extra hard', value: 'extraHard' },
+        ],
+      },
+      {
+        key: 'sound',
+        label: 'Game sounds',
+        type: 'toggle',
+      },
+    ],
+  },
+  {
+    id: 'minesweeper',
+    title: 'Minesweeper',
+    shortTitle: 'Mines',
+    tag: 'STRATEGY & FUSION',
+    category: 'spatial',
+    blurb:
+      'Clear the minefield — covered tiles use one eye, numbers and flags the other; colours swap on a timer.',
+    dichopticSplit: {
+      leftLabel: 'Covered tiles / numbers (swapping)',
+      rightLabel: 'Flags + opposite-eye digits',
+    },
+    recordLabel: 'Best score',
+    metricLabel: 'Cells cleared',
+    defaultSettings: {
+      difficulty: 'easy',
+      sound: true,
+    },
+    fields: [
+      {
+        key: 'difficulty',
+        label: 'Level',
+        type: 'segment',
+        options: [
+          { label: 'Easy', value: 'easy' },
+          { label: 'Hard', value: 'hard' },
+          { label: 'Extra hard', value: 'extraHard' },
+        ],
+      },
+      {
+        key: 'sound',
+        label: 'Game sounds',
+        type: 'toggle',
+      },
+    ],
+  },
+  {
+    id: 'sudoku',
+    title: 'Sudoku',
+    shortTitle: 'Sudoku',
+    tag: 'STRATEGY & FUSION',
+    category: 'spatial',
+    blurb:
+      'Fill the grid — clues and lines on one eye, your digits on the other; conflicts pulse for binocular check.',
+    dichopticSplit: {
+      leftLabel: 'Grid + clues (chosen eye)',
+      rightLabel: 'Your fills (other eye)',
+    },
+    recordLabel: 'Best score',
+    metricLabel: 'Cells filled',
+    defaultSettings: {
+      difficulty: 'easy',
+      sound: true,
+      gridEye: 'left',
+    },
+    fields: [
+      {
+        key: 'difficulty',
+        label: 'Level',
+        type: 'segment',
+        options: [
+          { label: 'Easy', value: 'easy' },
+          { label: 'Hard', value: 'hard' },
+          { label: 'Extra hard', value: 'extraHard' },
+        ],
+      },
+      {
+        key: 'sound',
+        label: 'Game sounds',
+        type: 'toggle',
+      },
+      {
+        key: 'gridEye',
+        label: 'Grid colour (glasses)',
+        type: 'eye',
+        options: [
+          { label: 'Left / Red', value: 'left' },
+          { label: 'Right / Cyan', value: 'right' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'solitaire',
+    title: 'Solitaire',
+    shortTitle: 'Solitaire',
+    tag: 'STRATEGY & FUSION',
+    category: 'spatial',
+    blurb:
+      'Klondike patience — red suits on one eye, black on the other, so building stacks trains binocular comparison.',
+    dichopticSplit: {
+      leftLabel: 'Red suits',
+      rightLabel: 'Black suits',
+    },
+    recordLabel: 'Best score',
+    metricLabel: 'Cards home',
+    defaultSettings: {
+      difficulty: 'easy',
+      sound: true,
+    },
+    fields: [
+      {
+        key: 'difficulty',
+        label: 'Level',
+        type: 'segment',
+        options: [
+          { label: 'Easy', value: 'easy' },
+          { label: 'Hard', value: 'hard' },
+          { label: 'Extra hard', value: 'extraHard' },
+        ],
+      },
+      {
+        key: 'sound',
+        label: 'Game sounds',
+        type: 'toggle',
+      },
+    ],
+  },
+  {
+    id: 'candy',
+    title: 'Candy Match',
+    shortTitle: 'Candy',
+    tag: 'STRATEGY & FUSION',
+    category: 'spatial',
+    blurb:
+      'Match-3 sweets split across eyes — clear cascades, specials, and pulsing focus candies for bonus score.',
+    dichopticSplit: {
+      leftLabel: 'Left-eye candy kinds',
+      rightLabel: 'Right-eye kinds + focus outline',
+    },
+    recordLabel: 'Best score',
+    metricLabel: 'Candies cleared',
     defaultSettings: {
       difficulty: 'easy',
       sound: true,
