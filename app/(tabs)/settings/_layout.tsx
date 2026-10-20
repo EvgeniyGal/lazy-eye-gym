@@ -18,6 +18,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="engine" />
       <Stack.Screen name="appearance" />
       <Stack.Screen name="language" />
+      <Stack.Screen name="support" />
     </Stack>
   );
 }

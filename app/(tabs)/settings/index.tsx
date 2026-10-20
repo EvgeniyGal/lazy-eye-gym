@@ -17,7 +17,8 @@ type SettingsRoute =
   | 'reminders'
   | 'engine'
   | 'appearance'
-  | 'language';
+  | 'language'
+  | 'support';
 
 export default function SettingsHubScreen() {
   const insets = useSafeAreaInsets();
@@ -70,6 +71,13 @@ export default function SettingsHubScreen() {
           titleKey: 'settings.language',
           hintKey: 'settings.languageHint',
           color: colors.secondary,
+        },
+        {
+          route: 'support' as const,
+          icon: 'heart-outline' as const,
+          titleKey: 'settings.supportDevelopment',
+          hintKey: 'settings.supportHint',
+          color: colors.tertiary,
         },
       ] satisfies {
         route: SettingsRoute;

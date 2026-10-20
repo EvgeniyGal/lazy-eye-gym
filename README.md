@@ -22,3 +22,4 @@ Then open in Expo Go / simulator (iOS or Android).
 
 - Wear red/cyan anaglyph glasses for Lazy-eye (3D ON) mode.
 - This is a casual training tool, not a certified medical device.
+- Optional Play tip jar (“Support development”): consumable IAPs via `expo-iap` — see [docs/play-tip-jar.md](docs/play-tip-jar.md). Requires a development/production build, not Expo Go.

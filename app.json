@@ -57,11 +57,26 @@
         "expo-localization",
         {
           "supportedLocales": {
-            "ios": ["en", "uk", "es", "de", "fr", "zh-Hans"],
-            "android": ["en", "uk", "es", "de", "fr", "zh-CN"]
+            "ios": [
+              "en",
+              "uk",
+              "es",
+              "de",
+              "fr",
+              "zh-Hans"
+            ],
+            "android": [
+              "en",
+              "uk",
+              "es",
+              "de",
+              "fr",
+              "zh-CN"
+            ]
           }
         }
-      ]
+      ],
+      "expo-iap"
     ],
     "experiments": {
       "typedRoutes": true
