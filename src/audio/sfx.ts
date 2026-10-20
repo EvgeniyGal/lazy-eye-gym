@@ -54,7 +54,21 @@ export type SfxName =
   | 'ast_shoot'
   | 'ast_bang'
   | 'ast_split'
-  | 'ast_die';
+  | 'ast_die'
+  // Shared power orbs
+  | 'pwr_spawn'
+  | 'pwr_swap'
+  | 'pwr_shield'
+  | 'pwr_slow'
+  | 'pwr_grow'
+  | 'pwr_shrink'
+  | 'pwr_speed'
+  | 'pwr_reverse'
+  | 'pwr_multi'
+  | 'pwr_laser'
+  | 'pwr_rocket'
+  | 'pwr_bomb'
+  | 'pwr_repulsor';
 
 type AssetKey =
   | 'chomp'
@@ -94,7 +108,20 @@ type AssetKey =
   | 'ast_shoot'
   | 'ast_bang'
   | 'ast_split'
-  | 'ast_die';
+  | 'ast_die'
+  | 'pwr_spawn'
+  | 'pwr_swap'
+  | 'pwr_shield'
+  | 'pwr_slow'
+  | 'pwr_grow'
+  | 'pwr_shrink'
+  | 'pwr_speed'
+  | 'pwr_reverse'
+  | 'pwr_multi'
+  | 'pwr_laser'
+  | 'pwr_rocket'
+  | 'pwr_bomb'
+  | 'pwr_repulsor';
 
 export type SfxOptions = {
   soundEnabled: boolean;
@@ -140,6 +167,19 @@ const sources: Record<AssetKey, number> = {
   ast_bang: require('../../assets/sfx/ast_bang.wav'),
   ast_split: require('../../assets/sfx/ast_split.wav'),
   ast_die: require('../../assets/sfx/ast_die.wav'),
+  pwr_spawn: require('../../assets/sfx/pwr_spawn.wav'),
+  pwr_swap: require('../../assets/sfx/pwr_swap.wav'),
+  pwr_shield: require('../../assets/sfx/pwr_shield.wav'),
+  pwr_slow: require('../../assets/sfx/pwr_slow.wav'),
+  pwr_grow: require('../../assets/sfx/pwr_grow.wav'),
+  pwr_shrink: require('../../assets/sfx/pwr_shrink.wav'),
+  pwr_speed: require('../../assets/sfx/pwr_speed.wav'),
+  pwr_reverse: require('../../assets/sfx/pwr_reverse.wav'),
+  pwr_multi: require('../../assets/sfx/pwr_multi.wav'),
+  pwr_laser: require('../../assets/sfx/pwr_laser.wav'),
+  pwr_rocket: require('../../assets/sfx/pwr_rocket.wav'),
+  pwr_bomb: require('../../assets/sfx/pwr_bomb.wav'),
+  pwr_repulsor: require('../../assets/sfx/pwr_repulsor.wav'),
 };
 
 const chompAlt = require('../../assets/sfx/chomp2.wav');
@@ -188,6 +228,19 @@ const RESOLVE: Record<SfxName, AssetKey> = {
   ast_bang: 'ast_bang',
   ast_split: 'ast_split',
   ast_die: 'ast_die',
+  pwr_spawn: 'pwr_spawn',
+  pwr_swap: 'pwr_swap',
+  pwr_shield: 'pwr_shield',
+  pwr_slow: 'pwr_slow',
+  pwr_grow: 'pwr_grow',
+  pwr_shrink: 'pwr_shrink',
+  pwr_speed: 'pwr_speed',
+  pwr_reverse: 'pwr_reverse',
+  pwr_multi: 'pwr_multi',
+  pwr_laser: 'pwr_laser',
+  pwr_rocket: 'pwr_rocket',
+  pwr_bomb: 'pwr_bomb',
+  pwr_repulsor: 'pwr_repulsor',
 };
 
 let ready = false;
@@ -287,7 +340,10 @@ function hapticFor(name: SfxName) {
     name === 'brk_stage' ||
     name === 'tet_tetris' ||
     name === 'pong_win' ||
-    name === 't48_merge'
+    name === 't48_merge' ||
+    name === 'pwr_bomb' ||
+    name === 'pwr_rocket' ||
+    name === 'pwr_shield'
   ) {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   } else {

@@ -1,4 +1,4 @@
-import { Canvas, Circle, Group, Path, Rect, RoundedRect, Skia } from '@shopify/react-native-skia';
+import { Canvas, Circle, Rect } from '@shopify/react-native-skia';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -6,6 +6,8 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
 import { useGameAudio } from '@/src/audio/useGameAudio';
+import { PowerOrb } from '../shared/powerOrbs';
+import { POWER_SPAWN_SFX, sfxForPowerKind } from '../shared/powerSfx';
 import type { GameSceneProps } from '../types';
 
 /** Power-ups both paddles can grab to trick each other. */
@@ -56,16 +58,6 @@ function pickOrbKind(): OrbKind {
   return rest[Math.floor(Math.random() * rest.length)]!;
 }
 
-function halfDiskPath(cx: number, cy: number, r: number, side: 'left' | 'right') {
-  const oval = Skia.XYWHRect(cx - r, cy - r, r * 2, r * 2);
-  // 0° = east; -90 = north. Left half sweeps CCW, right half CW.
-  return Skia.PathBuilder.Make()
-    .moveTo(cx, cy - r)
-    .arcToOval(oval, -90, side === 'left' ? -180 : 180, false)
-    .close()
-    .detach();
-}
-
 const LEVELS = {
   easy: {
     speed: 0.75,
@@ -109,88 +101,6 @@ function emptyBuffs(): Buffs {
     aiShrinkUntil: 0,
     turboUntil: 0,
   };
-}
-
-/** Cutout icons punched through the solid orb (drawn in optical background). */
-function OrbIcon({
-  kind,
-  cx,
-  cy,
-  cut,
-}: {
-  kind: OrbKind;
-  cx: number;
-  cy: number;
-  cut: string;
-}) {
-  if (kind === 'grow') {
-    // Bold plus — almost fills the disc
-    return (
-      <Group>
-        <RoundedRect x={cx - 9} y={cy - 2.5} width={18} height={5} r={1.5} color={cut} />
-        <RoundedRect x={cx - 2.5} y={cy - 9} width={5} height={18} r={1.5} color={cut} />
-      </Group>
-    );
-  }
-  if (kind === 'shrink') {
-    // Bold minus
-    return <RoundedRect x={cx - 9} y={cy - 2.5} width={18} height={5} r={1.5} color={cut} />;
-  }
-  if (kind === 'turbo') {
-    // Lightning bolt (speed)
-    const bolt = Skia.PathBuilder.Make()
-      .moveTo(cx + 2, cy - 10)
-      .lineTo(cx - 3, cy - 1)
-      .lineTo(cx + 1, cy - 1)
-      .lineTo(cx - 2, cy + 10)
-      .lineTo(cx + 4, cy + 0.5)
-      .lineTo(cx + 0.5, cy + 0.5)
-      .lineTo(cx + 5, cy - 10)
-      .close()
-      .detach();
-    return <Path path={bolt} color={cut} />;
-  }
-  // ⇅ — bounce / reverse ball direction
-  const up = Skia.PathBuilder.Make()
-    .moveTo(cx, cy - 10)
-    .lineTo(cx - 7, cy - 1)
-    .lineTo(cx + 7, cy - 1)
-    .close()
-    .detach();
-  const down = Skia.PathBuilder.Make()
-    .moveTo(cx, cy + 10)
-    .lineTo(cx - 7, cy + 1)
-    .lineTo(cx + 7, cy + 1)
-    .close()
-    .detach();
-  return (
-    <Group>
-      <Path path={up} color={cut} />
-      <Path path={down} color={cut} />
-    </Group>
-  );
-}
-
-/** Half red / half cyan disc — colour-swap power-up. */
-function SwapOrbDisc({
-  cx,
-  cy,
-  r,
-  leftColor,
-  rightColor,
-}: {
-  cx: number;
-  cy: number;
-  r: number;
-  leftColor: string;
-  rightColor: string;
-}) {
-  return (
-    <Group>
-      <Path path={halfDiskPath(cx, cy, r, 'left')} color={leftColor} />
-      <Path path={halfDiskPath(cx, cy, r, 'right')} color={rightColor} />
-    </Group>
-  );
 }
 
 export function PongGame({
@@ -312,7 +222,7 @@ export function PongGame({
       }
       buffsRef.current = buff;
       setBuffs(buff);
-      sfxRef.current('pong_orb');
+      sfxRef.current(sfxForPowerKind(kind));
     };
 
     const tick = () => {
@@ -450,6 +360,7 @@ export function PongGame({
           vx: (Math.random() - 0.5) * (slow ? 36 : 60),
           vy: (towardPlayer ? 1 : -1) * (slow ? 38 + Math.random() * 28 : 55 + Math.random() * 45),
         });
+        sfxRef.current(POWER_SPAWN_SFX);
       }
 
       nextOrbs = nextOrbs.filter((o) => {
@@ -531,27 +442,19 @@ export function PongGame({
           {pip(state.aiScore, 16, aiPaddleColor)}
           {pip(state.playerScore, height - 16, paddleColor)}
 
-          {orbs.map((o) => {
-            if (o.kind === 'swap') {
-              return (
-                <SwapOrbDisc
-                  key={o.id}
-                  cx={o.x}
-                  cy={o.y}
-                  r={orbR}
-                  leftColor={leftColor}
-                  rightColor={rightColor}
-                />
-              );
-            }
-            const fill = o.eye === 'left' ? leftColor : rightColor;
-            return (
-              <Group key={o.id}>
-                <Circle cx={o.x} cy={o.y} r={orbR} color={fill} />
-                <OrbIcon kind={o.kind} cx={o.x} cy={o.y} cut={boardBg} />
-              </Group>
-            );
-          })}
+          {orbs.map((o) => (
+            <PowerOrb
+              key={o.id}
+              kind={o.kind}
+              cx={o.x}
+              cy={o.y}
+              r={orbR}
+              leftColor={leftColor}
+              rightColor={rightColor}
+              boardBg={boardBg}
+              blinkT={Date.now() / 1000}
+            />
+          ))}
 
           <Rect x={state.aiX} y={28} width={aiW} height={paddleH} color={aiPaddleColor} />
           <Rect

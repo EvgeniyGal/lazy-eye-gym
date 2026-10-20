@@ -1,4 +1,4 @@
-import { Canvas, Circle, Group, Path, Rect, RoundedRect, Skia } from '@shopify/react-native-skia';
+import { Canvas, Circle, Group, Rect, RoundedRect } from '@shopify/react-native-skia';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -6,6 +6,8 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { withOpacity, type EyeSide } from '@/src/anaglyph/color';
 import { colorForEye, solidForEye } from '@/src/anaglyph/palette';
 import { useGameAudio } from '@/src/audio/useGameAudio';
+import { PowerOrb } from '../shared/powerOrbs';
+import { POWER_SPAWN_SFX, sfxForPowerKind } from '../shared/powerSfx';
 import type { GameSceneProps } from '../types';
 import { stagesForDifficulty, STAGES_PER_DIFFICULTY, type StageLayout } from './breakerStages';
 
@@ -222,95 +224,6 @@ function resolveBallBrick(
   };
 }
 
-/** Cutout icons — each sign matches the power’s effect. */
-function PowerIcon({
-  kind,
-  cx,
-  cy,
-  cut,
-}: {
-  kind: PowerKind;
-  cx: number;
-  cy: number;
-  cut: string;
-}) {
-  if (kind === 'wide') {
-    // Wider paddle: horizontal bar with end caps
-    return (
-      <Group>
-        <RoundedRect x={cx - 10} y={cy - 2} width={20} height={4} r={2} color={cut} />
-        <RoundedRect x={cx - 10} y={cy - 6} width={3.5} height={12} r={1.5} color={cut} />
-        <RoundedRect x={cx + 6.5} y={cy - 6} width={3.5} height={12} r={1.5} color={cut} />
-      </Group>
-    );
-  }
-  if (kind === 'slow') {
-    // Slow: downward chevrons (not a minus — that reads as shrink)
-    const top = Skia.PathBuilder.Make()
-      .moveTo(cx - 8, cy - 6)
-      .lineTo(cx, cy - 1)
-      .lineTo(cx + 8, cy - 6)
-      .lineTo(cx + 5, cy - 6)
-      .lineTo(cx, cy - 3)
-      .lineTo(cx - 5, cy - 6)
-      .close()
-      .detach();
-    const bot = Skia.PathBuilder.Make()
-      .moveTo(cx - 8, cy + 1)
-      .lineTo(cx, cy + 6)
-      .lineTo(cx + 8, cy + 1)
-      .lineTo(cx + 5, cy + 1)
-      .lineTo(cx, cy + 4)
-      .lineTo(cx - 5, cy + 1)
-      .close()
-      .detach();
-    return (
-      <Group>
-        <Path path={top} color={cut} />
-        <Path path={bot} color={cut} />
-      </Group>
-    );
-  }
-  if (kind === 'multi') {
-    // Extra balls: three discs
-    return (
-      <Group>
-        <Circle cx={cx - 6} cy={cy + 1} r={3.4} color={cut} />
-        <Circle cx={cx + 6} cy={cy + 1} r={3.4} color={cut} />
-        <Circle cx={cx} cy={cy - 5} r={3.4} color={cut} />
-      </Group>
-    );
-  }
-  if (kind === 'laser') {
-    // Upward laser beams (not a bolt — bolt reads as speed)
-    return (
-      <Group>
-        <RoundedRect x={cx - 5.5} y={cy - 9} width={3.5} height={18} r={1.5} color={cut} />
-        <RoundedRect x={cx + 2} y={cy - 9} width={3.5} height={18} r={1.5} color={cut} />
-      </Group>
-    );
-  }
-  // swap ↔ — opposing arrows (colour flip)
-  const left = Skia.PathBuilder.Make()
-    .moveTo(cx - 10, cy)
-    .lineTo(cx - 1, cy - 8)
-    .lineTo(cx - 1, cy + 8)
-    .close()
-    .detach();
-  const right = Skia.PathBuilder.Make()
-    .moveTo(cx + 10, cy)
-    .lineTo(cx + 1, cy - 8)
-    .lineTo(cx + 1, cy + 8)
-    .close()
-    .detach();
-  return (
-    <Group>
-      <Path path={left} color={cut} />
-      <Path path={right} color={cut} />
-    </Group>
-  );
-}
-
 let dropSeq = 0;
 
 export function BreakerGame({
@@ -493,6 +406,7 @@ export function BreakerGame({
               x: brick.x + brickW / 2,
               y: brick.y + BRICK_H / 2,
             });
+            sfxRef.current(POWER_SPAWN_SFX);
           }
         } else {
           nextBricks = nextBricks.map((b, i) => (i === hitIndex ? { ...b, hp } : b));
@@ -616,7 +530,7 @@ export function BreakerGame({
           powersRef.current = nextP;
           setPowers(nextP);
           nextScore += 15;
-          sfxRef.current('brk_power');
+          sfxRef.current(sfxForPowerKind(d.kind));
           return false;
         });
 
@@ -794,15 +708,19 @@ export function BreakerGame({
             );
           })}
 
-          {drops.map((d) => {
-            const fill = colorForEye(palette, d.eye);
-            return (
-              <Group key={d.id}>
-                <Circle cx={d.x} cy={d.y} r={ORB_R} color={fill} />
-                <PowerIcon kind={d.kind} cx={d.x} cy={d.y} cut={boardBg} />
-              </Group>
-            );
-          })}
+          {drops.map((d) => (
+            <PowerOrb
+              key={d.id}
+              kind={d.kind}
+              cx={d.x}
+              cy={d.y}
+              r={ORB_R}
+              leftColor={colorForEye(palette, 'left')}
+              rightColor={colorForEye(palette, 'right')}
+              boardBg={boardBg}
+              blinkT={Date.now() / 1000}
+            />
+          ))}
 
           {lasers.map((l) => (
             <Rect key={l.id} x={l.x - 2} y={l.y - 16} width={4} height={18} color={ballColor} />

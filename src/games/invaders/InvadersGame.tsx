@@ -6,6 +6,8 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
 import { useGameAudio } from '@/src/audio/useGameAudio';
+import { PowerOrb } from '../shared/powerOrbs';
+import { POWER_SPAWN_SFX, sfxForPowerKind } from '../shared/powerSfx';
 import type { GameSceneProps } from '../types';
 import {
   kindHp,
@@ -202,103 +204,6 @@ function alienPath(kind: AlienKind, x: number, y: number, cell: number) {
     .lineTo(cx - s, cy + s * 0.75)
     .close()
     .detach();
-}
-
-function PowerIcon({ kind, cx, cy, cut }: { kind: PowerKind; cx: number; cy: number; cut: string }) {
-  if (kind === 'repulsor') {
-    return (
-      <Path
-        path={Skia.PathBuilder.Make()
-          .moveTo(cx, cy - 8)
-          .lineTo(cx + 7, cy + 2)
-          .lineTo(cx + 3, cy + 2)
-          .lineTo(cx + 3, cy + 8)
-          .lineTo(cx - 3, cy + 8)
-          .lineTo(cx - 3, cy + 2)
-          .lineTo(cx - 7, cy + 2)
-          .close()
-          .detach()}
-        color={cut}
-      />
-    );
-  }
-  if (kind === 'shield') {
-    return (
-      <Path
-        path={Skia.PathBuilder.Make()
-          .moveTo(cx, cy - 8)
-          .lineTo(cx + 7, cy - 3)
-          .lineTo(cx + 7, cy + 2)
-          .lineTo(cx, cy + 9)
-          .lineTo(cx - 7, cy + 2)
-          .lineTo(cx - 7, cy - 3)
-          .close()
-          .detach()}
-        color={cut}
-      />
-    );
-  }
-  if (kind === 'overdrive') {
-    return (
-      <Path
-        path={Skia.PathBuilder.Make()
-          .moveTo(cx, cy - 8)
-          .lineTo(cx + 5, cy)
-          .lineTo(cx + 1, cy)
-          .lineTo(cx + 4, cy + 8)
-          .lineTo(cx - 5, cy)
-          .lineTo(cx - 1, cy)
-          .close()
-          .detach()}
-        color={cut}
-      />
-    );
-  }
-  if (kind === 'rocket') {
-    // Pointed missile
-    return (
-      <Path
-        path={Skia.PathBuilder.Make()
-          .moveTo(cx, cy - 9)
-          .lineTo(cx + 5, cy - 1)
-          .lineTo(cx + 3, cy - 1)
-          .lineTo(cx + 3, cy + 7)
-          .lineTo(cx - 3, cy + 7)
-          .lineTo(cx - 3, cy - 1)
-          .lineTo(cx - 5, cy - 1)
-          .close()
-          .detach()}
-        color={cut}
-      />
-    );
-  }
-  if (kind === 'bomb') {
-    return (
-      <Group>
-        <Circle cx={cx} cy={cy + 1} r={6.5} color={cut} />
-        <Rect x={cx - 1.5} y={cy - 9} width={3} height={5} color={cut} />
-      </Group>
-    );
-  }
-  // swap ↔ opposing arrows
-  const left = Skia.PathBuilder.Make()
-    .moveTo(cx - 9, cy)
-    .lineTo(cx - 1, cy - 7)
-    .lineTo(cx - 1, cy + 7)
-    .close()
-    .detach();
-  const right = Skia.PathBuilder.Make()
-    .moveTo(cx + 9, cy)
-    .lineTo(cx + 1, cy - 7)
-    .lineTo(cx + 1, cy + 7)
-    .close()
-    .detach();
-  return (
-    <Group>
-      <Path path={left} color={cut} />
-      <Path path={right} color={cut} />
-    </Group>
-  );
 }
 
 let seq = 0;
@@ -543,6 +448,7 @@ export function InvadersGame({
           y: ay + cell / 2,
         });
         killsSinceDrop.current = 0;
+        sfxRef.current(POWER_SPAWN_SFX);
       };
 
       // Power pickup
@@ -597,7 +503,7 @@ export function InvadersGame({
             );
           }
           nextScore += 15;
-          sfxRef.current('inv_hit');
+          sfxRef.current(sfxForPowerKind(d.kind));
           continue;
         }
         remainingDrops.push(d);
@@ -825,16 +731,19 @@ export function InvadersGame({
             </Group>
           ))}
 
-          {drops.map((d) => {
-            const fill = d.eye === 'left' ? leftColor : rightColor;
-            return (
-              <Group key={d.id}>
-                <Circle cx={d.x} cy={d.y} r={ORB_R + 3} color={fill} opacity={0.35} />
-                <Circle cx={d.x} cy={d.y} r={ORB_R} color={fill} />
-                <PowerIcon kind={d.kind} cx={d.x} cy={d.y} cut={boardBg} />
-              </Group>
-            );
-          })}
+          {drops.map((d) => (
+            <PowerOrb
+              key={d.id}
+              kind={d.kind}
+              cx={d.x}
+              cy={d.y}
+              r={ORB_R}
+              leftColor={leftColor}
+              rightColor={rightColor}
+              boardBg={boardBg}
+              blinkT={Date.now() / 1000}
+            />
+          ))}
 
           {bullets.map((b) =>
             b.rocket ? (

@@ -5,6 +5,8 @@ import { StyleSheet, Text, View, type GestureResponderEvent } from 'react-native
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
 import { useGameAudio } from '@/src/audio/useGameAudio';
+import { PowerOrb } from '../shared/powerOrbs';
+import { POWER_SPAWN_SFX, sfxForPowerKind } from '../shared/powerSfx';
 import type { GameSceneProps } from '../types';
 
 type RockSize = 'large' | 'medium' | 'small';
@@ -116,103 +118,6 @@ function dropChance(size: RockSize) {
   if (size === 'large') return 0.38;
   if (size === 'medium') return 0.28;
   return 0.18;
-}
-
-function PowerIcon({ kind, cx, cy, cut }: { kind: PowerKind; cx: number; cy: number; cut: string }) {
-  if (kind === 'shield') {
-    return (
-      <Path
-        path={Skia.PathBuilder.Make()
-          .moveTo(cx, cy - 8)
-          .lineTo(cx + 7, cy - 3)
-          .lineTo(cx + 7, cy + 2)
-          .lineTo(cx, cy + 9)
-          .lineTo(cx - 7, cy + 2)
-          .lineTo(cx - 7, cy - 3)
-          .close()
-          .detach()}
-        color={cut}
-      />
-    );
-  }
-  if (kind === 'spray') {
-    return (
-      <Group>
-        <Rect x={cx - 1.5} y={cy - 9} width={3} height={12} color={cut} />
-        <Rect x={cx - 7} y={cy - 5} width={3} height={10} color={cut} />
-        <Rect x={cx + 4} y={cy - 5} width={3} height={10} color={cut} />
-      </Group>
-    );
-  }
-  if (kind === 'slow') {
-    return (
-      <Path
-        path={Skia.PathBuilder.Make()
-          .moveTo(cx - 7, cy - 6)
-          .lineTo(cx, cy - 1)
-          .lineTo(cx + 7, cy - 6)
-          .lineTo(cx + 4, cy - 6)
-          .lineTo(cx, cy - 3)
-          .lineTo(cx - 4, cy - 6)
-          .close()
-          .moveTo(cx - 7, cy + 1)
-          .lineTo(cx, cy + 6)
-          .lineTo(cx + 7, cy + 1)
-          .lineTo(cx + 4, cy + 1)
-          .lineTo(cx, cy + 4)
-          .lineTo(cx - 4, cy + 1)
-          .close()
-          .detach()}
-        color={cut}
-      />
-    );
-  }
-  if (kind === 'nova') {
-    return (
-      <Group>
-        <Circle cx={cx} cy={cy} r={3} color={cut} />
-        <Rect x={cx - 1} y={cy - 9} width={2} height={5} color={cut} />
-        <Rect x={cx - 1} y={cy + 4} width={2} height={5} color={cut} />
-        <Rect x={cx - 9} y={cy - 1} width={5} height={2} color={cut} />
-        <Rect x={cx + 4} y={cy - 1} width={5} height={2} color={cut} />
-      </Group>
-    );
-  }
-  if (kind === 'boost') {
-    return (
-      <Path
-        path={Skia.PathBuilder.Make()
-          .moveTo(cx, cy - 8)
-          .lineTo(cx + 5, cy)
-          .lineTo(cx + 1, cy)
-          .lineTo(cx + 4, cy + 8)
-          .lineTo(cx - 5, cy)
-          .lineTo(cx - 1, cy)
-          .close()
-          .detach()}
-        color={cut}
-      />
-    );
-  }
-  // swap
-  const left = Skia.PathBuilder.Make()
-    .moveTo(cx - 9, cy)
-    .lineTo(cx - 1, cy - 7)
-    .lineTo(cx - 1, cy + 7)
-    .close()
-    .detach();
-  const right = Skia.PathBuilder.Make()
-    .moveTo(cx + 9, cy)
-    .lineTo(cx + 1, cy - 7)
-    .lineTo(cx + 1, cy + 7)
-    .close()
-    .detach();
-  return (
-    <Group>
-      <Path path={left} color={cut} />
-      <Path path={right} color={cut} />
-    </Group>
-  );
 }
 
 let seq = 0;
@@ -401,6 +306,7 @@ export function AsteroidsGame({
         life: 12,
       });
       killsSinceDrop.current = 0;
+      sfxRef.current(POWER_SPAWN_SFX);
     };
 
     const destroyRock = (
@@ -557,7 +463,6 @@ export function AsteroidsGame({
                 heavy: true,
               });
             }
-            sfxRef.current('ast_shoot');
           } else if (d.kind === 'slow') {
             const until = now + SLOW_MS;
             slowRef.current = until;
@@ -582,7 +487,7 @@ export function AsteroidsGame({
             boostRef.current = until;
             setBoostUntil(until);
           }
-          sfxRef.current('ast_split');
+          sfxRef.current(sfxForPowerKind(d.kind));
           continue;
         }
         keptDrops.push(d);
@@ -774,16 +679,19 @@ export function AsteroidsGame({
           ));
         })}
 
-        {drops.map((d) => {
-          const fill = d.eye === 'left' ? leftColor : rightColor;
-          return (
-            <Group key={d.id}>
-              <Circle cx={d.x} cy={d.y} r={ORB_R + 3} color={fill} opacity={0.3} />
-              <Circle cx={d.x} cy={d.y} r={ORB_R} color={fill} />
-              <PowerIcon kind={d.kind} cx={d.x} cy={d.y} cut={boardBg} />
-            </Group>
-          );
-        })}
+        {drops.map((d) => (
+          <PowerOrb
+            key={d.id}
+            kind={d.kind}
+            cx={d.x}
+            cy={d.y}
+            r={ORB_R}
+            leftColor={leftColor}
+            rightColor={rightColor}
+            boardBg={boardBg}
+            blinkT={Date.now() / 1000}
+          />
+        ))}
 
         {bullets.map((b) => (
           <Circle
