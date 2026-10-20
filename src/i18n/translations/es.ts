@@ -351,7 +351,7 @@ export const es = {
       rightLabel: 'Banderas + otro ojo',
       recordLabel: 'Mejor puntuación',
       metricLabel: 'Celdas abiertas',
-      field_difficulty: 'Nivel',
+      field_level: 'Nivel',
       field_sound: 'Sonidos del juego',
     },
     sudoku: {

@@ -415,19 +415,17 @@ export const GAMES: GameDefinition[] = [
     recordLabel: 'Best score',
     metricLabel: 'Cells cleared',
     defaultSettings: {
-      difficulty: 'easy',
+      level: 1,
       sound: true,
     },
     fields: [
       {
-        key: 'difficulty',
+        key: 'level',
         label: 'Level',
-        type: 'segment',
-        options: [
-          { label: 'Easy', value: 'easy' },
-          { label: 'Hard', value: 'hard' },
-          { label: 'Extra hard', value: 'extraHard' },
-        ],
+        type: 'slider',
+        min: 1,
+        max: 10,
+        step: 1,
       },
       {
         key: 'sound',

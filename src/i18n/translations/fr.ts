@@ -352,7 +352,7 @@ export const fr = {
       rightLabel: 'Drapeaux + autre œil',
       recordLabel: 'Meilleur score',
       metricLabel: 'Cases ouvertes',
-      field_difficulty: 'Niveau',
+      field_level: 'Niveau',
       field_sound: 'Sons du jeu',
     },
     sudoku: {

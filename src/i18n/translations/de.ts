@@ -351,7 +351,7 @@ export const de = {
       rightLabel: 'Flaggen + Gegenauge',
       recordLabel: 'Beste Punktzahl',
       metricLabel: 'Felder geräumt',
-      field_difficulty: 'Level',
+      field_level: 'Level',
       field_sound: 'Spielsounds',
     },
     sudoku: {

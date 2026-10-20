@@ -326,7 +326,7 @@ export const zhCN = {
       rightLabel: '旗帜 + 对侧数字',
       recordLabel: '最高得分',
       metricLabel: '已开格子',
-      field_difficulty: '难度',
+      field_level: '关卡',
       field_sound: '游戏音效',
     },
     sudoku: {

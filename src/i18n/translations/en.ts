@@ -344,7 +344,7 @@ export const en = {
       rightLabel: 'Flags + opposite-eye digits',
       recordLabel: 'Best score',
       metricLabel: 'Cells cleared',
-      field_difficulty: 'Level',
+      field_level: 'Level',
       field_sound: 'Game sounds',
     },
     sudoku: {

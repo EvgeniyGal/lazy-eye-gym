@@ -19,17 +19,11 @@ import {
   emptyGrid,
   isWin,
   placeMines,
+  resolveLevel,
   revealFlood,
-  specFor,
+  specForLevel,
   type Cell,
-  type DiffKey,
 } from './minesweeperLogic';
-
-function resolveDiff(settings: Record<string, string | number | boolean>): DiffKey {
-  const raw = String(settings.difficulty ?? 'easy');
-  if (raw === 'hard' || raw === 'extraHard') return raw;
-  return 'easy';
-}
 
 export function MinesweeperGame({
   width,
@@ -41,8 +35,8 @@ export function MinesweeperGame({
   onGameOver,
 }: GameSceneProps) {
   const { sfx } = useGameAudio(settings);
-  const diff = resolveDiff(settings);
-  const { size, mines } = specFor(diff);
+  const level = resolveLevel(settings);
+  const { size, mines } = specForLevel(level);
   const boardBg = palette.background;
 
   const [coverEye, setCoverEye] = useState<EyeSide>('left');

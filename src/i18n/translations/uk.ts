@@ -344,7 +344,7 @@ export const uk = {
       rightLabel: 'Прапорці + цифри іншого ока',
       recordLabel: 'Найкращий рахунок',
       metricLabel: 'Відкрито клітинок',
-      field_difficulty: 'Рівень',
+      field_level: 'Рівень',
       field_sound: 'Звуки гри',
     },
     sudoku: {
