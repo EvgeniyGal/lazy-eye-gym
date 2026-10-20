@@ -1,8 +1,11 @@
 import {
   Canvas,
+  Circle,
   Group,
+  Path,
   Rect,
   RoundedRect,
+  Skia,
   Text as SkText,
   matchFont,
 } from '@shopify/react-native-skia';
@@ -20,13 +23,109 @@ import {
   isWon,
   peekCard,
   rankLabel,
-  suitGlyph,
   tryMove,
   drawStock,
   type DiffKey,
   type GameState,
   type Sel,
+  type Suit,
 } from './solitaireLogic';
+
+/** Skia paths — Helvetica/sans often mis-render Unicode ♥♦♣♠. */
+function SuitMark({
+  suit,
+  cx,
+  cy,
+  size,
+  color,
+}: {
+  suit: Suit;
+  cx: number;
+  cy: number;
+  size: number;
+  color: string;
+}) {
+  const s = size;
+  if (suit === 'D') {
+    return (
+      <Path
+        path={Skia.PathBuilder.Make()
+          .moveTo(cx, cy - s)
+          .lineTo(cx + s * 0.72, cy)
+          .lineTo(cx, cy + s)
+          .lineTo(cx - s * 0.72, cy)
+          .close()
+          .detach()}
+        color={color}
+      />
+    );
+  }
+  if (suit === 'H') {
+    const r = s * 0.42;
+    return (
+      <Group>
+        <Circle cx={cx - r * 0.85} cy={cy - r * 0.35} r={r} color={color} />
+        <Circle cx={cx + r * 0.85} cy={cy - r * 0.35} r={r} color={color} />
+        <Path
+          path={Skia.PathBuilder.Make()
+            .moveTo(cx - s * 0.95, cy - r * 0.1)
+            .lineTo(cx, cy + s * 0.95)
+            .lineTo(cx + s * 0.95, cy - r * 0.1)
+            .close()
+            .detach()}
+          color={color}
+        />
+      </Group>
+    );
+  }
+  if (suit === 'S') {
+    const r = s * 0.38;
+    return (
+      <Group>
+        <Circle cx={cx - r * 0.85} cy={cy + r * 0.15} r={r} color={color} />
+        <Circle cx={cx + r * 0.85} cy={cy + r * 0.15} r={r} color={color} />
+        <Path
+          path={Skia.PathBuilder.Make()
+            .moveTo(cx - s * 0.9, cy + r * 0.25)
+            .lineTo(cx, cy - s)
+            .lineTo(cx + s * 0.9, cy + r * 0.25)
+            .close()
+            .detach()}
+          color={color}
+        />
+        <Rect x={cx - s * 0.14} y={cy + s * 0.15} width={s * 0.28} height={s * 0.75} color={color} />
+        <Path
+          path={Skia.PathBuilder.Make()
+            .moveTo(cx - s * 0.55, cy + s * 0.95)
+            .lineTo(cx, cy + s * 0.45)
+            .lineTo(cx + s * 0.55, cy + s * 0.95)
+            .close()
+            .detach()}
+          color={color}
+        />
+      </Group>
+    );
+  }
+  // Club
+  const r = s * 0.36;
+  return (
+    <Group>
+      <Circle cx={cx} cy={cy - r * 0.95} r={r} color={color} />
+      <Circle cx={cx - r * 0.95} cy={cy + r * 0.2} r={r} color={color} />
+      <Circle cx={cx + r * 0.95} cy={cy + r * 0.2} r={r} color={color} />
+      <Rect x={cx - s * 0.14} y={cy + s * 0.05} width={s * 0.28} height={s * 0.85} color={color} />
+      <Path
+        path={Skia.PathBuilder.Make()
+          .moveTo(cx - s * 0.5, cy + s * 0.95)
+          .lineTo(cx, cy + s * 0.4)
+          .lineTo(cx + s * 0.5, cy + s * 0.95)
+          .close()
+          .detach()}
+        color={color}
+      />
+    </Group>
+  );
+}
 
 function resolveDiff(settings: Record<string, string | number | boolean>): DiffKey {
   const raw = String(settings.difficulty ?? 'easy');
@@ -258,13 +357,29 @@ export function SolitaireGame({
           />
         ) : null}
         {card.faceUp ? (
-          <SkText
-            x={x + 4}
-            y={y + cardH * 0.38}
-            text={`${rankLabel(card.rank)}${suitGlyph(card.suit)}`}
-            font={font}
-            color={boardBg}
-          />
+          <Group>
+            <SkText
+              x={x + 4}
+              y={y + Math.max(12, cardW * 0.36)}
+              text={rankLabel(card.rank)}
+              font={font}
+              color={boardBg}
+            />
+            <SuitMark
+              suit={card.suit}
+              cx={x + cardW * 0.5}
+              cy={y + cardH * 0.58}
+              size={cardW * 0.22}
+              color={boardBg}
+            />
+            <SuitMark
+              suit={card.suit}
+              cx={x + cardW - 10}
+              cy={y + 11}
+              size={cardW * 0.12}
+              color={boardBg}
+            />
+          </Group>
         ) : null}
       </Group>
     );

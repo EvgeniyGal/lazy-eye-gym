@@ -15,13 +15,6 @@ export function rankLabel(rank: number) {
   return String(rank);
 }
 
-export function suitGlyph(suit: Suit) {
-  if (suit === 'H') return '♥';
-  if (suit === 'D') return '♦';
-  if (suit === 'C') return '♣';
-  return '♠';
-}
-
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i -= 1) {
