@@ -333,23 +333,27 @@ export function CandyGame({
     setSelected(null);
   };
 
+  /** Touches are on the full view (HUD + board); grid origin is below the HUD. */
+  const cellAt = (x: number, y: number) => {
+    const c = Math.floor((x - ox) / cellSize);
+    const r = Math.floor((y - hudH - oy) / cellSize);
+    if (r < 0 || c < 0 || r >= ROWS || c >= COLS) return null;
+    return { r, c };
+  };
+
   const tap = Gesture.Pan()
     .runOnJS(true)
     .onBegin((e) => {
       if (busy) return;
-      const c = Math.floor((e.x - ox) / cellSize);
-      const r = Math.floor((e.y - oy) / cellSize);
-      if (r >= 0 && c >= 0 && r < ROWS && c < COLS) onTapCell(r, c);
+      const hit = cellAt(e.x, e.y);
+      if (hit) onTapCell(hit.r, hit.c);
     })
     .onEnd((e) => {
       if (!selected || busy) return;
-      const c = Math.floor((e.x - ox) / cellSize);
-      const r = Math.floor((e.y - oy) / cellSize);
-      if (r >= 0 && c >= 0 && r < ROWS && c < COLS) {
-        if (selected.r !== r || selected.c !== c) {
-          trySwap(selected.r, selected.c, r, c);
-          setSelected(null);
-        }
+      const hit = cellAt(e.x, e.y);
+      if (hit && (selected.r !== hit.r || selected.c !== hit.c)) {
+        trySwap(selected.r, selected.c, hit.r, hit.c);
+        setSelected(null);
       }
     });
 
