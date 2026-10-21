@@ -243,12 +243,38 @@ const RESOLVE: Record<SfxName, AssetKey> = {
   pwr_repulsor: 'pwr_repulsor',
 };
 
-let ready = false;
+/** Cap concurrent one-shots so rapid cues (maze chomp) cannot exhaust native players. */
+const MAX_ACTIVE = 10;
+/** Longest generated cue is ~0.45s; keep a buffer before releasing. */
+const SFX_TTL_MS = 1500;
+
+type ActiveShot = {
+  player: AudioPlayer;
+  timer: ReturnType<typeof setTimeout>;
+};
+
 let users = 0;
-let players: Partial<Record<AssetKey, AudioPlayer>> = {};
-let chompB: AudioPlayer | null = null;
 let chompFlip = false;
 let modeConfigured = false;
+let sessionReady = false;
+let bootPromise: Promise<void> | null = null;
+let active: ActiveShot[] = [];
+
+function disposePlayer(player: AudioPlayer) {
+  try {
+    player.remove();
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearActive() {
+  for (const shot of active) {
+    clearTimeout(shot.timer);
+    disposePlayer(shot.player);
+  }
+  active = [];
+}
 
 async function ensureMode() {
   if (modeConfigured) return;
@@ -264,56 +290,70 @@ async function ensureMode() {
   }
 }
 
-async function initPool() {
-  if (ready) return;
-  await ensureMode();
+/** Silent warm-up so the first real cue is not delayed by session/decoder init. */
+function warmSession() {
   try {
-    (Object.keys(sources) as AssetKey[]).forEach((name) => {
-      players[name] = createAudioPlayer(sources[name], { keepAudioSessionActive: true });
-      players[name]!.volume = 0.85;
-    });
-    chompB = createAudioPlayer(chompAlt, { keepAudioSessionActive: true });
-    chompB.volume = 0.85;
-    ready = true;
-  } catch {
-    ready = false;
-  }
-}
-
-function disposePool() {
-  Object.values(players).forEach((p) => {
-    try {
-      p?.remove();
-    } catch {
-      /* ignore */
-    }
-  });
-  try {
-    chompB?.remove();
+    const warm = createAudioPlayer(sources.chomp, { keepAudioSessionActive: true });
+    warm.volume = 0;
+    warm.play();
+    setTimeout(() => disposePlayer(warm), 400);
   } catch {
     /* ignore */
   }
-  players = {};
-  chompB = null;
-  ready = false;
+}
+
+async function bootSession() {
+  await ensureMode();
+  warmSession();
+  sessionReady = true;
 }
 
 export async function acquireSfx() {
   users += 1;
-  await initPool();
+  if (!bootPromise) {
+    bootPromise = bootSession().catch(() => {
+      bootPromise = null;
+      sessionReady = false;
+    });
+  }
+  await bootPromise;
 }
 
 export function releaseSfx() {
   users = Math.max(0, users - 1);
-  if (users === 0) disposePool();
+  if (users === 0) {
+    clearActive();
+    bootPromise = null;
+    sessionReady = false;
+    // Keep modeConfigured — re-applying mode every remount is unnecessary.
+  }
 }
 
-function replay(player: AudioPlayer | undefined | null) {
-  if (!player) return;
+/**
+ * One-shot playback: create → play → release.
+ * Reusing a pooled player with seekTo(0) is unreliable on expo-audio (often silent
+ * after the first play), which is why games were feeling like “haptics only”.
+ */
+function playOneShot(source: number) {
   try {
-    void player.seekTo(0).then(() => {
-      player.play();
-    });
+    while (active.length >= MAX_ACTIVE) {
+      const oldest = active.shift();
+      if (!oldest) break;
+      clearTimeout(oldest.timer);
+      disposePlayer(oldest.player);
+    }
+
+    const player = createAudioPlayer(source, { keepAudioSessionActive: true });
+    player.volume = 0.9;
+    player.play();
+
+    const timer = setTimeout(() => {
+      const idx = active.findIndex((s) => s.player === player);
+      if (idx >= 0) active.splice(idx, 1);
+      disposePlayer(player);
+    }, SFX_TTL_MS);
+
+    active.push({ player, timer });
   } catch {
     /* ignore */
   }
@@ -353,13 +393,21 @@ function hapticFor(name: SfxName) {
 
 export function playSfx(name: SfxName, opts: SfxOptions) {
   if (opts.hapticEnabled) hapticFor(name);
-  if (!opts.soundEnabled || !ready) return;
+  if (!opts.soundEnabled || users === 0) return;
+
+  // One-shots do not need a prebuilt pool; warm-up may still be in flight.
+  if (!sessionReady && !bootPromise) {
+    bootPromise = bootSession().catch(() => {
+      bootPromise = null;
+      sessionReady = false;
+    });
+  }
 
   const asset = RESOLVE[name];
   if (asset === 'chomp') {
     chompFlip = !chompFlip;
-    replay(chompFlip ? players.chomp : chompB);
+    playOneShot(chompFlip ? sources.chomp : chompAlt);
     return;
   }
-  replay(players[asset]);
+  playOneShot(sources[asset]);
 }

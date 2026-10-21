@@ -9,7 +9,17 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lazyeyegym.app"
+      "bundleIdentifier": "com.lazyeyegym.app",
+      "infoPlist": {
+        "CFBundleLocalizations": [
+          "en",
+          "uk",
+          "es",
+          "de",
+          "fr",
+          "zh-Hans"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -84,8 +94,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "2d429e79-2ba3-4d95-a7a1-7c4187d5a0f3"
+        "projectId": "53bbbdae-4b55-4c2d-b479-eeedcb034952"
       }
-    }
+    },
+    "owner": "yevgengal"
   }
 }
