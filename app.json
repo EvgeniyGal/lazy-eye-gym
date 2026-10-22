@@ -94,7 +94,8 @@
           }
         }
       ],
-      "expo-iap"
+      "expo-iap",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true
