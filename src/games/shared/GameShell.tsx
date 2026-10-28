@@ -129,11 +129,23 @@ export function GameShell({ gameId }: { gameId: GameId }) {
   const pausedBeforeLeave = useRef(false);
 
   const boardBg = palette.background;
-  const onLight = activeProfile.background === 'white';
-  const hudFg = onLight ? '#111111' : colors.onSurface;
-  const hudMuted = onLight ? '#444444' : colors.onSurfaceVariant;
-  const hudBtnBg = onLight ? 'rgba(0,0,0,0.08)' : colors.surfaceHigh;
-  const overlayBg = onLight ? 'rgba(244,244,244,0.92)' : 'rgba(6,14,32,0.9)';
+  const opticalBg = activeProfile.background;
+  const onLight = opticalBg === 'white';
+  // HUD/modal chrome follows optical board contrast — never app light/dark theme tokens.
+  const hudFg = onLight ? '#111111' : palette.neutral;
+  const hudMuted = onLight ? '#444444' : 'rgba(255,255,255,0.65)';
+  const hudBtnBg = onLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)';
+  const overlayBg = onLight
+    ? 'rgba(244,244,244,0.92)'
+    : opticalBg === 'gray'
+      ? 'rgba(42,42,42,0.92)'
+      : 'rgba(6,14,32,0.9)';
+  const secondaryBorder = onLight ? '#333333' : 'rgba(255,255,255,0.35)';
+  const modalPadStyle = {
+    backgroundColor: overlayBg,
+    paddingBottom: spacing.xl + insets.bottom,
+    paddingTop: spacing.xl + insets.top,
+  };
 
   const canvasH = Math.max(280, height - insets.top - insets.bottom - 120);
 
@@ -337,20 +349,20 @@ export function GameShell({ gameId }: { gameId: GameId }) {
 
       {/* Modal sits above Skia canvases — absolute sibling overlays can end up under native Skia. */}
       <Modal visible={leaveOpen && !ended} transparent animationType="fade" onRequestClose={stayInGame}>
-        <View style={[styles.modalRoot, { backgroundColor: overlayBg }]}>
+        <View style={[styles.modalRoot, modalPadStyle]}>
           <Text style={[styles.overlayTitle, { color: hudFg }]}>{t('gameShell.leaveTitle')}</Text>
           <Text style={[styles.overlayMeta, { color: hudMuted }]}>{t('gameShell.leaveMessage')}</Text>
           <Pressable style={styles.primaryBtn} onPress={stayInGame}>
             <Text style={styles.primaryBtnText}>{t('gameShell.stay')}</Text>
           </Pressable>
           <Pressable
-            style={[styles.secondaryBtn, { borderColor: onLight ? '#333' : colors.outline }]}
+            style={[styles.secondaryBtn, { borderColor: secondaryBorder }]}
             onPress={restartFromLeave}
           >
             <Text style={[styles.secondaryBtnText, { color: hudFg }]}>{t('gameShell.startAgain')}</Text>
           </Pressable>
           <Pressable
-            style={[styles.secondaryBtn, { borderColor: onLight ? '#333' : colors.outline }]}
+            style={[styles.secondaryBtn, { borderColor: secondaryBorder }]}
             onPress={leaveGame}
           >
             <Text style={[styles.secondaryBtnText, { color: hudFg }]}>{t('gameShell.leave')}</Text>
@@ -359,7 +371,7 @@ export function GameShell({ gameId }: { gameId: GameId }) {
       </Modal>
 
       <Modal visible={!!ended} transparent animationType="fade" onRequestClose={() => router.back()}>
-        <View style={[styles.modalRoot, { backgroundColor: overlayBg }]}>
+        <View style={[styles.modalRoot, modalPadStyle]}>
           <Text style={[styles.overlayTitle, { color: hudFg }]}>{t('gameShell.sessionComplete')}</Text>
           {ended ? (
             <Text style={[styles.overlayMeta, { color: hudMuted }]}>
@@ -375,7 +387,7 @@ export function GameShell({ gameId }: { gameId: GameId }) {
             <Text style={styles.primaryBtnText}>{t('gameShell.startAgain')}</Text>
           </Pressable>
           <Pressable
-            style={[styles.secondaryBtn, { borderColor: onLight ? '#333' : colors.outline }]}
+            style={[styles.secondaryBtn, { borderColor: secondaryBorder }]}
             onPress={() => router.back()}
           >
             <Text style={[styles.secondaryBtnText, { color: hudFg }]}>{t('gameShell.backToSetup')}</Text>
