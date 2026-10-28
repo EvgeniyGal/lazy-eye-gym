@@ -15,7 +15,11 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "CMAKE_BUILD_PARALLEL_LEVEL": "1",
+        "GRADLE_OPTS": "-Dorg.gradle.jvmargs=\"-Xmx3g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8\" -Dorg.gradle.parallel=false -Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+      }
     }
   },
   "submit": {
