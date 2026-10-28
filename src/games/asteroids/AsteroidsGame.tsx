@@ -1,6 +1,8 @@
 import { Canvas, Circle, Group, Path, Rect, Skia } from '@shopify/react-native-skia';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, type ElementRef } from 'react';
 import { StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
+
+type ViewRef = ElementRef<typeof View>;
 
 import type { EyeSide } from '@/src/anaglyph/color';
 import { colorForEye } from '@/src/anaglyph/palette';
@@ -558,12 +560,10 @@ export function AsteroidsGame({
   }, [level, onGameOver, paused, playH, width]);
 
   const padBoxes = useRef<Partial<Record<PadId, PadBox>>>({});
-  const padRefs = useRef<Partial<Record<PadId, View | null>>>({});
+  const padRefs = useRef<Partial<Record<PadId, ViewRef | null>>>({});
 
   const measurePad = useCallback((id: PadId) => {
-    const node = padRefs.current[id] as
-      | (View & { measureInWindow?: (cb: (x: number, y: number, w: number, h: number) => void) => void })
-      | null;
+    const node = padRefs.current[id];
     node?.measureInWindow?.((x, y, w, h) => {
       padBoxes.current[id] = { x, y, w, h };
     });

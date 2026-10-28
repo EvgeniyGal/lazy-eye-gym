@@ -1,7 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRouter } from 'expo-router';
-import { usePreventRemove } from 'expo-router/build/react-navigation/core';
-import type { NavigationAction } from 'expo-router/build/react-navigation/routers';
+import {
+  useNavigation,
+  usePreventRemove,
+  useRouter,
+  type NavigationAction,
+} from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

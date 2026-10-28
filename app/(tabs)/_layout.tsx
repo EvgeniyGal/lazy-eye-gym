@@ -35,7 +35,13 @@ export default function TabLayout() {
         name="index"
         options={{
           title: t('tabs.home'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="barbell-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="barbell-outline"
+              size={size}
+              color={typeof color === 'string' ? color : colors.onSurfaceVariant}
+            />
+          ),
         }}
       />
       <Tabs.Screen
@@ -43,7 +49,11 @@ export default function TabLayout() {
         options={{
           title: t('tabs.games'),
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="game-controller-outline" size={size} color={color} />
+            <Ionicons
+              name="game-controller-outline"
+              size={size}
+              color={typeof color === 'string' ? color : colors.onSurfaceVariant}
+            />
           ),
           headerShown: false,
         }}
@@ -52,7 +62,13 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: t('tabs.settings'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="settings-outline"
+              size={size}
+              color={typeof color === 'string' ? color : colors.onSurfaceVariant}
+            />
+          ),
           headerShown: false,
         }}
       />
@@ -60,7 +76,13 @@ export default function TabLayout() {
         name="guide"
         options={{
           title: t('tabs.guide'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="book-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="book-outline"
+              size={size}
+              color={typeof color === 'string' ? color : colors.onSurfaceVariant}
+            />
+          ),
         }}
       />
     </Tabs>
